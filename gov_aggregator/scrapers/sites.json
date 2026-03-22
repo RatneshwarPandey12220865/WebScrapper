@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "description": "Legacy supported scraper configuration. Keep this file aligned with data/sites_config.json when adding new websites.",
+    "site_target": 178,
+    "selector_contract": {
+      "item_selector": "CSS selector for each repeatable card, row, or link",
+      "title_selector": "Optional child selector for the title text",
+      "link_selector": "Optional child selector for the anchor element",
+      "summary_selector": "Optional child selector for description text",
+      "date_selector": "Optional child selector for publish date text",
+      "row_selector": "Table row selector when parser = table",
+      "wait_for_selector": "Optional selector to wait for before capturing rendered HTML"
+    }
+  },
+  "sites": [
+    {
+      "site_key": "department-of-food-and-public-distribution",
+      "ministry": "Department of Food and Public Distribution",
+      "name": "Department of Food and Public Distribution",
+      "source_url": "https://dfpd.gov.in/Home/WhatsNewViewAllList?languageId=1",
+      "base_url": "https://dfpd.gov.in",
+      "parser": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "default_category": "notification",
+      "category_mapping": {
+        "recruitment": ["application", "recruitment", "vacancy", "post of", "posts of"],
+        "tender": ["tender", "bid", "eoi", "rfp"],
+        "circular": ["circular", "guideline"],
+        "notification": ["notification", "notice", "order", "quota", "allocation", "reallocation"],
+        "news": ["press release", "celebrates", "portal", "committed"]
+      },
+      "selectors": {
+        "item_selector": "#dataTable tbody tr td a"
+      }
+    },
+    {
+      "site_key": "ministry-of-heavy-industries",
+      "ministry": "Ministry of Heavy Industries",
+      "name": "Ministry of Heavy Industries",
+      "base_url": "https://heavyindustries.gov.in",
+      "category_mapping": {
+        "recruitment": ["application", "recruitment", "vacancy", "appointment"],
+        "tender": ["tender", "bid", "eoi", "rfp"],
+        "circular": ["circular", "guideline"],
+        "notification": ["notification", "notice", "order"],
+        "news": ["press release", "news", "update", "launch", "scheme", "mission"]
+      },
+      "sections": [
+        {
+          "section_label": "Notifications",
+          "source_url": "https://heavyindustries.gov.in/en/notifications",
+          "parser": "table",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": "table tbody tr",
+            "title_selector": ".views-field-title a",
+            "link_selector": ".views-field-field-upload-notifications-docum-1 a, .views-field-title a",
+            "date_selector": ".views-field-field-notifications-d, .views-field-field-date"
+          }
+        },
+        {
+          "section_label": "Press Releases",
+          "source_url": "https://heavyindustries.gov.in/en/press-releases",
+          "parser": "table",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "default_category": "news",
+          "selectors": {
+            "row_selector": "table tbody tr",
+            "title_selector": ".views-field-title a",
+            "link_selector": ".views-field-title a",
+            "date_selector": ".views-field-field-date"
+          }
+        }
+      ]
+    }
+  ]
+}

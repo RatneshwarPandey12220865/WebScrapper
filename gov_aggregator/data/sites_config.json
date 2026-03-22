@@ -1,0 +1,555 @@
+{
+  "metadata": {
+    "description": "Supported scraper configuration for government websites. Add new websites here with selectors and parser details when they are ready to crawl.",
+    "site_target": 178,
+    "selector_contract": {
+      "item_selector": "CSS selector for each repeatable card, row, or link",
+      "title_selector": "Optional child selector for the title text",
+      "link_selector": "Optional child selector for the anchor element",
+      "summary_selector": "Optional child selector for description text",
+      "date_selector": "Optional child selector for publish date text",
+      "row_selector": "Table row selector when parser_type = table",
+      "wait_for_selector": "Optional selector to wait for before capturing rendered HTML",
+      "parser_backend": "Use bs4 for simple HTML pages or scrapy for selector-heavy pages"
+    }
+  },
+  "sites": [
+    {
+      "site_key": "department-of-food-and-public-distribution",
+      "ministry": "Department of Food and Public Distribution",
+      "name": "Department of Food and Public Distribution",
+      "url": "https://dfpd.gov.in/Home/WhatsNewViewAllList?languageId=1",
+      "base_url": "https://dfpd.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "default_category": "notification",
+      "category_mapping": {
+        "recruitment": [
+          "application",
+          "recruitment",
+          "vacancy",
+          "post of",
+          "posts of"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "eoi",
+          "rfp"
+        ],
+        "circular": [
+          "circular",
+          "guideline"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "order",
+          "quota",
+          "allocation",
+          "reallocation"
+        ],
+        "news": [
+          "press release",
+          "celebrates",
+          "portal",
+          "committed"
+        ]
+      },
+      "selectors": {
+        "item_selector": "#dataTable tbody tr td a"
+      }
+    },
+    {
+      "site_key": "ministry-of-heavy-industries",
+      "ministry": "Ministry of Heavy Industries",
+      "name": "Ministry of Heavy Industries",
+      "base_url": "https://heavyindustries.gov.in",
+      "category_mapping": {
+        "recruitment": [
+          "application",
+          "recruitment",
+          "vacancy",
+          "appointment"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "eoi",
+          "rfp"
+        ],
+        "circular": [
+          "circular",
+          "guideline"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "order"
+        ],
+        "news": [
+          "press release",
+          "news",
+          "update",
+          "launch",
+          "scheme",
+          "mission"
+        ]
+      },
+      "sections": [
+        {
+          "section_label": "Notifications",
+          "url": "https://heavyindustries.gov.in/en/notifications",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": "table tbody tr",
+            "title_selector": ".views-field-title",
+            "link_selector": ".views-field-field-upload-notifications-docum-1 a, .views-field-title a",
+            "date_selector": ".views-field-field-notifications-d, .views-field-field-date"
+          }
+        },
+        {
+          "section_label": "Press Releases",
+          "url": "https://heavyindustries.gov.in/en/press-releases",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "default_category": "news",
+          "selectors": {
+            "row_selector": "table tbody tr",
+            "title_selector": ".views-field-title a",
+            "link_selector": ".views-field-title a",
+            "date_selector": ".views-field-field-date"
+          }
+        }
+      ]
+    },
+    {
+      "site_key": "export-promotion-council",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Export Promotion Council for EOUs & SEZs (EPCES)",
+      "url": "https://epces.in/index.php",
+      "base_url": "https://epces.in",
+      "parser_type": "pdf_index",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "default_category": "notification",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "instruction",
+          "sop",
+          "procedure"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "public notice",
+          "boa",
+          "board of approval"
+        ],
+        "news": [
+          "seminar",
+          "launches",
+          "announces",
+          "update",
+          "scheme",
+          "msme",
+          "dgft"
+        ],
+        "tender": [
+          "tender",
+          "bid"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "career",
+          "appointment"
+        ]
+      },
+      "selectors": {
+        "item_selector": ".newsListSlider ul li a",
+        "title_selector": "div strong",
+        "link_selector": null
+      }
+    },
+    {
+      "site_key": "industry-and-internal-trade",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Department for Promotion of Industry and Internal Trade (DPIIT)",
+      "url": "https://www.dpiit.gov.in/whats-new",
+      "base_url": "https://www.dpiit.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "default_category": "notification",
+      "wait_for_selector": ".whats-new-announcements .announcementbox",
+      "category_mapping": {
+        "tender": [
+          "tender",
+          "rfp",
+          "corrigendum",
+          "quotation",
+          "bid"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "consultant",
+          "appointment",
+          "career"
+        ],
+        "circular": [
+          "circular",
+          "gazette",
+          "g.s.r",
+          "notification no"
+        ],
+        "notification": [
+          "press note",
+          "notice",
+          "order",
+          "notification"
+        ],
+        "news": [
+          "annual report",
+          "factsheet",
+          "publication",
+          "fdi",
+          "report"
+        ]
+      },
+      "selectors": {
+        "item_selector": ".announcementbox",
+        "title_selector": "p.mb-0, div.mb-0.text-break",
+        "link_selector": "a.download-btn, a.link-btn",
+        "date_selector": "small.ptype.mb-0"
+      }
+    },
+    {
+      "site_key": "industry-and-internal-trade-ip",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Intellectual Property India",
+      "url": "https://ipindia.gov.in/Home/Latestnews/1?CatID=1&pg=1",
+      "base_url": "https://ipindia.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "pagination_param": "pg",
+      "start_page": 1,
+      "max_pages": 2,
+      "default_category": "notification",
+      "category_mapping": {
+        "tender": [
+          "tender",
+          "bid",
+          "quotation",
+          "rfp"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "examination",
+          "result",
+          "pae",
+          "tae"
+        ],
+        "notification": [
+          "public notice",
+          "notice",
+          "order",
+          "shifting"
+        ],
+        "news": [
+          "award",
+          "lecture",
+          "series",
+          "wipo",
+          "ipr"
+        ]
+      },
+      "selectors": {
+        "item_selector": "#news-container ul li",
+        "title_selector": "a",
+        "link_selector": "a",
+        "date_selector": "p[class^='newsDate-']"
+      }
+    },
+    {
+      "site_key": "ministry-of-steel",
+      "ministry": "Ministry of Steel",
+      "name": "Ministry of Steel",
+      "url": "https://steel.gov.in/press-release",
+      "base_url": "https://steel.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "press release",
+          "pib",
+          "launch",
+          "steel",
+          "scheme",
+          "pli",
+          "taxonomy",
+          "chintan",
+          "ambassadors"
+        ],
+        "circular": [
+          "circular",
+          "guideline"
+        ],
+        "notification": [
+          "notification",
+          "notice"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "rfp"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy"
+        ]
+      },
+      "selectors": {
+        "row_selector": ".whats-new table tbody tr",
+        "title_selector": "td.views-field-title",
+        "link_selector": "td.views-field-field-download a, td.views-field-field-link a",
+        "date_selector": null
+      }
+    },
+    {
+      "site_key": "ministry-of-textiles",
+      "ministry": "Ministry of Textiles",
+      "name": "Ministry of Textiles",
+      "url": "https://www.texmin.gov.in/whats-new",
+      "base_url": "https://www.texmin.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "gazette",
+          "regulation",
+          "standard",
+          "labelling"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "draft",
+          "concept note",
+          "protocol"
+        ],
+        "tender": [
+          "tender",
+          "rfp",
+          "corrigendum",
+          "quotation"
+        ],
+        "recruitment": [
+          "vacancy",
+          "recruitment",
+          "post of",
+          "managing director",
+          "director",
+          "commissioner",
+          "selection"
+        ],
+        "news": [
+          "report",
+          "mapping",
+          "conference",
+          "mission",
+          "scheme",
+          "programme",
+          "samarth",
+          "nttm",
+          "pm mitra"
+        ]
+      },
+      "selectors": {
+        "item_selector": ".announcementbox",
+        "title_selector": "p.mb-0, div.mb-0.text-break",
+        "link_selector": "a.download-btn, a.link-btn",
+        "date_selector": "small.ptype.mb-0"
+      },
+      "wait_for_selector": ".whats-new-announcements .announcementbox"
+    },
+    {
+      "site_key": "project-export-promotion-council",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Project Export Promotion Council (PEPC)",
+      "url": "https://projectexports.com",
+      "base_url": "https://projectexports.com",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "infrastructure",
+          "export",
+          "project",
+          "energy",
+          "transmission",
+          "collaboration",
+          "platform",
+          "market"
+        ],
+        "notification": [
+          "notice",
+          "notification",
+          "circular"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "rfp"
+        ],
+        "recruitment": [
+          "vacancy",
+          "recruitment",
+          "appointment"
+        ]
+      },
+      "selectors": {
+        "item_selector": "#menu6 div.news",
+        "title_selector": "p.short-para",
+        "link_selector": "a.btn",
+        "date_selector": "p.title7"
+      }
+    },
+    {
+      "site_key": "ministry-of-information-and-broadcasting-gazette",
+      "ministry": "Ministry of Information and Broadcasting",
+      "name": "Ministry of Information and Broadcasting",
+      "base_url": "https://mib.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "tender": [
+          "tender",
+          "quotation",
+          "invitation",
+          "rickshaw",
+          "supply",
+          "empanelment"
+        ],
+        "recruitment": [
+          "vacancy",
+          "appointment",
+          "filling up",
+          "engagement",
+          "deputation",
+          "consultant",
+          "young professional",
+          "result",
+          "selected"
+        ],
+        "circular": [
+          "advisory",
+          "amendment",
+          "order",
+          "compliance",
+          "circular"
+        ],
+        "notification": [
+          "notice",
+          "list of",
+          "registered",
+          "cancelled",
+          "surrendered",
+          "expired",
+          "pre-qualified",
+          "mock auction",
+          "discrepancies"
+        ],
+        "news": [
+          "prasar bharati",
+          "fm radio",
+          "broadcast",
+          "community radio",
+          "media"
+        ]
+      },
+      "selectors": {},
+      "sections": [
+        {
+          "section_label": "What's New - Page 1",
+          "url": "https://mib.gov.in/en/whats-new?page=0",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": ".scroll-table1 td.views-field-nothing",
+            "title_selector": "a",
+            "link_selector": "a",
+            "date_selector": null,
+            "wait_for_selector": ".scroll-table1 td.views-field-nothing"
+          }
+        },
+        {
+          "section_label": "What's New - Page 2",
+          "url": "https://mib.gov.in/en/whats-new?page=1",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": ".scroll-table1 td.views-field-nothing",
+            "title_selector": "a",
+            "link_selector": "a",
+            "date_selector": null,
+            "wait_for_selector": ".scroll-table1 td.views-field-nothing"
+          }
+        },
+        {
+          "section_label": "What's New - Page 3",
+          "url": "https://mib.gov.in/en/whats-new?page=2",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": ".scroll-table1 td.views-field-nothing",
+            "title_selector": "a",
+            "link_selector": "a",
+            "date_selector": null,
+            "wait_for_selector": ".scroll-table1 td.views-field-nothing"
+          }
+        },
+        {
+          "section_label": "What's New - Page 4",
+          "url": "https://mib.gov.in/en/whats-new?page=3",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": ".scroll-table1 td.views-field-nothing",
+            "title_selector": "a",
+            "link_selector": "a",
+            "date_selector": null,
+            "wait_for_selector": ".scroll-table1 td.views-field-nothing"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+scraper_results.json
+scraper_results_utf8.json
+scraper_test.log
+verify_result.json
+.vscode/
+.idea/
+.DS_Store
+*.log

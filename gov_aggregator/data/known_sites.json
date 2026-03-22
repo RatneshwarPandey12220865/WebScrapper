@@ -1,0 +1,1606 @@
+{
+  "sites": [
+    {
+      "site_key": "coffee-board",
+      "name": "Coffee Board",
+      "registry_url": "https://indiacoffee.org",
+      "alternate_url": "https://coffeeboard.gov.in/",
+      "preferred_url": "https://coffeeboard.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "department-of-food-and-public-distribution",
+      "name": "Department of Food and Public Distribution",
+      "registry_url": "https://dfpd.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dfpd.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-heavy-industries",
+      "name": "Department of Heavy Industries",
+      "registry_url": "https://heavyindustries.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://heavyindustries.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "dgft",
+      "name": "DGFT",
+      "registry_url": "https://www.dgft.gov.in/CP",
+      "alternate_url": null,
+      "preferred_url": "https://www.dgft.gov.in/CP",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "export-promotion-council",
+      "name": "Export Promotion Council",
+      "registry_url": "https://www.epces.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.epces.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "industry-and-internal-trade",
+      "name": "Industry and Internal Trade",
+      "registry_url": "https://dpiit.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://dpiit.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "industry-and-internal-trade-cipam-ip",
+      "name": "Industry and Internal Trade_CIPAM_IP",
+      "registry_url": "http://cipam.gov.in",
+      "alternate_url": null,
+      "preferred_url": "http://cipam.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "industry-and-internal-trade-economic-adv-policies",
+      "name": "Industry and Internal Trade_Economic Adv (Policies)",
+      "registry_url": "https://eaindustry.nic.in/",
+      "alternate_url": null,
+      "preferred_url": "https://eaindustry.nic.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "industry-and-internal-trade-foreign-trade",
+      "name": "Industry and Internal Trade_Foreign Trade",
+      "registry_url": "https://fifp.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://fifp.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "industry-and-internal-trade-ip",
+      "name": "Industry and Internal Trade_IP",
+      "registry_url": "http://ipindia.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://ipindia.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-steel",
+      "name": "Ministry of Steel",
+      "registry_url": "https://steel.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://steel.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-textiles",
+      "name": "Ministry of Textiles",
+      "registry_url": "http://ministryoftextiles.gov.in/",
+      "alternate_url": "https://www.texmin.gov.in/",
+      "preferred_url": "https://www.texmin.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "project-export-promotion-council",
+      "name": "Project Export Promotion Council",
+      "registry_url": "http://www.projectexports.com/",
+      "alternate_url": null,
+      "preferred_url": "http://www.projectexports.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "quality-council-of-india",
+      "name": "Quality Council of India",
+      "registry_url": "https://qcin.org/",
+      "alternate_url": null,
+      "preferred_url": "https://qcin.org/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "rubber-board",
+      "name": "Rubber Board",
+      "registry_url": "http://rubberboard.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://rubberboard.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "services-export-promotion-council",
+      "name": "Services Export Promotion Council",
+      "registry_url": "www.servicesepc.org/",
+      "alternate_url": null,
+      "preferred_url": "www.servicesepc.org/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "spices-board",
+      "name": "Spices Board",
+      "registry_url": "www.indianspices.com",
+      "alternate_url": null,
+      "preferred_url": "www.indianspices.com",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "international-financial-services-centres-authority",
+      "name": "International Financial Services Centres Authority",
+      "registry_url": "https://ifsca.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://ifsca.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-information-and-broadcasting-gazette",
+      "name": "Ministry of Information and Broadcasting (Gazette)",
+      "registry_url": "https://mib.gov.in",
+      "alternate_url": "https://mib.gov.in",
+      "preferred_url": "https://mib.gov.in/en/whats-new",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-production-gazette",
+      "name": "Ministry of Production (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.commerce.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ministry-of-finance-bifurcation-gazette",
+      "name": "Ministry of Finance- Bifurcation (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://financialservices.gov.in/beta/en",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "income-tax",
+      "name": "Income Tax",
+      "registry_url": "https://incometaxindia.gov.in/Pages/press-releases.aspx",
+      "alternate_url": null,
+      "preferred_url": "https://incometaxindia.gov.in/Pages/press-releases.aspx",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "income-tax",
+      "name": "Income Tax",
+      "registry_url": "Tax Laws & Rules > Circulars & Notifications > Notifications (incometaxindia.gov.in)",
+      "alternate_url": "https://incometaxindia.gov.in/pages/communications/circulars.aspx",
+      "preferred_url": "https://incometaxindia.gov.in/pages/communications/circulars.aspx",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "cbic-customs-exices",
+      "name": "CBIC (Customs & Exices)",
+      "registry_url": "Welcome, CBIC!",
+      "alternate_url": "https://www.cbic.gov.in/entities/customs",
+      "preferred_url": "https://www.cbic.gov.in/entities/customs",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "pfrda",
+      "name": "PFRDA",
+      "registry_url": "https://www.pfrda.org.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.pfrda.org.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "sez",
+      "name": "SEZ",
+      "registry_url": "http://sezindia.nic.in",
+      "alternate_url": null,
+      "preferred_url": "http://sezindia.nic.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "fire-service-civil-defence",
+      "name": "Fire Service, Civil Defence",
+      "registry_url": "https://dgfscdhg.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dgfscdhg.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-home-affairs",
+      "name": "Ministry of Home Affairs",
+      "registry_url": "https://www.mha.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.mha.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-tourism-for-hotels-restaurants",
+      "name": "Ministry of Tourism (For Hotels & Restaurants)",
+      "registry_url": "https://tourism.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://tourism.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-women-child-development",
+      "name": "Ministry of Women & Child Development",
+      "registry_url": "https://wcd.nic.in/",
+      "alternate_url": "https://wcd.gov.in/",
+      "preferred_url": "https://wcd.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "commission-for-agri-costs-and-prices",
+      "name": "Commission for Agri Costs and Prices",
+      "registry_url": "https://cacp.dacnet.nic.in/",
+      "alternate_url": "https://cacp.da.gov.in/",
+      "preferred_url": "https://cacp.da.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "department-of-agricultural-research-and-education",
+      "name": "Department of Agricultural Research and Education",
+      "registry_url": "http://dare.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://dare.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-agriculture-and-farmers-welfare",
+      "name": "Department of Agriculture and Farmers Welfare",
+      "registry_url": "http://agricoop.gov.in/",
+      "alternate_url": "https://www.agriwelfare.gov.in/",
+      "preferred_url": "https://www.agriwelfare.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "department-of-animal-husbandary-and-dairying",
+      "name": "Department of Animal Husbandary and Dairying",
+      "registry_url": "https://dahd.nic.in/",
+      "alternate_url": "https://www.dahd.gov.in/",
+      "preferred_url": "https://www.dahd.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "department-of-fertilizers",
+      "name": "Department of Fertilizers",
+      "registry_url": "http://fert.nic.in/",
+      "alternate_url": "https://fert.gov.in/en",
+      "preferred_url": "https://fert.gov.in/en",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "department-of-fisheries",
+      "name": "Department of Fisheries",
+      "registry_url": "https://dof.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dof.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "directorate-of-arecanut-and-spices-development-spices",
+      "name": "Directorate of Arecanut and Spices Development (Spices)",
+      "registry_url": "https://www.dasd.gov.in/",
+      "alternate_url": "https://spicenurseries.in/",
+      "preferred_url": "https://spicenurseries.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "directorate-of-cashewnut-cocoa-development",
+      "name": "Directorate of Cashewnut & Cocoa Development",
+      "registry_url": "https://www.dccd.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.dccd.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "directorate-of-marketing-and-inspection-for-pulses-grading-and-marking",
+      "name": "Directorate of Marketing and Inspection (For Pulses grading and Marking)",
+      "registry_url": "http://dmi.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://dmi.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules",
+      "name": "Directorate of Plant Protection Quarantine & Storage (For Plant Quarantine Rules, Insectides Rules)",
+      "registry_url": "http://ppqs.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://ppqs.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "mission-for-integrated-development-of-horticulture-schemes-guidelines",
+      "name": "Mission for Integrated Development of Horticulture (Schemes & Guidelines)",
+      "registry_url": "https://midh.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://midh.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-agricultural-market-apmc-and-agricultural-warehousing-related-notifications",
+      "name": "National Agricultural Market ( APMC and Agricultural Warehousing Related Notifications)",
+      "registry_url": "https://enam.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://enam.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-bea-board",
+      "name": "National Bea Board",
+      "registry_url": "https://nbb.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://nbb.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-centre-for-cold-chain-development",
+      "name": "National Centre for Cold-chain Development",
+      "registry_url": "https://nccd.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://nccd.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-food-security-mission-for-oilseeds",
+      "name": "National Food Security Mission (For Oilseeds)",
+      "registry_url": "https://nfsm.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://nfsm.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-horticulture-board",
+      "name": "National Horticulture Board",
+      "registry_url": "https://nfsm.gov.in/https://nfsm.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://nfsm.gov.in/https://nfsm.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "plant-protection-quarantie-and-storage-import-and-export-related",
+      "name": "Plant Protection, Quarantie and Storage (Import and Export related)",
+      "registry_url": "https://plantquarantineindia.nic.in/",
+      "alternate_url": "https://ppqs.gov.in/en",
+      "preferred_url": "https://ppqs.gov.in/en",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "sfac-farmer-producer-organisation",
+      "name": "SFAC (Farmer Producer Organisation)",
+      "registry_url": "http://sfacindia.com/",
+      "alternate_url": null,
+      "preferred_url": "http://sfacindia.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "mpeda",
+      "name": "MPEDA",
+      "registry_url": "https://mpeda.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://mpeda.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "cochin-sez",
+      "name": "Cochin SEZ",
+      "registry_url": "https://csez.com/",
+      "alternate_url": null,
+      "preferred_url": "https://csez.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "falta-sez",
+      "name": "Falta SEZ",
+      "registry_url": "http://fsez.gov.in",
+      "alternate_url": null,
+      "preferred_url": "http://fsez.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "kandla-sez",
+      "name": "Kandla SEZ",
+      "registry_url": "http://kasez.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://kasez.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "noida-sez",
+      "name": "Noida SEZ",
+      "registry_url": "https://www.nsez.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.nsez.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "seepz-sez",
+      "name": "SEEPZ SEZ",
+      "registry_url": "http://seepz.gov.in",
+      "alternate_url": null,
+      "preferred_url": "http://seepz.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "vizag-sez",
+      "name": "Vizag SEZ",
+      "registry_url": "http://www.vsez.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://www.vsez.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "minisry-of-labour",
+      "name": "Minisry of Labour",
+      "registry_url": "https://labour.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://labour.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-mines",
+      "name": "Department of Mines",
+      "registry_url": "https://mines.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://mines.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-petroleum-and-natural-gas",
+      "name": "Ministry of Petroleum and Natural Gas",
+      "registry_url": "https://mopng.gov.in/en",
+      "alternate_url": null,
+      "preferred_url": "https://mopng.gov.in/en",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "archaeological-survey-of-india",
+      "name": "Archaeological Survey of India",
+      "registry_url": "http://asiegov.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://asiegov.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-land-resources",
+      "name": "Department of Land Resources",
+      "registry_url": "https://dolr.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://dolr.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-urban-development",
+      "name": "Ministry Of Urban Development",
+      "registry_url": "https://mohua.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://mohua.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-payments-corporation-of-india",
+      "name": "National Payments Corporation of India",
+      "registry_url": "https://www.npci.org.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.npci.org.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "national-housing-bank",
+      "name": "National Housing Bank",
+      "registry_url": "https://nhb.org.in/en/",
+      "alternate_url": null,
+      "preferred_url": "https://nhb.org.in/en/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-ports-shipping-and-waterways",
+      "name": "Ministry of Ports Shipping and Waterways",
+      "registry_url": "http://http/shipmin.gov.in/",
+      "alternate_url": "https://shipmin.gov.in/",
+      "preferred_url": "https://shipmin.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "ministry-of-food-processing-industries",
+      "name": "Ministry of Food Processing Industries",
+      "registry_url": "https://mofpi.nic.in/",
+      "alternate_url": null,
+      "preferred_url": "https://mofpi.nic.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "warehousing-development-and-regulatory-authority",
+      "name": "Warehousing Development and Regulatory Authority",
+      "registry_url": "https://wdra.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://wdra.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ayush",
+      "name": "AYUSH",
+      "registry_url": "https://www.ayush.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.ayush.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "cdsco",
+      "name": "CDSCO",
+      "registry_url": "https://cdsco.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://cdsco.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-bio-technology",
+      "name": "Department of Bio Technology",
+      "registry_url": "https://dbtindia.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dbtindia.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-pharmaceuticals",
+      "name": "Department of Pharmaceuticals",
+      "registry_url": "https://pharmaceuticals.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://pharmaceuticals.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "chattisgarh",
+      "name": "Chattisgarh",
+      "registry_url": "N/A",
+      "alternate_url": "https://egazette.cg.nic.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-shramevjayate-cg-gov-in",
+      "name": "https://shramevjayate.cg.gov.in/",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "jammu-and-kashmir",
+      "name": "Jammu and kashmir",
+      "registry_url": "N/A",
+      "alternate_url": null,
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "chandigarh",
+      "name": "Chandigarh",
+      "registry_url": "N/A",
+      "alternate_url": "https://egazette.chd.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "lakshwadeep",
+      "name": "Lakshwadeep",
+      "registry_url": "N/A",
+      "alternate_url": "https://lakshadweep.gov.in/document-category/gazatte-notifications/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "odisha",
+      "name": "Odisha",
+      "registry_url": "https://govtpress.odisha.gov.in/gazdatewise.htm",
+      "alternate_url": null,
+      "preferred_url": "https://govtpress.odisha.gov.in/gazdatewise.htm",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "uttarakhand",
+      "name": "Uttarakhand",
+      "registry_url": "http://gazettes.uk.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://gazettes.uk.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-cooperation-gazette",
+      "name": "Ministry of Cooperation (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.cooperation.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "joint-electricity-regulatory-commission-for-goa-and-union-territories-gazette",
+      "name": "Joint Electricity Regulatory Commission for Goa and Union Territories (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.goaelectricity.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-electricity-py-gov-in-regulations-jerc",
+      "name": "https://electricity.py.gov.in/regulations-jerc",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-cercind-gov-in-jerc-regulation-jerc-home-htm",
+      "name": "https://cercind.gov.in/JERC-Regulation/jerc-home.htm",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "joint-electricity-regulatory-commission-for-union-territories-of-jammu-and-kashmir-and-union-territories-of-ladakh-gazette",
+      "name": "Joint Electricity Regulatory Commission for Union Territories of Jammu and kashmir and Union Territories of Ladakh (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://jercjkl.jk.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "cerc",
+      "name": "CERC",
+      "registry_url": "https://cercind.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://cercind.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-health-welfare",
+      "name": "Ministry of Health & Welfare",
+      "registry_url": "https://main.mohfw.gov.in/",
+      "alternate_url": "https://www.mohfw.gov.in/?q=en",
+      "preferred_url": "https://www.mohfw.gov.in/?q=en",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "national-medical-commission",
+      "name": "National Medical Commission",
+      "registry_url": "https://www.nmc.org.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.nmc.org.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "pharmacy-council",
+      "name": "Pharmacy Council",
+      "registry_url": "https://pci.nic.in/",
+      "alternate_url": null,
+      "preferred_url": "https://pci.nic.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "himachal-pradesh",
+      "name": "Himachal Pradesh",
+      "registry_url": "https://rajpatrahimachal.nic.in/Default.aspx",
+      "alternate_url": null,
+      "preferred_url": "https://rajpatrahimachal.nic.in/Default.aspx",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "jharkhand",
+      "name": "Jharkhand",
+      "registry_url": "https://jharkhandgazette.nic.in/Notification.aspx",
+      "alternate_url": "https://egazette.jharkhand.gov.in/",
+      "preferred_url": "https://egazette.jharkhand.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "kerala",
+      "name": "Kerala",
+      "registry_url": "http://www.egazette.kerala.gov.in/latest.php?id=2",
+      "alternate_url": null,
+      "preferred_url": "http://www.egazette.kerala.gov.in/latest.php?id=2",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "tamil-nadu",
+      "name": "Tamil Nadu",
+      "registry_url": "http://www.stationeryprinting.tn.gov.in/extraordinary/extraord_list.php",
+      "alternate_url": null,
+      "preferred_url": "http://www.stationeryprinting.tn.gov.in/extraordinary/extraord_list.php",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "telangana",
+      "name": "Telangana",
+      "registry_url": "not working",
+      "alternate_url": "https://www.telangana.gov.in/te/gazette/",
+      "preferred_url": "not working",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-tggazette-cgg-gov-in",
+      "name": "https://tggazette.cgg.gov.in/",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "tripura",
+      "name": "Tripura",
+      "registry_url": "https://egazette.tripura.gov.in/eGazette/",
+      "alternate_url": null,
+      "preferred_url": "https://egazette.tripura.gov.in/eGazette/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "advertising-standards-council-of-india",
+      "name": "Advertising Standards Council of India",
+      "registry_url": "https://asci.social/",
+      "alternate_url": null,
+      "preferred_url": "https://asci.social/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "bis",
+      "name": "BIS",
+      "registry_url": "https://www.bis.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.bis.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "consumer-affairs",
+      "name": "Consumer Affairs",
+      "registry_url": "https://consumeraffairs.nic.in",
+      "alternate_url": null,
+      "preferred_url": "https://consumeraffairs.nic.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-economic-affairs-bilateral-netting-ifsca-etc",
+      "name": "Department of Economic Affairs ( Bilateral Netting, IFSCA etc)",
+      "registry_url": "https://dea.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dea.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "fcra",
+      "name": "FCRA",
+      "registry_url": "https://fcraonline.nic.in",
+      "alternate_url": null,
+      "preferred_url": "https://fcraonline.nic.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "aadhaar",
+      "name": "Aadhaar",
+      "registry_url": "https://uidai.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://uidai.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-revenue-foreign-exchange-import-customs-duty",
+      "name": "Department of Revenue(Foreign Exchange, Import & Customs Duty)",
+      "registry_url": "https://dor.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dor.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "fssai",
+      "name": "FSSAI",
+      "registry_url": "https://fssai.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://fssai.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "dept-of-empowerment-of-persons-with-disabilities",
+      "name": "Dept of Empowerment of persons with disabilities",
+      "registry_url": "http://disabilityaffairs.gov.in",
+      "alternate_url": null,
+      "preferred_url": "http://disabilityaffairs.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "health-research",
+      "name": "Health Research",
+      "registry_url": "https://dhr.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dhr.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "indian-council-of-medical-research",
+      "name": "Indian Council of Medical Research",
+      "registry_url": "https://main.icmr.nic.in/",
+      "alternate_url": "https://www.icmr.gov.in/",
+      "preferred_url": "https://www.icmr.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "indian-nursing-council",
+      "name": "Indian Nursing Council",
+      "registry_url": "https://www.indiannursingcouncil.org/",
+      "alternate_url": null,
+      "preferred_url": "https://www.indiannursingcouncil.org/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-finance-bifurcation-gazette",
+      "name": "Ministry of Finance- Bifurcation (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://incometaxindia.gov.in/Pages/default.aspx",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "n-a",
+      "name": "N/A",
+      "registry_url": "https://www.cbic.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.cbic.gov.in/",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "gst",
+      "name": "GST",
+      "registry_url": "https://www.gst.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.gst.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "cbic-only-gst",
+      "name": "CBIC (Only GST)",
+      "registry_url": "https://www.cbic.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.cbic.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "department-of-atomic-energy",
+      "name": "Department of Atomic Energy",
+      "registry_url": "https://dae.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dae.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "rbi",
+      "name": "RBI",
+      "registry_url": "https://www.rbi.org.in",
+      "alternate_url": null,
+      "preferred_url": "https://www.rbi.org.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-personnel-public-grievances-pensions-corruption-related",
+      "name": "Ministry of Personnel, Public Grievances & Pensions (Corruption Related)",
+      "registry_url": "https://persmin.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://persmin.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-finance-bifurcation-gazette-rbi",
+      "name": "Ministry of Finance- Bifurcation (Gazette) RBI",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.rbi.org.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "central-ground-water-board",
+      "name": "Central Ground Water Board",
+      "registry_url": "http://cgwb.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://cgwb.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "cpcb",
+      "name": "CPCB",
+      "registry_url": "https://cpcb.nic.in/",
+      "alternate_url": null,
+      "preferred_url": "https://cpcb.nic.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-environment-forest",
+      "name": "Ministry of Environment & Forest",
+      "registry_url": "http://moef.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://moef.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-jal-sakthi-water-resources",
+      "name": "Ministry of Jal Sakthi (Water Resources)",
+      "registry_url": "http://jalshakti-dowr.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://jalshakti-dowr.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "meity",
+      "name": "MeiTY",
+      "registry_url": "https://www.meity.gov.in/divisions",
+      "alternate_url": null,
+      "preferred_url": "https://www.meity.gov.in/divisions",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "saral-sanchar",
+      "name": "Saral Sanchar",
+      "registry_url": "https://saralsanchar.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://saralsanchar.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "manipur",
+      "name": "Manipur",
+      "registry_url": "https://manipurgovtpress.nic.in/index.php?option=com_gazette&task=+&Itemid=88",
+      "alternate_url": null,
+      "preferred_url": "https://manipurgovtpress.nic.in/index.php?option=com_gazette&task=+&Itemid=88",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "https-jerc-mizoram-gov-in",
+      "name": "https://jerc.mizoram.gov.in/",
+      "registry_url": "working",
+      "alternate_url": null,
+      "preferred_url": "working",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-finance-mn-gov-in-index-aspx",
+      "name": "https://finance.mn.gov.in/index.aspx",
+      "registry_url": "working",
+      "alternate_url": null,
+      "preferred_url": "working",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "meghalaya",
+      "name": "Meghalaya",
+      "registry_url": "http://megpns.gov.in/gazette/archive.asp",
+      "alternate_url": null,
+      "preferred_url": "http://megpns.gov.in/gazette/archive.asp",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "mizoram",
+      "name": "Mizoram",
+      "registry_url": "https://printingstationery.mizoram.gov.in/gazettes",
+      "alternate_url": null,
+      "preferred_url": "https://printingstationery.mizoram.gov.in/gazettes",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "nagaland",
+      "name": "Nagaland",
+      "registry_url": "https://govtpress.nagaland.gov.in/egazette/",
+      "alternate_url": null,
+      "preferred_url": "https://govtpress.nagaland.gov.in/egazette/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "arunachal-pradesh",
+      "name": "Arunachal Pradesh",
+      "registry_url": "http://www.arunachalpradesh.gov.in/gazette/",
+      "alternate_url": null,
+      "preferred_url": "http://www.arunachalpradesh.gov.in/gazette/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "bihar",
+      "name": "Bihar",
+      "registry_url": "http://egazette.bih.nic.in/Notification.aspx",
+      "alternate_url": "https://egazette.bihar.gov.in/",
+      "preferred_url": "https://egazette.bihar.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "national-capital-territory-of-delhi",
+      "name": "National Capital Territory of Delhi",
+      "registry_url": "http://web.delhi.gov.in/wps/wcm/connect/doit/Delhi+Govt/Delhi+Home/Gazette+Notification",
+      "alternate_url": "https://delhi.gov.in/centralized-cos",
+      "preferred_url": "https://delhi.gov.in/centralized-cos",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "https-delhi-gov-in-notice-board-notifications",
+      "name": "https://delhi.gov.in/notice-board/notifications",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "uttar-pradesh",
+      "name": "Uttar Pradesh",
+      "registry_url": "www.upvidhansabhaproceedings.gov.in",
+      "alternate_url": null,
+      "preferred_url": "www.upvidhansabhaproceedings.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "haryana",
+      "name": "Haryana",
+      "registry_url": "http://www.egazetteharyana.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "http://www.egazetteharyana.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "punjab",
+      "name": "Punjab",
+      "registry_url": "https://punjab.gov.in/notifications/",
+      "alternate_url": null,
+      "preferred_url": "https://punjab.gov.in/notifications/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "assam",
+      "name": "Assam",
+      "registry_url": "N/A",
+      "alternate_url": null,
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ladakh",
+      "name": "Ladakh",
+      "registry_url": "N/A",
+      "alternate_url": "https://egazette.ladakh.gov.in/(S(owvmlcwc1mkib3n50t3nqoyk))/default.aspx",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "andaman-ana-nicobar-islands",
+      "name": "Andaman ana Nicobar Islands",
+      "registry_url": "N/A",
+      "alternate_url": "https://andamannicobar.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "dadra-and-nagar-haveli-and-daman-and-diu",
+      "name": "Dadra and Nagar Haveli and Daman and Diu",
+      "registry_url": "N/A",
+      "alternate_url": "https://ddd.gov.in/document-category/official-gazette/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ministry-of-road-transport-and-highways",
+      "name": "Ministry of Road Transport and Highways",
+      "registry_url": "https://morth.gov.in/index.php",
+      "alternate_url": null,
+      "preferred_url": "https://morth.gov.in/index.php",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "minisry-of-commerce",
+      "name": "Minisry of Commerce",
+      "registry_url": "https://commerce.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://commerce.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "state-gst",
+      "name": "State GST",
+      "registry_url": "https://gstcouncil.gov.in/sgst-tax-notifications",
+      "alternate_url": null,
+      "preferred_url": "https://gstcouncil.gov.in/sgst-tax-notifications",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "mca",
+      "name": "MCA",
+      "registry_url": "https://www.mca.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.mca.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "sebi",
+      "name": "SEBI",
+      "registry_url": "https://www.sebi.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.sebi.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "nse",
+      "name": "NSE",
+      "registry_url": "https://www.nseindia.com/",
+      "alternate_url": null,
+      "preferred_url": "https://www.nseindia.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "bse",
+      "name": "BSE",
+      "registry_url": "https://www.bseindia.com/",
+      "alternate_url": null,
+      "preferred_url": "https://www.bseindia.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "icsi",
+      "name": "ICSI",
+      "registry_url": "www.icsi.org",
+      "alternate_url": "https://icsi.edu/home/",
+      "preferred_url": "https://icsi.edu/home/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "goa",
+      "name": "Goa",
+      "registry_url": "https://goaprintingpress.gov.in/search-by-date/",
+      "alternate_url": null,
+      "preferred_url": "https://goaprintingpress.gov.in/search-by-date/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "puducherry",
+      "name": "Puducherry",
+      "registry_url": "https://styandptg.py.gov.in/2020/exordinary1jul20.html",
+      "alternate_url": null,
+      "preferred_url": "https://styandptg.py.gov.in/2020/exordinary1jul20.html",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-micro-small-and-medium-enterprises-gazette",
+      "name": "Ministry of Micro, Small and Medium Enterprises (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://msme.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ministry-of-overseas-indian-affairs-gazette",
+      "name": "Ministry of Overseas Indian Affairs (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.mea.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ministry-of-small-scale-industries-gazette",
+      "name": "Ministry of Small Scale Industries (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://msme.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "ministry-of-external-affairs-gazette",
+      "name": "Ministry of External Affairs (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://www.mea.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "insolvency-and-bankruptcy-board-of-india-gazette",
+      "name": "Insolvency and Bankruptcy Board of India (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://ibbi.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "the-competition-commission-of-india-gazette",
+      "name": "The Competition Commission of India (Gazette)",
+      "registry_url": "N/A",
+      "alternate_url": "https://cci.gov.in/",
+      "preferred_url": "N/A",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "sikkim",
+      "name": "Sikkim",
+      "registry_url": "https://sikkim.gov.in/mygovernment/gazettes",
+      "alternate_url": null,
+      "preferred_url": "https://sikkim.gov.in/mygovernment/gazettes",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "gujarat",
+      "name": "Gujarat",
+      "registry_url": "https://dgps.gujarat.gov.in/webcontroller/postone/E-Gazettes",
+      "alternate_url": null,
+      "preferred_url": "https://dgps.gujarat.gov.in/webcontroller/postone/E-Gazettes",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "madhya-pradesh",
+      "name": "Madhya Pradesh",
+      "registry_url": "http://govtpressmp.nic.in/gazette.html",
+      "alternate_url": "https://pam.mp.gov.in/gadget-notification",
+      "preferred_url": "https://pam.mp.gov.in/gadget-notification",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "https-govtpress-mp-gov-in-gazette",
+      "name": "https://govtpress.mp.gov.in/gazette",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "https-www-indianemployees-com-gazette-notifications-department-mp-home",
+      "name": "https://www.indianemployees.com/gazette-notifications/department/mp-home/",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "rajasthan",
+      "name": "Rajasthan",
+      "registry_url": "not working",
+      "alternate_url": "https://reams.rajasthan.gov.in/PrintingStationary/GuestSearch",
+      "preferred_url": "not working",
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "reams-rajasthan-gov-in-printingstationary-guestsearchordinarycitizen",
+      "name": "reams.rajasthan.gov.in/PrintingStationary/GuestSearchOrdinaryCitizen",
+      "registry_url": "",
+      "alternate_url": null,
+      "preferred_url": null,
+      "status": "unknown",
+      "status_raw": null
+    },
+    {
+      "site_key": "maharashtra",
+      "name": "Maharashtra",
+      "registry_url": "https://egazzete.mahaonline.gov.in/Forms/GazetteSearch.aspx",
+      "alternate_url": null,
+      "preferred_url": "https://egazzete.mahaonline.gov.in/Forms/GazetteSearch.aspx",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "west-bengal",
+      "name": "West Bengal",
+      "registry_url": "https://wb.gov.in/documents-notification.aspx",
+      "alternate_url": null,
+      "preferred_url": "https://wb.gov.in/documents-notification.aspx",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "andhra-pradesh",
+      "name": "Andhra Pradesh",
+      "registry_url": "https://apegazette.cgg.gov.in/login.do",
+      "alternate_url": null,
+      "preferred_url": "https://apegazette.cgg.gov.in/login.do",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "karnataka",
+      "name": "Karnataka",
+      "registry_url": "https://erajyapatra.karnataka.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://erajyapatra.karnataka.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-power",
+      "name": "Ministry of Power",
+      "registry_url": "https://powermin.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://powermin.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-coal-for-coal-mines",
+      "name": "Ministry Of Coal (For Coal Mines)",
+      "registry_url": "https://coal.nic.in/",
+      "alternate_url": null,
+      "preferred_url": "https://coal.nic.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "ministry-of-new-and-renewable-energy",
+      "name": "Ministry of New and Renewable Energy",
+      "registry_url": "https://mnre.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://mnre.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "trai",
+      "name": "TRAI",
+      "registry_url": "https://www.trai.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://www.trai.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "irdai",
+      "name": "IRDAI",
+      "registry_url": "https://www.irdai.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://www.irdai.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "pharmexcil",
+      "name": "Pharmexcil",
+      "registry_url": "https://pharmexcil.com/",
+      "alternate_url": null,
+      "preferred_url": "https://pharmexcil.com/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "civil-aviation",
+      "name": "Civil Aviation",
+      "registry_url": "https://www.civilaviation.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.civilaviation.gov.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "chemicals-and-fertilizers",
+      "name": "Chemicals and Fertilizers",
+      "registry_url": "https://chemicals.nic.in/",
+      "alternate_url": "https://www.mocf.gov.in/",
+      "preferred_url": "https://www.mocf.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "chemexcil",
+      "name": "Chemexcil",
+      "registry_url": "https://chemexcil.in/",
+      "alternate_url": null,
+      "preferred_url": "https://chemexcil.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "tea-board",
+      "name": "Tea Board",
+      "registry_url": "http://www.teaboard.gov.in",
+      "alternate_url": null,
+      "preferred_url": "http://www.teaboard.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "trade-portal",
+      "name": "Trade Portal",
+      "registry_url": "https://www.indiantradeportal.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.indiantradeportal.in/",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "communications",
+      "name": "Communications",
+      "registry_url": "https://www.mcit.gov.in/",
+      "alternate_url": "https://dot.gov.in/",
+      "preferred_url": "https://dot.gov.in/",
+      "status": "not_working",
+      "status_raw": "not working"
+    },
+    {
+      "site_key": "dot",
+      "name": "DoT",
+      "registry_url": "https://dot.gov.in",
+      "alternate_url": null,
+      "preferred_url": "https://dot.gov.in",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "esic",
+      "name": "ESIC",
+      "registry_url": "https://www.esic.gov.in/circulars",
+      "alternate_url": null,
+      "preferred_url": "https://www.esic.gov.in/circulars",
+      "status": "working",
+      "status_raw": "working"
+    },
+    {
+      "site_key": "epfo",
+      "name": "EPFO",
+      "registry_url": "https://www.epfindia.gov.in/site_en/circulars.php",
+      "alternate_url": null,
+      "preferred_url": "https://www.epfindia.gov.in/site_en/circulars.php",
+      "status": "working",
+      "status_raw": "working"
+    }
+  ]
+}

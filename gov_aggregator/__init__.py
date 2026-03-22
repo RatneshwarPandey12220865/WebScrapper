@@ -1,0 +1,1 @@
+"""Government news aggregation package."""
