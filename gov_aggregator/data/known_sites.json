@@ -248,7 +248,7 @@
       "name": "Ministry of Home Affairs",
       "registry_url": "https://www.mha.gov.in/",
       "alternate_url": null,
-      "preferred_url": "https://www.mha.gov.in/",
+      "preferred_url": "https://www.mha.gov.in/en/media/whats-new",
       "status": "working",
       "status_raw": "working"
     },
@@ -257,7 +257,7 @@
       "name": "Ministry of Tourism (For Hotels & Restaurants)",
       "registry_url": "https://tourism.gov.in/",
       "alternate_url": null,
-      "preferred_url": "https://tourism.gov.in/",
+      "preferred_url": "https://tourism.gov.in/index.php/media/whats-new",
       "status": "working",
       "status_raw": "working"
     },

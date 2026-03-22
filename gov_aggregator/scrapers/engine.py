@@ -103,7 +103,7 @@ class ScraperEngine:
         *,
         site_configs: list[SiteConfig],
         concurrency: int = 10,
-        timeout_seconds: float = 30.0,
+        timeout_seconds: float = 60.0,
     ) -> None:
         self.site_configs = site_configs
         self.concurrency = concurrency
@@ -274,9 +274,11 @@ class ScraperEngine:
             await page.set_extra_http_headers(
                 {key: value for key, value in DEFAULT_HEADERS.items() if key != "User-Agent"}
             )
-            await page.goto(url, wait_until="networkidle", timeout=int(self.timeout_seconds * 1000))
+            await page.goto(url, wait_until="domcontentloaded", timeout=int(self.timeout_seconds * 1000))
             if wait_for_selector:
                 await page.wait_for_selector(wait_for_selector, timeout=int(self.timeout_seconds * 1000))
+            else:
+                await page.wait_for_timeout(3000)
             return await page.content()
         finally:
             await page.close()

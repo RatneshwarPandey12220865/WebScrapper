@@ -74,6 +74,8 @@ def get_site_catalog() -> list[dict[str, Any]]:
 
     for site in inventory:
         site_key = site.get("site_key") or _slugify(site.get("name", ""))
+        if site_key in seen_keys:
+            continue
         config = supported.get(site_key)
         catalog.append(
             {
@@ -268,6 +270,7 @@ def _error_status(site_key: str, site_name: str, message: str) -> dict[str, Any]
 
 
 async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> dict[str, Any]:
+    from gov_aggregator.scrapers.custom import CUSTOM_CRAWLERS
     from gov_aggregator.scrapers.engine import ScraperEngine
 
     unique_keys = list(dict.fromkeys(site_keys))
@@ -312,10 +315,35 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
             )
             continue
 
+        if site_key in CUSTOM_CRAWLERS:
+            config = configs[site_key]
+            try:
+                previous_links = _previous_links(site_key)
+                custom_items = await CUSTOM_CRAWLERS[site_key](config)
+                shaped_items = [
+                    _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
+                    for item in custom_items
+                ]
+                _store_cache(config.site_key, shaped_items)
+                items.extend(shaped_items)
+                statuses.append(
+                    _status_payload(
+                        site_key=config.site_key,
+                        site_name=config.name,
+                        state="completed",
+                        message="Crawl completed successfully.",
+                        item_count=len(shaped_items),
+                        new_count=sum(1 for item in shaped_items if item["is_new"]),
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001
+                statuses.append(_error_status(site_key, site["name"], str(exc)))
+            continue
+
         to_crawl.append(configs[site_key])
 
     if to_crawl:
-        engine = ScraperEngine(site_configs=to_crawl)
+        engine = ScraperEngine(site_configs=to_crawl, timeout_seconds=90.0)
         results = await engine.scrape_all()
         result_map = {result.site_key: result for result in results}
 

@@ -232,6 +232,50 @@
       }
     },
     {
+      "site_key": "income-tax",
+      "ministry": "Department of Revenue",
+      "name": "Income Tax",
+      "url": "https://incometaxindia.gov.in/Pages/communications/whats-new.aspx",
+      "base_url": "https://incometaxindia.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "default_category": "news",
+      "category_mapping": {
+        "notification": [
+          "notification",
+          "notice"
+        ],
+        "circular": [
+          "circular",
+          "instruction",
+          "order"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "rfp"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "appointment",
+          "counsel"
+        ],
+        "news": [
+          "press release",
+          "update",
+          "portal"
+        ]
+      },
+      "selectors": {
+        "item_selector": ".card-print-btn-with-date-new-tag",
+        "title_selector": "p.card-title-with-arrow",
+        "date_selector": ".date-in-card",
+        "wait_for_selector": ".etds-misc-cards"
+      }
+    },
+    {
       "site_key": "industry-and-internal-trade-ip",
       "ministry": "Ministry of Commerce and Industry",
       "name": "Intellectual Property India",
@@ -550,6 +594,125 @@
           }
         }
       ]
+    },
+    {
+      "site_key": "ministry-of-home-affairs",
+      "ministry": "Ministry of Home Affairs",
+      "name": "Ministry of Home Affairs",
+      "url": "https://www.mha.gov.in/en/media/whats-new",
+      "base_url": "https://www.mha.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "recruitment": [
+          "vacancy",
+          "filling up",
+          "appointment",
+          "deputation",
+          "secondment",
+          "recruitment",
+          "result",
+          "tier",
+          "compassionate",
+          "reception officer",
+          "commandant",
+          "counsel"
+        ],
+        "circular": [
+          "circular",
+          "compliance",
+          "flag code",
+          "observance",
+          "silence",
+          "instructions",
+          "guidelines",
+          "sop"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "announcement",
+          "medal",
+          "gallantry",
+          "padma",
+          "award",
+          "estimates",
+          "surrender",
+          "savings"
+        ],
+        "news": [
+          "campaign",
+          "training",
+          "workshop",
+          "policy",
+          "strategy",
+          "counter-terrorism",
+          "republic day",
+          "jeevan raksha"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "quotation"
+        ]
+      },
+      "selectors": {
+        "row_selector": ".scroll-table1 table tbody tr",
+        "title_selector": "td.views-field-title-1",
+        "link_selector": "td.views-field-nid a",
+        "date_selector": "td.views-field-field-date time"
+      }
+    },
+    {
+      "site_key": "ministry-of-tourism-for-hotels-restaurants",
+      "ministry": "Ministry of Tourism",
+      "name": "Ministry of Tourism",
+      "url": "https://tourism.gov.in/index.php/media/whats-new",
+      "base_url": "https://tourism.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "webinar",
+          "mart",
+          "conference",
+          "compendium",
+          "catalogue",
+          "parv",
+          "tourism",
+          "budget"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "order"
+        ],
+        "circular": [
+          "circular",
+          "guideline"
+        ],
+        "tender": [
+          "tender",
+          "bid"
+        ],
+        "recruitment": [
+          "vacancy",
+          "recruitment",
+          "appointment"
+        ]
+      },
+      "selectors": {
+        "row_selector": ".scroll-table1 table tbody tr",
+        "title_selector": "td[data-label='Title']",
+        "link_selector": "td.views-field-view-node a",
+        "date_selector": "td.views-field-field-date time"
+      }
     }
   ]
 }
