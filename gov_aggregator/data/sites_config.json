@@ -8911,7 +8911,8 @@
       "selectors": {
         "item_selector": "marquee a[href]",
         "title_selector": null,
-        "link_selector": null
+        "link_selector": null,
+        "exclude_selector": "a[href=\"\"]"
       }
     },
     {
