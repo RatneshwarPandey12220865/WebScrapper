@@ -9446,6 +9446,74 @@
           }
         }
       ]
+    },
+    {
+      "site_key": "nagaland",
+      "ministry": "Government of Nagaland",
+      "name": "Nagaland - Notifications",
+      "url": "https://nagaland.gov.in/news",
+      "base_url": "https://nagaland.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "notification": [
+          "notification",
+          "notice",
+          "order",
+          "circular",
+          "guidelines",
+          "office memorandum"
+        ],
+        "recruitment": [
+          "recruitment",
+          "appointment",
+          "posting",
+          "transfer",
+          "vacancy",
+          "engagement"
+        ],
+        "tender": [
+          "tender",
+          "e-tender",
+          "eoi",
+          "selection"
+        ],
+        "news": [
+          "advisor",
+          "press release",
+          "announcement"
+        ]
+      },
+      "selectors": {
+        "item_selector": "table.datatable-table tbody tr",
+        "title_selector": "td:nth-child(2)",
+        "link_selector": "td:nth-child(2) a",
+        "date_selector": "td:nth-child(4)",
+        "department_selector": "td:nth-child(3)",
+        "wait_for_selector": "table.datatable-table tbody tr"
+      },
+      "sections": [
+        {
+          "section_label": "Notifications",
+          "url": "https://nagaland.gov.in/news",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "max_pages": 5,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": "table.datatable-table tbody tr",
+            "title_selector": "td:nth-child(2)",
+            "link_selector": "td:nth-child(2) a",
+            "date_selector": "td:nth-child(4)",
+            "department_selector": "td:nth-child(3)",
+            "wait_for_selector": "table.datatable-table tbody tr"
+          }
+        }
+      ]
     }
   ]
 }
