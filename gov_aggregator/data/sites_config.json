@@ -9287,7 +9287,8 @@
           },
           "pre_capture_js": "await new Promise(r => setTimeout(r, 8000));"
         }
-      ],
+      ]
+    },
     {
       "site_key": "arunachal-pradesh",
       "ministry": "Government of Arunachal Pradesh",
