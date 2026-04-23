@@ -18,6 +18,9 @@ class SiteSection:
     pagination_param: str | None = None
     start_page: int = 1
     max_pages: int = 1
+    max_items: int | None = None
+    verify_ssl: bool | None = None
+    min_date: str | None = None
 
 
 @dataclass(slots=True)
@@ -37,9 +40,12 @@ class SiteConfig:
     pagination_param: str | None = None
     start_page: int = 1
     max_pages: int = 1
+    max_items: int | None = None
+    verify_ssl: bool = True
     # Optional multi-section support: when set, engine crawls all sections
     # and merges results under this single site_key.
     sections: list[SiteSection] = field(default_factory=list)
+    min_date: str | None = None
 
 
 @dataclass(slots=True)

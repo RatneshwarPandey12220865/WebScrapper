@@ -87,6 +87,9 @@ function renderSiteList() {
     const disabled = site.supported ? "" : "disabled";
     const statusLabel = site.supported ? "Supported" : "Planned";
 
+    const rawUrl = site.registry_url || site.preferred_url || site.crawl_url || "";
+    const baseUrl = rawUrl ? (() => { try { return new URL(rawUrl).origin; } catch { return rawUrl; } })() : "No URL available";
+
     card.innerHTML = `
       <input type="checkbox" data-site-key="${site.site_key}" ${checked} ${disabled}>
       <div class="site-card__body">
@@ -94,11 +97,7 @@ function renderSiteList() {
           <strong>${site.name}</strong>
           <span class="badge">${statusLabel}</span>
         </div>
-        <p>${site.crawl_url || site.preferred_url || "No crawl URL available"}</p>
-        <div class="site-card__meta">
-          <span>${site.parser || "No parser yet"}</span>
-          <span>${site.status.replace("_", " ")}</span>
-        </div>
+        <p>${baseUrl}</p>
       </div>
     `;
 

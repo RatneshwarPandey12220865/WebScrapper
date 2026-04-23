@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 from playwright.async_api import Browser, Page, async_playwright
 
+from gov_aggregator.scrapers.config import is_ssl_error
 from gov_aggregator.scrapers.parsers import extract_items
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig, SiteSection
+
+logger = logging.getLogger("gov_aggregator.engine")
 
 
 DEFAULT_HEADERS = {
@@ -51,13 +55,21 @@ def _run_playwright_in_subprocess(
     """
 
     async def _run() -> list[ScrapeResult]:
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            headers=DEFAULT_HEADERS,
-            timeout=timeout_seconds,
-        ) as client:
+        async with (
+            httpx.AsyncClient(
+                follow_redirects=True,
+                headers=DEFAULT_HEADERS,
+                timeout=timeout_seconds,
+            ) as client,
+            httpx.AsyncClient(
+                follow_redirects=True,
+                headers=DEFAULT_HEADERS,
+                timeout=timeout_seconds,
+                verify=False,
+            ) as insecure_client,
+        ):
             async with async_playwright() as playwright:
-                browser = await playwright.chromium.launch(headless=True, channel="msedge")
+                browser = await playwright.chromium.launch(headless=True)
                 semaphore = asyncio.Semaphore(concurrency)
                 engine = ScraperEngine(
                     site_configs=site_configs,
@@ -66,7 +78,10 @@ def _run_playwright_in_subprocess(
                 )
                 try:
                     return await asyncio.gather(
-                        *[engine._scrape_site(site, semaphore, client, browser) for site in site_configs]
+                        *[
+                            engine._scrape_site(site, semaphore, client, insecure_client, browser)
+                            for site in site_configs
+                        ]
                     )
                 finally:
                     await browser.close()
@@ -103,7 +118,7 @@ class ScraperEngine:
         *,
         site_configs: list[SiteConfig],
         concurrency: int = 10,
-        timeout_seconds: float = 60.0,
+        timeout_seconds: float = 30.0,
     ) -> None:
         self.site_configs = site_configs
         self.concurrency = concurrency
@@ -121,19 +136,34 @@ class ScraperEngine:
 
         uses_playwright = any(needs_playwright(site) for site in selected)
 
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            headers=DEFAULT_HEADERS,
-            timeout=self.timeout_seconds,
-        ) as client:
+        async with (
+            httpx.AsyncClient(
+                follow_redirects=True,
+                headers=DEFAULT_HEADERS,
+                timeout=self.timeout_seconds,
+            ) as client,
+            httpx.AsyncClient(
+                follow_redirects=True,
+                headers=DEFAULT_HEADERS,
+                timeout=self.timeout_seconds,
+                verify=False,
+            ) as insecure_client,
+        ):
             if not uses_playwright:
-                return await asyncio.gather(*[self._scrape_site(site, semaphore, client, None) for site in selected])
+                return await asyncio.gather(
+                    *[self._scrape_site(site, semaphore, client, insecure_client, None) for site in selected]
+                )
 
             js_sites = [site for site in selected if needs_playwright(site)]
             static_sites = [site for site in selected if not needs_playwright(site)]
 
             static_results = (
-                await asyncio.gather(*[self._scrape_site(site, semaphore, client, None) for site in static_sites])
+                await asyncio.gather(
+                    *[
+                        self._scrape_site(site, semaphore, client, insecure_client, None)
+                        for site in static_sites
+                    ]
+                )
                 if static_sites
                 else []
             )
@@ -153,17 +183,31 @@ class ScraperEngine:
         self,
         config: SiteConfig,
         client: httpx.AsyncClient,
+        insecure_client: httpx.AsyncClient | None,
         browser: Browser | None,
     ) -> list[ScrapedItem]:
         urls = _pagination_urls(config.source_url, config.pagination_param, config.start_page, config.max_pages)
         items: list[ScrapedItem] = []
         seen_links: set[str] = set()
 
+        logger.info("[%s] Scraping %d page(s) starting from %s", config.site_key, len(urls), urls[0] if urls else "(no URL)")
+
         for url in urls:
-            html = await self._fetch_html_for(url, config.render_js, client, browser, config.selectors)
+            logger.debug("[%s] Fetching: %s (render_js=%s)", config.site_key, url, config.render_js)
+            html = await self._fetch_html_for(
+                url,
+                config.render_js,
+                client,
+                insecure_client,
+                browser,
+                config.selectors,
+                verify_ssl=config.verify_ssl,
+            )
+            logger.debug("[%s] Got %d bytes of HTML from %s", config.site_key, len(html), url)
             page_items = extract_items(config, html)
 
             if config.pagination_param and not page_items:
+                logger.info("[%s] Page %s returned 0 items, stopping pagination", config.site_key, url)
                 break
 
             for item in page_items:
@@ -171,7 +215,10 @@ class ScraperEngine:
                     continue
                 seen_links.add(item.link)
                 items.append(item)
+                if config.max_items is not None and len(items) >= config.max_items:
+                    return items[: config.max_items]
 
+        logger.info("[%s] Total items extracted: %d", config.site_key, len(items))
         return items
 
     async def _scrape_site(
@@ -179,6 +226,7 @@ class ScraperEngine:
         site: SiteConfig,
         semaphore: asyncio.Semaphore,
         client: httpx.AsyncClient,
+        insecure_client: httpx.AsyncClient | None,
         browser: Browser | None,
     ) -> ScrapeResult:
         async with semaphore:
@@ -187,11 +235,21 @@ class ScraperEngine:
                 if site.sections:
                     all_items: list[ScrapedItem] = []
                     for section in site.sections:
-                        section_items = await self._scrape_section(site, section, client, browser)
+                        section_items = await self._scrape_section(site, section, client, insecure_client, browser)
                         # Tag each item with its section label
                         for item in section_items:
                             item.section_label = section.section_label
                         all_items.extend(section_items)
+
+                    # After collecting all_items, deduplicate by link
+                    seen_links: set[str] = set()
+                    deduped_items: list[ScrapedItem] = []
+                    for item in all_items:
+                        if item.link and item.link not in seen_links:
+                            seen_links.add(item.link)
+                            deduped_items.append(item)
+                    all_items = deduped_items
+
                     return ScrapeResult(
                         site_key=site.site_key,
                         ministry=site.ministry,
@@ -201,7 +259,7 @@ class ScraperEngine:
                     )
 
                 # --- Single-section mode (default) ---
-                items = await self._scrape_config_pages(site, client, browser)
+                items = await self._scrape_config_pages(site, client, insecure_client, browser)
                 return ScrapeResult(
                     site_key=site.site_key,
                     ministry=site.ministry,
@@ -210,11 +268,14 @@ class ScraperEngine:
                     site_config=site,
                 )
             except Exception as exc:  # noqa: BLE001
+                error_msg = str(exc)
+                if is_ssl_error(exc):
+                    error_msg = f"[SSL ERROR] {error_msg}"
                 return ScrapeResult(
                     site_key=site.site_key,
                     ministry=site.ministry,
                     found=0,
-                    error=str(exc),
+                    error=error_msg,
                     site_config=site,
                 )
 
@@ -223,6 +284,7 @@ class ScraperEngine:
         parent: SiteConfig,
         section: SiteSection,
         client: httpx.AsyncClient,
+        insecure_client: httpx.AsyncClient | None,
         browser: Browser | None,
     ) -> list[ScrapedItem]:
         """Scrape a single section URL using its own parser settings, but the parent's base_url and category_mapping."""
@@ -242,43 +304,167 @@ class ScraperEngine:
             pagination_param=section.pagination_param,
             start_page=section.start_page,
             max_pages=section.max_pages,
+            max_items=parent.max_items if section.max_items is None else section.max_items,
+            verify_ssl=parent.verify_ssl if section.verify_ssl is None else section.verify_ssl,
+            min_date=section.min_date,
         )
-        return await self._scrape_config_pages(section_config, client, browser)
+        return await self._scrape_config_pages(section_config, client, insecure_client, browser)
 
     async def _fetch_html_for(
         self,
         url: str,
         render_js: bool,
         client: httpx.AsyncClient,
+        insecure_client: httpx.AsyncClient | None,
         browser: Browser | None,
         selectors: dict,
+        verify_ssl: bool = True,
     ) -> str:
         if render_js:
             if browser is None:
                 raise RuntimeError("Playwright browser was not initialized for a JS-enabled site/section")
-            return await self._fetch_with_playwright(url, browser, selectors.get("wait_for_selector"))
-        return await self._fetch_with_httpx(url, client)
+            return await self._fetch_with_playwright(
+                url,
+                browser,
+                selectors.get("wait_for_selector"),
+                selectors.get("pre_capture_js"),
+                selectors.get("pre_capture_click"),
+                verify_ssl=verify_ssl,
+            )
+        return await self._fetch_with_httpx(url, client, insecure_client=insecure_client, verify_ssl=verify_ssl)
 
     # Keep old helpers for backward compatibility
     async def _fetch_html(self, site: SiteConfig, client: httpx.AsyncClient, browser: Browser | None) -> str:
-        return await self._fetch_html_for(site.source_url, site.render_js, client, browser, site.selectors)
+        return await self._fetch_html_for(
+            site.source_url,
+            site.render_js,
+            client,
+            None,
+            browser,
+            site.selectors,
+            verify_ssl=site.verify_ssl,
+        )
 
-    async def _fetch_with_httpx(self, url: str, client: httpx.AsyncClient) -> str:
-        response = await client.get(url)
-        response.raise_for_status()
-        return response.text
+    async def _fetch_with_httpx(
+        self,
+        url: str,
+        client: httpx.AsyncClient,
+        *,
+        insecure_client: httpx.AsyncClient | None = None,
+        verify_ssl: bool = True,
+    ) -> str:
+        async def _one_off_insecure_get() -> str:
+            async with httpx.AsyncClient(
+                follow_redirects=True,
+                headers=DEFAULT_HEADERS,
+                timeout=self.timeout_seconds,
+                verify=False,
+            ) as one_off_insecure_client:
+                response = await one_off_insecure_client.get(url)
+                response.raise_for_status()
+                return response.text
 
-    async def _fetch_with_playwright(self, url: str, browser: Browser, wait_for_selector: str | None = None) -> str:
-        page: Page = await browser.new_page(user_agent=DEFAULT_HEADERS["User-Agent"])
+        if not verify_ssl:
+            if insecure_client is not None:
+                response = await insecure_client.get(url)
+                response.raise_for_status()
+                return response.text
+            return await _one_off_insecure_get()
+
         try:
-            await page.set_extra_http_headers(
-                {key: value for key, value in DEFAULT_HEADERS.items() if key != "User-Agent"}
-            )
-            await page.goto(url, wait_until="domcontentloaded", timeout=int(self.timeout_seconds * 1000))
-            if wait_for_selector:
-                await page.wait_for_selector(wait_for_selector, timeout=int(self.timeout_seconds * 1000))
-            else:
-                await page.wait_for_timeout(3000)
-            return await page.content()
-        finally:
-            await page.close()
+            response = await client.get(url)
+            response.raise_for_status()
+            return response.text
+        except Exception as exc:  # noqa: BLE001
+            # If the caller wanted SSL verification but the site has broken chains,
+            # retry once with verification disabled (and optionally persist config
+            # changes via the upper-level exception handlers).
+            if is_ssl_error(exc):
+                logger.warning("SSL error fetching %s; retrying once with verify=False", url)
+                if insecure_client is not None:
+                    response = await insecure_client.get(url)
+                    response.raise_for_status()
+                    return response.text
+                return await _one_off_insecure_get()
+            raise
+
+    async def _fetch_with_playwright(
+        self,
+        url: str,
+        browser: Browser,
+        wait_for_selector: str | None = None,
+        pre_capture_js: str | None = None,
+        pre_capture_click: str | None = None,
+        *,
+        verify_ssl: bool = True,
+    ) -> str:
+        import asyncio
+        last_error: Exception | None = None
+        for attempt in range(2):  # retry once on browser target errors
+            context = None
+            page: Page | None = None
+            try:
+                extra_headers = {k: v for k, v in DEFAULT_HEADERS.items() if k != "User-Agent"}
+                context = await browser.new_context(
+                    user_agent=DEFAULT_HEADERS["User-Agent"],
+                    extra_http_headers=extra_headers,
+                    ignore_https_errors=not verify_ssl,
+                )
+                page = await context.new_page()
+                await page.goto(
+                    url,
+                    wait_until="domcontentloaded",  # faster than "load"
+                    timeout=int(self.timeout_seconds * 1000),
+                )
+                if wait_for_selector:
+                    try:
+                        await page.wait_for_selector(
+                            wait_for_selector, timeout=12000
+                        )
+                    except Exception as wait_exc:
+                        logger.warning(
+                            "wait_for_selector('%s') timed out for %s: %s — "
+                            "falling back to 3s sleep. Page content may be incomplete.",
+                            wait_for_selector, url, wait_exc,
+                        )
+                        await page.wait_for_timeout(3000)
+                else:
+                    await page.wait_for_timeout(2000)
+
+                if pre_capture_click:
+                    try:
+                        await page.click(pre_capture_click, timeout=5000)
+                        await page.wait_for_timeout(1500)
+                    except Exception:
+                        pass
+
+                if pre_capture_js:
+                    try:
+                        await page.evaluate(pre_capture_js)
+                        await page.wait_for_timeout(1000)
+                    except Exception:
+                        pass
+
+                return await page.content()
+
+            except Exception as exc:
+                last_error = exc
+                error_str = str(exc)
+                # Only retry on browser/target closed errors
+                if "closed" in error_str.lower() or "target" in error_str.lower():
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                    continue
+                raise  # re-raise non-retryable errors immediately
+            finally:
+                if page is not None:
+                    try:
+                        await page.close()
+                    except Exception:
+                        pass  # page may already be closed
+                if context is not None:
+                    try:
+                        await context.close()
+                    except Exception:
+                        pass
+
+        raise last_error  # exhausted retries

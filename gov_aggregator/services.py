@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any
 
-from gov_aggregator.scrapers.config import load_site_configs
+logger = logging.getLogger("gov_aggregator.services")
+
+from gov_aggregator.scrapers.config import is_ssl_error, load_site_configs
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 
@@ -16,12 +19,30 @@ DATA_DIR = BASE_DIR / "data"
 KNOWN_SITES_PATH = DATA_DIR / "known_sites.json"
 CACHE_TTL = timedelta(minutes=15)
 
+# Global date cutoff — only return items from January 2026 onwards
+GLOBAL_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+_TITLE_SUFFIX_RE = re.compile(
+    r"\s*[\[\uff08(]\s*(?:Updated on|Uploaded on|Dated)\s*[:\s]*[\d\-\/\s,A-Za-z]*[\]\uff09)]\s*$"
+    r"|\s+Download\s*\([\d\.KMGB]+\)\s*$"
+    r"|\s+Link\s*$"
+    r"|\s+Size:\s*[\d\.,]+\s*[KMGBT]?B?\s*$"
+    r"|\s*-\s*PDF\s+size\s*:\s*\([\d\.\s\w]+\)\s*\.?\s*$"
+    r"|\s*-\s*PDF\s*$",
+    re.IGNORECASE,
+)
+
 DEFAULT_CATEGORY_MAPPING: dict[str, list[str]] = {
     "recruitment": ["recruitment", "vacancy", "apply", "application", "post of", "posts of", "appointment"],
     "tender": ["tender", "bid", "eoi", "rfp", "corrigendum"],
     "circular": ["circular", "guideline", "manual"],
     "notification": ["notification", "notice", "order", "quota", "allocation", "reallocation"],
     "news": ["news", "press release", "update", "celebrates", "portal", "committed"],
+}
+
+SITE_KEY_ALIASES: dict[str, str] = {
+    "dgft": "directorate-general-of-foreign-trade",
 }
 
 SESSION_CACHE: dict[str, dict[str, Any]] = {}
@@ -50,6 +71,10 @@ def _read_json(path: Path, default: Any) -> Any:
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
+def _resolve_site_key(site_key: str) -> str:
+    return SITE_KEY_ALIASES.get(site_key, site_key)
+
+
 def _supported_config_map() -> dict[str, SiteConfig]:
     return {site.site_key: site for site in load_site_configs()}
 
@@ -74,9 +99,10 @@ def get_site_catalog() -> list[dict[str, Any]]:
 
     for site in inventory:
         site_key = site.get("site_key") or _slugify(site.get("name", ""))
-        if site_key in seen_keys:
+        resolved_site_key = _resolve_site_key(site_key)
+        if site_key in seen_keys or resolved_site_key in seen_keys:
             continue
-        config = supported.get(site_key)
+        config = supported.get(resolved_site_key)
         catalog.append(
             {
                 "site_key": site_key,
@@ -97,6 +123,8 @@ def get_site_catalog() -> list[dict[str, Any]]:
             }
         )
         seen_keys.add(site_key)
+        if config is not None:
+            seen_keys.add(resolved_site_key)
 
     for site_key, config in supported.items():
         if site_key in seen_keys:
@@ -137,20 +165,6 @@ def site_catalog_payload() -> dict[str, Any]:
     }
 
 
-def _parse_embedded_date(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    match = re.search(r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})", value)
-    if not match:
-        return None
-
-    day, month, year = (int(part) for part in match.groups())
-    try:
-        return datetime(year, month, day, tzinfo=timezone.utc)
-    except ValueError:
-        return None
-
-
 def _classify_item(config: SiteConfig, item: ScrapedItem) -> str:
     haystack = _normalize_text(f"{item.title} {item.summary or ''}")
     mapping = _category_mapping_for(config)
@@ -167,15 +181,13 @@ def _shape_item(config: SiteConfig, item: ScrapedItem, *, crawl_time: str, previ
     published_at = item.published_at
     if published_at and published_at.tzinfo is None:
         published_at = published_at.replace(tzinfo=timezone.utc)
-    if published_at is None:
-        published_at = _parse_embedded_date(item.title)
 
     return {
         "site_key": config.site_key,
         "source_website": config.name,
         "section_label": item.section_label or "",   # e.g. "Notifications", "Press Releases"
         "crawl_url": config.source_url or config.base_url,
-        "title": item.title,
+        "title": _clean_title(item.title),
         "category": _classify_item(config, item),
         "description": item.summary,
         "publish_date": published_at.isoformat() if published_at else None,
@@ -230,6 +242,30 @@ def _result_sort_key(item: dict[str, Any]) -> tuple[str, str]:
     return (item.get("publish_date") or "", item.get("crawl_time") or "")
 
 
+_GLOBAL_MIN_DATE_EXEMPT = {"department-of-bio-technology", "cbic-customs"}
+
+
+def _passes_global_min_date(item: dict[str, Any]) -> bool:
+    """Return True if item's publish_date is on or after GLOBAL_MIN_DATE.
+
+    Items with no publish_date pass through — their date could not be
+    determined and filtering them would silently drop valid content.
+    Sites in _GLOBAL_MIN_DATE_EXEMPT bypass the cutoff entirely.
+    """
+    if item.get("site_key") in _GLOBAL_MIN_DATE_EXEMPT:
+        return True
+    publish_date = item.get("publish_date")
+    if not publish_date:
+        return True
+    try:
+        dt = datetime.fromisoformat(publish_date)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt >= GLOBAL_MIN_DATE
+    except (ValueError, TypeError):
+        return True
+
+
 def _status_payload(
     *,
     site_key: str,
@@ -268,6 +304,15 @@ def _error_status(site_key: str, site_name: str, message: str) -> dict[str, Any]
         message=message,
     )
 
+def _clean_title(title: str | None) -> str:
+    if not title:
+        return ""
+    # Remove ♦ prefix
+    title = title.lstrip("♦ \u25c6\u2666").strip()
+    # Remove [Updated on:...], [Uploaded on:...], [Dated:...] suffixes
+    title = _TITLE_SUFFIX_RE.sub("", title).strip()
+    return title
+
 
 async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> dict[str, Any]:
     from gov_aggregator.scrapers.custom import CUSTOM_CRAWLERS
@@ -280,10 +325,11 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
 
     items: list[dict[str, Any]] = []
     statuses: list[dict[str, Any]] = []
-    to_crawl: list[SiteConfig] = []
+    to_crawl: list[tuple[str, dict[str, Any], SiteConfig]] = []
 
     for site_key in unique_keys:
         site = catalog.get(site_key)
+        resolved_site_key = _resolve_site_key(site_key)
         if site is None:
             statuses.append(
                 _status_payload(
@@ -295,12 +341,12 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
             )
             continue
 
-        if not site["supported"] or site_key not in configs:
+        if not site["supported"] or resolved_site_key not in configs:
             statuses.append(_unsupported_status(site))
             continue
 
-        if use_cache and _is_cache_fresh(site_key):
-            cached = _cached_items(site_key)
+        if use_cache and _is_cache_fresh(resolved_site_key):
+            cached = _cached_items(resolved_site_key)
             items.extend(cached)
             statuses.append(
                 _status_payload(
@@ -315,11 +361,11 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
             )
             continue
 
-        if site_key in CUSTOM_CRAWLERS:
-            config = configs[site_key]
+        if resolved_site_key in CUSTOM_CRAWLERS:
+            config = configs[resolved_site_key]
             try:
-                previous_links = _previous_links(site_key)
-                custom_items = await CUSTOM_CRAWLERS[site_key](config)
+                previous_links = _previous_links(resolved_site_key)
+                custom_items = await CUSTOM_CRAWLERS[resolved_site_key](config)
                 shaped_items = [
                     _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                     for item in custom_items
@@ -328,8 +374,8 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                 items.extend(shaped_items)
                 statuses.append(
                     _status_payload(
-                        site_key=config.site_key,
-                        site_name=config.name,
+                        site_key=site_key,
+                        site_name=site["name"],
                         state="completed",
                         message="Crawl completed successfully.",
                         item_count=len(shaped_items),
@@ -337,24 +383,31 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                     )
                 )
             except Exception as exc:  # noqa: BLE001
-                statuses.append(_error_status(site_key, site["name"], str(exc)))
+                error_msg = str(exc)
+                if is_ssl_error(exc):
+                    error_msg = f"[SSL ERROR] {error_msg}"
+                statuses.append(_error_status(site_key, site["name"], error_msg))
             continue
 
-        to_crawl.append(configs[site_key])
+        to_crawl.append((site_key, site, configs[resolved_site_key]))
 
     if to_crawl:
-        engine = ScraperEngine(site_configs=to_crawl, timeout_seconds=90.0)
+        engine = ScraperEngine(
+            site_configs=[config for _, _, config in to_crawl],
+            concurrency=5,
+            timeout_seconds=90.0,
+        )
         results = await engine.scrape_all()
         result_map = {result.site_key: result for result in results}
 
-        for config in to_crawl:
+        for requested_site_key, site, config in to_crawl:
             result = result_map.get(config.site_key)
             if result is None:
-                statuses.append(_error_status(config.site_key, config.name, "No crawl result was returned."))
+                statuses.append(_error_status(requested_site_key, site["name"], "No crawl result was returned."))
                 continue
 
             if result.error:
-                statuses.append(_error_status(config.site_key, config.name, result.error))
+                statuses.append(_error_status(requested_site_key, site["name"], result.error))
                 continue
 
             previous_links = _previous_links(config.site_key)
@@ -366,8 +419,8 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
             items.extend(shaped_items)
             statuses.append(
                 _status_payload(
-                    site_key=config.site_key,
-                    site_name=config.name,
+                    site_key=requested_site_key,
+                    site_name=site["name"],
                     state="completed",
                     message="Crawl completed successfully.",
                     item_count=len(shaped_items),
@@ -375,6 +428,14 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                 )
             )
 
+    total_before_filter = len(items)
+    items = [item for item in items if _passes_global_min_date(item)]
+    filtered_count = total_before_filter - len(items)
+    if filtered_count > 0:
+        logger.info(
+            "GLOBAL_MIN_DATE filter removed %d items (before %s)",
+            filtered_count, GLOBAL_MIN_DATE.strftime("%Y-%m-%d"),
+        )
     items.sort(key=_result_sort_key, reverse=True)
     return {
         "crawl_time": crawl_time,

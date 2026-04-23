@@ -1,0 +1,197 @@
+# Pending Sites Complexity Report
+
+- **Total Sites**: 183
+- **Completed (Done)**: 63
+- **Remaining (Pending)**: 120
+
+---
+
+## 🔴 Hard Sites (77)
+Sites that have heavy JavaScript rendering, anti-bot mechanisms, ASP.NET ViewStates, or Server-Side rendering without accessible APIs.
+
+- **Aadhaar** (`aadhaar`)
+  - _Reason: working_
+- **Andhra Pradesh** (`andhra-pradesh`)
+  - _Reason: ASP.NET ViewState or legacy Java Struts_
+- **Archaeological Survey of India** (`archaeological-survey-of-india`)
+  - _Reason: working_
+- **Arunachal Pradesh** (`arunachal-pradesh`)
+  - _Reason: working_
+- **Bihar** (`bihar`)
+  - _Reason: ASP.NET ViewState or legacy Java Struts_
+- **BSE** (`bse`)
+  - _Reason: working_
+- **CDSCO** (`cdsco`)
+  - _Reason: working_
+- **CERC** (`cerc`)
+  - _Reason: working_
+- **Chemexcil** (`chemexcil`)
+  - _Reason: working_
+- **Civil Aviation** (`civil-aviation`)
+  - _Reason: working_
+- **Department of Bio Technology** (`department-of-bio-technology`)
+  - _Reason: working_
+- **Department of Heavy Industries** (`department-of-heavy-industries`)
+  - _Reason: working_
+- **DGFT** (`dgft`)
+  - _Reason: working_
+- **Directorate of Cashewnut and Cocoa Development (DCCD)** (`directorate-of-cashewnut-and-cocoa-development`)
+  - _Reason: working_
+- **Directorate of Plant Protection Quarantine & Storage (For Plant Quarantine Rules, Insectides Rules)** (`directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules`)
+  - _Reason: working_
+- **DoT** (`dot`)
+  - _Reason: working_
+- **EPFO** (`epfo`)
+  - _Reason: working_
+- **Falta SEZ** (`falta-sez`)
+  - _Reason: working_
+- **Fire Service, Civil Defence** (`fire-service-civil-defence`)
+  - _Reason: working_
+  
+- **Kandla SEZ** (`kandla-sez`)
+  - _Reason: working_
+- **Karnataka** (`karnataka`)
+  - _Reason: working_
+- **Kerala** (`kerala`)
+  - _Reason: working_
+- **Maharashtra** (`maharashtra`)
+  - _Reason: ASP.NET ViewState or legacy Java Struts_
+- **Manipur** (`manipur`)
+  - _Reason: working_
+- **MCA** (`mca`)
+  - _Reason: working_
+- **Meghalaya** (`meghalaya`)
+  - _Reason: working_
+- **MeiTY** (`meity`)
+  - _Reason: working_
+- **Minisry of Commerce** (`minisry-of-commerce`)
+  - _Reason: working_
+- **Minisry of Labour** (`minisry-of-labour`)
+  - _Reason: working_
+- **Ministry Of Coal (For Coal Mines)** (`ministry-of-coal-for-coal-mines`)
+  - _Reason: working_
+- **Ministry of Jal Sakthi (Water Resources)** (`ministry-of-jal-sakthi-water-resources`)
+  - _Reason: working_
+- **Ministry of New and Renewable Energy** (`ministry-of-new-and-renewable-energy`)
+  - _Reason: working_
+- **Ministry of Personnel, Public Grievances & Pensions (Corruption Related)** (`ministry-of-personnel-public-grievances-pensions-corruption-related`)
+  - _Reason: working_
+- **Ministry of Petroleum and Natural Gas** (`ministry-of-petroleum-and-natural-gas`)
+  - _Reason: working_
+- **Ministry of Power** (`ministry-of-power`)
+  - _Reason: working_
+- **Ministry of Road Transport and Highways** (`ministry-of-road-transport-and-highways`)
+  - _Reason: working_
+- **Mission for Integrated Development of Horticulture (Schemes & Guidelines)** (`mission-for-integrated-development-of-horticulture-schemes-guidelines`)
+  - _Reason: working_
+- **Mizoram** (`mizoram`)
+  - _Reason: working_
+- **Nagaland** (`nagaland`)
+  - _Reason: working_
+- **National Agricultural Market ( APMC and Agricultural Warehousing Related Notifications)** (`national-agricultural-market-apmc-and-agricultural-warehousing-related-notifications`)
+  - _Reason: working_
+- **National Bea Board** (`national-bea-board`)
+  - _Reason: working_
+- **National Centre for Cold-chain Development** (`national-centre-for-cold-chain-development`)
+  - _Reason: working_
+- **National Horticulture Board** (`national-horticulture-board`)
+  - _Reason: working_
+- **National Payments Corporation of India** (`national-payments-corporation-of-india`)
+  - _Reason: working_
+- **Noida SEZ** (`noida-sez`)
+  - _Reason: working_
+- **NSE** (`nse`)
+  - _Reason: working_
+- **Odisha** (`odisha`)
+  - _Reason: working_
+- **Pharmexcil** (`pharmexcil`)
+  - _Reason: working_
+- **Puducherry** (`puducherry`)
+  - _Reason: working_
+- **Punjab** (`punjab`)
+  - _Reason: working_
+- **Rubber Board** (`rubber-board`)
+  - _Reason: working_
+- **Saral Sanchar** (`saral-sanchar`)
+  - _Reason: working_
+- **SEBI** (`sebi`)
+  - _Reason: working_
+- **SEEPZ SEZ** (`seepz-sez`)
+  - _Reason: working_
+- **Services Export Promotion Council** (`services-export-promotion-council`)
+  - _Reason: working_
+- **SEZ** (`sez`)
+  - _Reason: working_
+- **SFAC (Farmer Producer Organisation)** (`sfac-farmer-producer-organisation`)
+  - _Reason: working_
+- **Sikkim** (`sikkim`)
+  - _Reason: working_
+- **Spices Board** (`spices-board`)
+  - _Reason: working_
+- **State GST** (`state-gst`)
+  - _Reason: working_
+- **Tamil Nadu** (`tamil-nadu`)
+  - _Reason: working_
+- **Tea Board** (`tea-board`)
+  - _Reason: working_
+- **Trade Portal** (`trade-portal`)
+  - _Reason: working_
+- **TRAI** (`trai`)
+  - _Reason: working_
+- **Tripura** (`tripura`)
+  - _Reason: working_
+- **Uttar Pradesh** (`uttar-pradesh`)
+  - _Reason: working_
+- **Uttarakhand** (`uttarakhand`)
+  - _Reason: working_
+- **Vizag SEZ** (`vizag-sez`)
+  - _Reason: working_
+- **West Bengal** (`west-bengal`)
+  - _Reason: ASP.NET ViewState or legacy Java Struts_
+
+## 🟢 Easy / Moderate Sites (43)
+Sites that likely return static HTML, use standard pagination, and can be scraped via standard BeautifulSoup (bs4) configs without blockers.
+
+- **Andaman ana Nicobar Islands** (`andaman-ana-nicobar-islands`) - [URL](N/A)
+- **Assam** (`assam`) - [URL](N/A)
+- **CBIC (Customs & Exices)** (`cbic-customs-exices`) - [URL](https://www.cbic.gov.in/entities/customs)
+- **Chandigarh** (`chandigarh`) - [URL](N/A)
+- **Chattisgarh** (`chattisgarh`) - [URL](N/A)
+- **Chemicals and Fertilizers** (`chemicals-and-fertilizers`) - [URL](https://www.mocf.gov.in/)
+- **Coffee Board** (`coffee-board`) - [URL](https://coffeeboard.gov.in/)
+- **Communications** (`communications`) - [URL](https://dot.gov.in/)
+- **Dadra and Nagar Haveli and Daman and Diu** (`dadra-and-nagar-haveli-and-daman-and-diu`) - [URL](N/A)
+- **Department of Animal Husbandary and Dairying** (`department-of-animal-husbandary-and-dairying`) - [URL](https://www.dahd.gov.in/)
+- **Department of Land Resources** (`department-of-land-resources`) - [URL](https://dolr.gov.in)
+- **Directorate of Arecanut and Spices Development (Spices)** (`directorate-of-arecanut-and-spices-development-spices`) - [URL](https://spicenurseries.in/)
+- **https://cercind.gov.in/JERC-Regulation/jerc-home.htm** (`https-cercind-gov-in-jerc-regulation-jerc-home-htm`) - [URL](N/A)
+- **https://delhi.gov.in/notice-board/notifications** (`https-delhi-gov-in-notice-board-notifications`) - [URL](N/A)
+- **https://electricity.py.gov.in/regulations-jerc** (`https-electricity-py-gov-in-regulations-jerc`) - [URL](N/A)
+- **https://finance.mn.gov.in/index.aspx** (`https-finance-mn-gov-in-index-aspx`) - [URL](working)
+- **https://govtpress.mp.gov.in/gazette** (`https-govtpress-mp-gov-in-gazette`) - [URL](N/A)
+- **https://jerc.mizoram.gov.in/** (`https-jerc-mizoram-gov-in`) - [URL](working)
+- **https://shramevjayate.cg.gov.in/** (`https-shramevjayate-cg-gov-in`) - [URL](N/A)
+- **https://tggazette.cgg.gov.in/** (`https-tggazette-cgg-gov-in`) - [URL](N/A)
+- **https://www.indianemployees.com/gazette-notifications/department/mp-home/** (`https-www-indianemployees-com-gazette-notifications-department-mp-home`) - [URL](N/A)
+- **ICSI** (`icsi`) - [URL](https://icsi.edu/home/)
+- **Insolvency and Bankruptcy Board of India (Gazette)** (`insolvency-and-bankruptcy-board-of-india-gazette`) - [URL](N/A)
+- **Jammu and kashmir** (`jammu-and-kashmir`) - [URL](N/A)
+- **Joint Electricity Regulatory Commission for Union Territories of Jammu and kashmir and Union Territories of Ladakh (Gazette)** (`joint-electricity-regulatory-commission-for-union-territories-of-jammu-and-kashmir-and-union-territories-of-ladakh-gazette`) - [URL](N/A)
+- **Ladakh** (`ladakh`) - [URL](N/A)
+- **Lakshwadeep** (`lakshwadeep`) - [URL](N/A)
+- **Madhya Pradesh** (`madhya-pradesh`) - [URL](https://pam.mp.gov.in/gadget-notification)
+- **Ministry of Cooperation (Gazette)** (`ministry-of-cooperation-gazette`) - [URL](N/A)
+- **Ministry of External Affairs (Gazette)** (`ministry-of-external-affairs-gazette`) - [URL](N/A)
+- **Ministry of Finance- Bifurcation (Gazette)** (`ministry-of-finance-bifurcation-gazette`) - [URL](N/A)
+- **Ministry of Finance- Bifurcation (Gazette) RBI** (`ministry-of-finance-bifurcation-gazette-rbi`) - [URL](N/A)
+- **Ministry of Micro, Small and Medium Enterprises (Gazette)** (`ministry-of-micro-small-and-medium-enterprises-gazette`) - [URL](N/A)
+- **Ministry of Overseas Indian Affairs (Gazette)** (`ministry-of-overseas-indian-affairs-gazette`) - [URL](N/A)
+- **Ministry of Production (Gazette)** (`ministry-of-production-gazette`) - [URL](N/A)
+- **Ministry of Small Scale Industries (Gazette)** (`ministry-of-small-scale-industries-gazette`) - [URL](N/A)
+- **N/A** (`n-a`) - [URL](https://www.cbic.gov.in/)
+- **National Capital Territory of Delhi** (`national-capital-territory-of-delhi`) - [URL](https://delhi.gov.in/centralized-cos)
+- **Plant Protection, Quarantie and Storage (Import and Export related)** (`plant-protection-quarantie-and-storage-import-and-export-related`) - [URL](https://ppqs.gov.in/en)
+- **Rajasthan** (`rajasthan`) - [URL](not working)
+- **reams.rajasthan.gov.in/PrintingStationary/GuestSearchOrdinaryCitizen** (`reams-rajasthan-gov-in-printingstationary-guestsearchordinarycitizen`) - [URL](N/A)
+- **Telangana** (`telangana`) - [URL](not working)
+- **The Competition Commission of India (Gazette)** (`the-competition-commission-of-india-gazette`) - [URL](N/A)
