@@ -1170,6 +1170,65 @@
       }
     },
     {
+      "site_key": "department-of-agriculture-and-farmers-welfare-whatsnew",
+      "ministry": "Department of Agriculture and Farmers Welfare",
+      "name": "Department of Agriculture and Farmers Welfare – What's New",
+      "url": "https://agriwelfare.gov.in",
+      "base_url": "https://agriwelfare.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "notification": [
+          "minimum support price",
+          "msp",
+          "notification",
+          "policy",
+          "framework",
+          "natural farming",
+          "seeds bill",
+          "pesticides",
+          "fertilizer",
+          "cabinet approves",
+          "krishi yojana"
+        ],
+        "recruitment": [
+          "recruitment",
+          "stenographer",
+          "deputation",
+          "young professional",
+          "contract basis"
+        ],
+        "circular": [
+          "circular",
+          "order",
+          "checklist",
+          "advisory",
+          "disclaimer"
+        ],
+        "tender": [
+          "tender",
+          "expression of interest",
+          "eoi",
+          "invitation"
+        ],
+        "news": [
+          "press release",
+          "news",
+          "update",
+          "alert"
+        ]
+      },
+      "selectors": {
+        "item_selector": "#whatsnewscontent .homebox h4 a",
+        "exclude_title_pattern": "^(Hack|Infosec|Test)\\b",
+        "wait_for_selector": "#whatsnewscontent .homebox",
+        "pre_capture_js": "new Promise(r => setTimeout(r, 2000))"
+      }
+    },
+    {
       "site_key": "department-of-fertilizers",
       "ministry": "Ministry of Chemicals and Fertilizers",
       "name": "Department of Fertilizers",
@@ -8170,17 +8229,17 @@
       },
       "sections": [
         {
-          "section_label": "News & Updates",
-          "source_url": "https://nbb.gov.in",
+          "section_label": "News & Events",
+          "url": "https://nbb.gov.in/",
           "parser_type": "list",
-          "parser_backend": "scrapy",
+          "parser_backend": "bs4",
           "render_js": true,
           "default_category": "news",
           "selectors": {
-            "item_selector": "marquee ul.cmn_ul li",
+            "item_selector": "ul.cmn_ul li",
             "title_selector": "a",
             "link_selector": "a",
-            "wait_for_selector": "marquee ul.cmn_ul li"
+            "wait_for_selector": "ul.cmn_ul li"
           }
         }
       ]
