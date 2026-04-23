@@ -9336,6 +9336,116 @@
         "link_selector": "td:nth-child(4) a",
         "date_selector": "td:nth-child(3)"
       }
+    },
+    {
+      "site_key": "meghalaya",
+      "ministry": "Government of Meghalaya",
+      "name": "Meghalaya - What's New",
+      "url": "https://meghalaya.gov.in/whats-new",
+      "base_url": "https://meghalaya.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "news",
+      "category_mapping": {
+        "notification": [
+          "notification",
+          "order",
+          "circular",
+          "direction",
+          "guideline"
+        ],
+        "recruitment": [
+          "recruitment",
+          "walk-in",
+          "engagement",
+          "vacancy",
+          "appointment",
+          "post",
+          "applications invited"
+        ],
+        "news": [
+          "press release",
+          "announcement",
+          "launch",
+          "inaugurates",
+          "celebrates",
+          "conducted",
+          "hosted"
+        ],
+        "tender": [
+          "tender",
+          "e-tender",
+          "bid"
+        ]
+      },
+      "sections": [
+        {
+          "section_label": "What's New",
+          "url": "https://meghalaya.gov.in/index.php/whats-new",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "max_pages": 5,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": "ul li",
+            "title_selector": "span.field-content a",
+            "link_selector": "span.field-content a",
+            "date_selector": "span.field-content",
+            "wait_for_selector": "ul li"
+          }
+        },
+        {
+          "section_label": "Gov Orders",
+          "url": "https://meghalaya.gov.in/whats-new/gov-orders",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "max_pages": 5,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": "ul li",
+            "title_selector": "span.field-content a",
+            "link_selector": "span.field-content a",
+            "date_selector": "span.field-content",
+            "wait_for_selector": "ul li"
+          }
+        },
+        {
+          "section_label": "Announcements",
+          "url": "https://meghalaya.gov.in/whats-new/announcements",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "max_pages": 5,
+          "default_category": "news",
+          "selectors": {
+            "item_selector": "ul li",
+            "title_selector": "span.field-content a",
+            "link_selector": "span.field-content a",
+            "date_selector": "span.field-content",
+            "wait_for_selector": "ul li"
+          }
+        },
+        {
+          "section_label": "Press Releases",
+          "url": "https://meghalaya.gov.in/whats-new/press-releases",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "max_pages": 5,
+          "default_category": "news",
+          "selectors": {
+            "item_selector": "ul li",
+            "title_selector": "span.field-content a",
+            "link_selector": "span.field-content a",
+            "date_selector": "span.field-content",
+            "wait_for_selector": "ul li"
+          }
+        }
+      ]
     }
   ]
 }
