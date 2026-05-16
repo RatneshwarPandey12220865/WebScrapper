@@ -5,6 +5,7 @@ from gov_aggregator.scrapers.custom.dot import _extract_announcementbox_items
 from gov_aggregator.scrapers.custom.fssai import _parse_recent_whatnew
 from gov_aggregator.scrapers.custom.income_tax import _fallback_link, _parse_date
 from gov_aggregator.scrapers.custom.meity import _extract_nic_announcementbox_items, _page_url
+from gov_aggregator.scrapers.custom.rajasthan import _extract_press_release_items
 from gov_aggregator.services import get_site_catalog
 
 
@@ -211,6 +212,49 @@ def test_dgft_custom_scraper_is_registered():
 
     assert "directorate-general-of-foreign-trade" in sites
     assert "directorate-general-of-foreign-trade" in CUSTOM_CRAWLERS
+
+
+def test_rajasthan_alias_maps_to_supported_scraper():
+    rajasthan_sites = [site for site in get_site_catalog() if site["site_key"] == "rajasthan"]
+
+    assert len(rajasthan_sites) == 1
+    assert rajasthan_sites[0]["supported"] is True
+    assert rajasthan_sites[0]["crawl_url"] == "https://dipr.rajasthan.gov.in/pages/press-release-list/85/36?lan=en"
+
+    canonical_rajasthan = [site for site in get_site_catalog() if site["site_key"] == "rajasthan-dipr"]
+    assert canonical_rajasthan == []
+
+
+def test_rajasthan_custom_scraper_is_registered():
+    sites = {site.site_key: site for site in load_site_configs()}
+
+    assert "rajasthan-dipr" in sites
+    assert sites["rajasthan-dipr"].custom_crawler == "rajasthan"
+    assert "rajasthan" in CUSTOM_CRAWLERS
+
+
+def test_rajasthan_parser_extracts_title_date_and_detail_link():
+    html = """
+    <table>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>27 Apr 2026, 6:05 PM</td>
+          <td><span>Sample Rajasthan Press Release</span></td>
+          <td><div></div></td>
+          <td><a href="/press-release-detail/239490/85">View Details</a></td>
+        </tr>
+      </tbody>
+    </table>
+    """
+
+    items = _extract_press_release_items(html, "https://dipr.rajasthan.gov.in")
+
+    assert len(items) == 1
+    assert items[0].title == "Sample Rajasthan Press Release"
+    assert items[0].link == "https://dipr.rajasthan.gov.in/press-release-detail/239490/85"
+    assert items[0].published_at is not None
+    assert items[0].published_at.isoformat() == "2026-04-27T18:05:00+00:00"
 
 
 def test_dgft_regulatory_updates_parser_keeps_current_year_rows():
