@@ -3,139 +3,197 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Government Website Crawler</title>
+  <title>KSyder — Government Intelligence Platform</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="page-shell">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">Government Website Crawler</p>
-        <h1>Search, select, crawl, and export government updates from a config-driven site catalog.</h1>
-        <p class="hero-text">
-          The site picker loads a predefined JSON inventory, the API crawls supported sites in parallel, and the UI keeps filtering,
-          export, and new-link highlighting entirely in the browser session.
-        </p>
+
+  <!-- Top Navigation -->
+  <nav class="topnav">
+    <div class="topnav__brand">
+      <span class="topnav__logo">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect width="30" height="30" rx="9" fill="url(#lg)"/>
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#2563eb"/>
+              <stop offset="100%" stop-color="#0d9488"/>
+            </linearGradient>
+          </defs>
+          <path d="M8 15 L15 8 L22 15 L15 22 Z" fill="white" opacity="0.9"/>
+          <circle cx="15" cy="15" r="3.5" fill="url(#lg)"/>
+        </svg>
+      </span>
+      <div>
+        <span class="topnav__name">KSyder</span>
+        <span class="topnav__sub">Government Intelligence Platform</span>
       </div>
-      <div class="hero-actions">
-        <button id="crawlButton" class="primary-button" type="button">Crawl Selected Sites</button>
-        <label class="toggle-card">
-          <input id="useCacheToggle" type="checkbox" checked>
-          <span>Reuse in-memory results for repeated crawls in the same session</span>
-        </label>
-        <div id="catalogSummary" class="hero-note">Loading site catalog...</div>
+    </div>
+    <div class="topnav__actions">
+      <span id="catalogSummary" class="topnav__stat">Loading catalog…</span>
+      <button id="crawlButton" class="btn btn--primary" type="button">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/>
+          <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+        </svg>
+        Crawl Selected
+      </button>
+      <label class="toggle-pill" title="Reuse cached results within this session">
+        <input id="useCacheToggle" type="checkbox" checked>
+        <span class="toggle-pill__track"><span class="toggle-pill__thumb"></span></span>
+        <span>Use cache</span>
+      </label>
+    </div>
+  </nav>
+
+  <!-- Toast notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="app-shell">
+
+    <!-- Left sidebar -->
+    <aside class="sidebar">
+
+      <!-- Site Selector -->
+      <div class="sidebar-card">
+        <div class="sidebar-card__header">
+          <h2>Sites</h2>
+          <span id="selectedSummary" class="pill">0 selected</span>
+        </div>
+        <div class="search-box">
+          <svg class="search-box__icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+          </svg>
+          <input id="siteSearchInput" type="search" placeholder="Search sites…">
+        </div>
+        <div class="btn-row">
+          <button id="selectSupportedButton" class="btn btn--ghost btn--sm" type="button">Select all supported</button>
+          <button id="clearSelectionButton" class="btn btn--ghost btn--sm" type="button">Clear</button>
+        </div>
+        <div id="siteList" class="site-list"></div>
       </div>
-    </header>
 
-    <main class="workspace">
-      <aside class="control-column">
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <h2>Site Selection</h2>
-              <p>Select one or multiple supported websites to crawl.</p>
+      <!-- Filters -->
+      <div class="sidebar-card">
+        <div class="sidebar-card__header">
+          <h2>Filters</h2>
+          <button id="clearFiltersBtn" class="btn btn--ghost btn--sm" type="button">Clear filters</button>
+        </div>
+        <div class="filter-stack">
+          <label class="field">
+            <span>Keyword</span>
+            <div class="search-box">
+              <svg class="search-box__icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+              </svg>
+              <input id="keywordSearch" type="search" placeholder="Title or description…">
             </div>
+          </label>
+          <label class="field">
+            <span>Website</span>
+            <select id="websiteFilter"></select>
+          </label>
+          <label class="field">
+            <span>Category</span>
+            <select id="categoryFilter">
+              <option value="">All categories</option>
+              <option value="notification">Notification</option>
+              <option value="news">News</option>
+              <option value="circular">Circular</option>
+              <option value="tender">Tender</option>
+              <option value="recruitment">Recruitment</option>
+            </select>
+          </label>
+          <div class="date-row">
+            <label class="field">
+              <span>From</span>
+              <input id="dateFromFilter" class="date-input" type="date">
+            </label>
+            <label class="field">
+              <span>To</span>
+              <input id="dateToFilter" class="date-input" type="date">
+            </label>
           </div>
+        </div>
 
-          <div class="toolbar-row">
-            <input id="siteSearchInput" class="text-input" type="search" placeholder="Search sites">
-            <button id="selectSupportedButton" class="secondary-button" type="button">Select Supported</button>
-            <button id="clearSelectionButton" class="secondary-button" type="button">Clear</button>
+        <div class="export-group">
+          <p class="export-group__label">Export filtered results</p>
+          <div class="btn-row">
+            <button id="exportJsonButton" class="btn btn--export" type="button">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+              JSON
+            </button>
+            <button id="exportCsvButton" class="btn btn--export" type="button">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+              CSV
+            </button>
+            <button id="exportExcelButton" class="btn btn--export" type="button">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+              Excel
+            </button>
           </div>
+        </div>
+      </div>
+    </aside>
 
-          <div id="selectedSummary" class="selection-summary">0 sites selected</div>
-          <div id="siteList" class="site-list"></div>
-        </section>
+    <!-- Main content -->
+    <main class="main-content">
 
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <h2>Result Filters</h2>
-              <p>Applied on the frontend after crawl results return.</p>
+      <!-- Metrics row -->
+      <div id="metrics" class="metrics-row"></div>
+
+      <!-- Status panel -->
+      <div class="content-card">
+        <div class="content-card__header">
+          <div>
+            <h2>Crawl Status</h2>
+            <p id="statusText" class="subtitle">Select supported websites and start crawling.</p>
+          </div>
+          <div id="crawlSpinner" class="spinner" style="display:none"></div>
+        </div>
+        <div id="statusList" class="status-list"></div>
+      </div>
+
+      <!-- Results panel -->
+      <div class="content-card">
+        <div class="content-card__header">
+          <div>
+            <h2>Results</h2>
+            <p id="resultSummary" class="subtitle">No crawl has been run yet.</p>
+          </div>
+          <div class="results-header-right">
+            <div id="dateFilterBanner" class="date-filter-banner" style="display:none">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+              </svg>
+              <span id="dateFilterBannerText"></span>
             </div>
+            <div id="activeFilterChips" class="chip-row"></div>
           </div>
-
-          <div class="filter-grid">
-            <label class="field">
-              <span>Keyword</span>
-              <input id="keywordSearch" class="text-input" type="search" placeholder="Search title or description">
-            </label>
-
-            <label class="field">
-              <span>Website</span>
-              <select id="websiteFilter"></select>
-            </label>
-
-            <label class="field">
-              <span>Category</span>
-              <select id="categoryFilter">
-                <option value="">All categories</option>
-                <option value="notification">Notification</option>
-                <option value="news">News</option>
-                <option value="circular">Circular</option>
-                <option value="tender">Tender</option>
-                <option value="recruitment">Recruitment</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Date from</span>
-              <input id="dateFromFilter" class="text-input" type="date">
-            </label>
-
-            <label class="field">
-              <span>Date to</span>
-              <input id="dateToFilter" class="text-input" type="date">
-            </label>
+        </div>
+        <div class="table-wrapper">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Website / Section</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Published / Validity</th>
+                <th>Links</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 16 16" fill="currentColor" opacity="0.25">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+            </svg>
+            <p>Run a crawl to populate results.</p>
           </div>
+        </div>
+      </div>
 
-          <div class="toolbar-row export-row">
-            <button id="exportJsonButton" class="secondary-button" type="button">Export JSON</button>
-            <button id="exportCsvButton" class="secondary-button" type="button">Export CSV</button>
-            <button id="exportExcelButton" class="secondary-button" type="button">Export Excel</button>
-          </div>
-        </section>
-      </aside>
-
-      <section class="results-column">
-        <section class="metrics" id="metrics"></section>
-
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <h2>Crawl Status</h2>
-              <p id="statusText">Loading crawler workspace...</p>
-            </div>
-          </div>
-          <div id="statusList" class="status-list"></div>
-        </section>
-
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <h2>Results</h2>
-              <p id="resultSummary">No crawl has been run yet.</p>
-            </div>
-          </div>
-          <div id="activeFilterChips" class="chip-row"></div>
-          <div class="table-shell">
-            <table class="results-table">
-              <thead>
-                <tr>
-                  <th>Website</th>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Published</th>
-                  <th>Summary</th>
-                  <th>Links</th>
-                </tr>
-              </thead>
-              <tbody id="resultsBody"></tbody>
-            </table>
-          </div>
-          <div id="emptyState" class="empty-state">Run a crawl to populate results.</div>
-        </section>
-      </section>
     </main>
   </div>
 
