@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pande\\\\Desktop\\\\a\\\\KPMG\\\\KSyder\\\\kspyder2.0 - Copy \\(6\\) - Copy\" -Recurse -Force)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }
