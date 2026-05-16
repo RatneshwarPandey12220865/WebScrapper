@@ -25,15 +25,41 @@
   },
   "sites": [
     {
-      "site_key": "gst",
-      "ministry": "Ministry of Finance",
-      "name": "GST Portal \u00e2\u20ac\u201d News and Updates",
-      "url": "https://services.gst.gov.in/services/advisory/advisoryandreleases",
-      "base_url": "https://services.gst.gov.in",
+      "site_key": "cci",
+      "ministry": "Competition Commission of India",
+      "name": "Competition Commission of India",
+      "url": "https://cci.gov.in/",
+      "base_url": "https://cci.gov.in",
       "parser_type": "list",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
+      "custom_crawler": "cci",
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "press release",
+          "events"
+        ],
+        "notification": [
+          "public notice",
+          "notice"
+        ]
+      },
+      "selectors": {},
+      "min_date": "2026-01-01"
+    },
+    {
+      "site_key": "gst",
+      "ministry": "Ministry of Finance",
+      "name": "GST Portal — News & Updates",
+      "url": "https://services.gst.gov.in/services/advisory/advisoryandreleases",
+      "base_url": "https://services.gst.gov.in",
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "gst",
       "default_category": "circular",
       "category_mapping": {
         "circular": [
@@ -333,10 +359,11 @@
       "name": "Department for Promotion of Industry and Internal Trade (DPIIT)",
       "url": "https://www.dpiit.gov.in/whats-new",
       "base_url": "https://www.dpiit.gov.in",
-      "parser_type": "list",
-"parser_backend": "bs4",
-      "render_js": true,
-      "active": false,
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "industry-and-internal-trade",
       "default_category": "notification",
       "category_mapping": {
         "circular": [
@@ -369,13 +396,15 @@
     {
       "site_key": "income-tax",
       "ministry": "Department of Revenue",
-      "name": "Income Tax",
-      "url": "https://incometaxindia.gov.in/Pages/communications/whats-new.aspx",
-      "base_url": "https://incometaxindia.gov.in",
-      "parser_type": "list",
+      "name": "Income Tax — Latest News",
+      "url": "https://www.incometax.gov.in/iec/foportal/latest-news",
+      "base_url": "https://www.incometax.gov.in",
+      "parser_type": "custom",
       "parser_backend": "bs4",
-      "render_js": true,
-      "default_category": "news",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "income-tax",
+      "default_category": "notification",
       "category_mapping": {
         "notification": [
           "notification",
@@ -403,12 +432,7 @@
           "portal"
         ]
       },
-      "selectors": {
-        "item_selector": ".card-print-btn-with-date-new-tag",
-        "title_selector": "p.card-title-with-arrow",
-        "date_selector": ".date-in-card",
-        "wait_for_selector": ".etds-misc-cards"
-      }
+      "selectors": {}
     },
     {
       "site_key": "industry-and-internal-trade-ip",
@@ -1114,62 +1138,6 @@
       ]
     },
     {
-      "site_key": "department-of-agriculture-and-farmers-welfare",
-      "ministry": "Department of Agriculture and Farmers Welfare",
-      "name": "Department of Agriculture and Farmers Welfare",
-      "url": "https://agriwelfare.gov.in/en/Recent",
-      "base_url": "https://agriwelfare.gov.in",
-      "parser_type": "table",
-      "parser_backend": "scrapy",
-      "render_js": true,
-      "active": true,
-      "default_category": "notification",
-      "category_mapping": {
-        "notification": [
-          "minimum support price",
-          "msp",
-          "notification",
-          "guidelines",
-          "policy",
-          "framework",
-          "natural farming"
-        ],
-        "tender": [
-          "tender",
-          "eoi",
-          "expression of interest",
-          "corrigendum",
-          "civil",
-          "electrical"
-        ],
-        "recruitment": [
-          "recruitment",
-          "recruitment rules",
-          "draft rr",
-          "economic officer",
-          "technical clerk"
-        ],
-        "circular": [
-          "circular",
-          "order",
-          "guideline"
-        ],
-        "news": [
-          "press release",
-          "news",
-          "update"
-        ]
-      },
-      "selectors": {
-        "row_selector": "tbody#tbodyRecruitment tr",
-        "title_selector": "td:nth-child(2)",
-        "link_selector": "td:nth-child(4) a",
-        "date_selector": "td:nth-child(3)",
-        "wait_for_selector": "tbody#tbodyRecruitment tr",
-        "pre_capture_js": "(() => { const select = document.querySelector(\"select[name$='_length'], .dataTables_length select\"); if (select) { const values = Array.from(select.options).map(option => option.value); select.value = values.includes('100') ? '100' : values[values.length - 1]; select.dispatchEvent(new Event('change', { bubbles: true })); } document.querySelectorAll('tbody#tbodyRecruitment tr').forEach(tr => tr.style.display = ''); })()"
-      }
-    },
-    {
       "site_key": "department-of-agriculture-and-farmers-welfare-whatsnew",
       "ministry": "Department of Agriculture and Farmers Welfare",
       "name": "Department of Agriculture and Farmers Welfare – What's New",
@@ -1226,7 +1194,9 @@
         "exclude_title_pattern": "^(Hack|Infosec|Test)\\b",
         "wait_for_selector": "#whatsnewscontent .homebox",
         "pre_capture_js": "new Promise(r => setTimeout(r, 2000))"
-      }
+      },
+      "custom_crawler": "department-of-agriculture-and-farmers-welfare-whatsnew",
+      "min_date": "2025-01-01"
     },
     {
       "site_key": "department-of-fertilizers",
@@ -1234,10 +1204,11 @@
       "name": "Department of Fertilizers",
       "url": "https://fert.gov.in/what-s-new",
       "base_url": "https://fert.gov.in",
-      "parser_type": "table",
+      "parser_type": "custom",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
+      "custom_crawler": "department-of-fertilizers",
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
@@ -1312,9 +1283,9 @@
       "name": "Department of Fisheries",
       "url": "https://dof.gov.in/whats-new",
       "base_url": "https://dof.gov.in",
-      "parser_type": "list",
-      "parser_backend": "scrapy",
-      "render_js": true,
+      "parser_type": "custom",
+      "render_js": false,
+      "custom_crawler": "department-of-fisheries",
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -1351,13 +1322,7 @@
           "update"
         ]
       },
-      "selectors": {
-        "item_selector": ".announcementbox",
-        "title_selector": "p.mb-0, div.mb-0.text-break",
-        "link_selector": "a.download-btn, a.link-btn",
-        "date_selector": "small.ptype.mb-0",
-        "wait_for_selector": ".whats-new-announcements .announcementbox"
-      }
+      "selectors": {}
     },
     {
       "site_key": "directorate-of-marketing-and-inspection-for-pulses-grading-and-marking",
@@ -1571,7 +1536,9 @@
             "wait_for_selector": "#div1 tr"
           }
         }
-      ]
+      ],
+      "custom_crawler": "cochin-sez",
+      "min_date": "2025-01-01"
     },
     {
       "site_key": "mpeda",
@@ -2492,9 +2459,11 @@
       "ministry": "Ministry of Ayush",
       "name": "Ministry of Ayush",
       "base_url": "https://ayush.gov.in",
-      "parser_type": "table",
-      "parser_backend": "scrapy",
-      "render_js": true,
+      "url": "https://ayush.gov.in",
+      "custom_crawler": "ministry-of-ayush",
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
       "active": true,
       "default_category": "news",
       "category_mapping": {
@@ -2557,39 +2526,7 @@
           "eoi"
         ]
       },
-      "selectors": {},
-      "sections": [
-        {
-          "section_label": "Press Releases",
-          "url": "https://ayush.gov.in/#!/pressrelease",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "row_selector": "table.table tbody tr",
-            "title_selector": "td:nth-child(2)",
-            "link_selector": "td:nth-child(3) a",
-            "date_selector": null,
-            "wait_for_selector": "table.table tbody tr"
-          }
-        },
-        {
-          "section_label": "What's New",
-          "url": "https://ayush.gov.in/#!/whatsnew",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": "table.table tbody tr",
-            "title_selector": "td:nth-child(2)",
-            "link_selector": "td:nth-child(3) a",
-            "date_selector": null,
-            "wait_for_selector": "table.table tbody tr"
-          }
-        }
-      ]
+      "selectors": {}
     },
     {
       "site_key": "central-drugs-standard-control-organisation",
@@ -2734,7 +2671,9 @@
       "ministry": "Ministry of Chemicals and Fertilizers",
       "name": "Department of Pharmaceuticals (DoP)",
       "base_url": "https://pharma-dept.gov.in",
-      "parser_type": "list",
+      "url": "https://pharma-dept.gov.in/whats-new",
+      "custom_crawler": "department-of-pharmaceuticals",
+      "parser_type": "custom",
       "parser_backend": "scrapy",
       "render_js": true,
       "verify_ssl": false,
@@ -3884,9 +3823,11 @@
       "ministry": "Ministry of Health and Family Welfare",
       "name": "Department of Health Research (DHR)",
       "base_url": "https://dhr.gov.in",
-      "parser_type": "list",
+      "url": "https://www.dhr.gov.in/whats-new",
+      "custom_crawler": "department-of-health-research",
+      "parser_type": "custom",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -3986,6 +3927,7 @@
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
+      "custom_crawler": "icmr",
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
@@ -5465,77 +5407,70 @@
       "ministry": "Ministry of Commerce and Industry",
       "name": "Directorate General of Foreign Trade",
       "base_url": "https://www.dgft.gov.in",
+      "custom_crawler": "directorate-general-of-foreign-trade",
       "sections": [
         {
           "section_label": "Notifications",
-          "source_url": "https://www.dgft.gov.in/CP/#/notifications",
+          "source_url": "https://www.dgft.gov.in/CP/",
           "parser_type": "table",
-          "parser_backend": "scrapy",
+          "parser_backend": "bs4",
           "render_js": true,
-          "date_format": "%d/%m/%Y",
+          "default_category": "notification",
           "selectors": {
             "row_selector": "#metadataTable tbody tr",
             "title_selector": "td:nth-child(4)",
-            "link_selector": "td:nth-child(6) a",
+            "link_selector": "td:nth-child(6) a, td:nth-child(4) a",
             "date_selector": "td:nth-child(5)",
-            "wait_for_selector": "#metadataTable tbody tr.odd, #metadataTable tbody tr.even"
+            "wait_for_selector": "#metadataTable tbody tr",
+            "pre_capture_click": "a[href='#/notifications']"
           }
         },
         {
           "section_label": "Public Notices",
-          "source_url": "https://www.dgft.gov.in/CP/#/publicnotices",
+          "source_url": "https://www.dgft.gov.in/CP/",
           "parser_type": "table",
-          "parser_backend": "scrapy",
+          "parser_backend": "bs4",
           "render_js": true,
-          "date_format": "%d/%m/%Y",
+          "default_category": "notification",
           "selectors": {
             "row_selector": "#metadataTable tbody tr",
             "title_selector": "td:nth-child(4)",
-            "link_selector": "td:nth-child(6) a",
+            "link_selector": "td:nth-child(6) a, td:nth-child(4) a",
             "date_selector": "td:nth-child(5)",
-            "wait_for_selector": "#metadataTable tbody tr.odd, #metadataTable tbody tr.even"
+            "wait_for_selector": "#metadataTable tbody tr",
+            "pre_capture_click": "a[href='#/publicnotices']"
           }
         },
         {
           "section_label": "Circulars",
-          "source_url": "https://www.dgft.gov.in/CP/#/circulars",
+          "source_url": "https://www.dgft.gov.in/CP/",
           "parser_type": "table",
-          "parser_backend": "scrapy",
+          "parser_backend": "bs4",
           "render_js": true,
-          "date_format": "%d/%m/%Y",
+          "default_category": "circular",
           "selectors": {
             "row_selector": "#metadataTable tbody tr",
             "title_selector": "td:nth-child(4)",
-            "link_selector": "td:nth-child(6) a",
+            "link_selector": "td:nth-child(6) a, td:nth-child(4) a",
             "date_selector": "td:nth-child(5)",
-            "wait_for_selector": "#metadataTable tbody tr.odd, #metadataTable tbody tr.even"
+            "wait_for_selector": "#metadataTable tbody tr",
+            "pre_capture_click": "a[href='#/circulars']"
           }
         },
         {
           "section_label": "Trade Notices",
-          "source_url": "https://www.dgft.gov.in/CP/#/tradenotices",
+          "source_url": "https://www.dgft.gov.in/CP/",
           "parser_type": "table",
-          "parser_backend": "scrapy",
+          "parser_backend": "bs4",
           "render_js": true,
-          "date_format": "%d/%m/%Y",
+          "default_category": "notification",
           "selectors": {
             "row_selector": "#metadataTable tbody tr",
             "title_selector": "td:nth-child(4)",
-            "link_selector": "td:nth-child(6) a",
+            "link_selector": "td:nth-child(6) a, td:nth-child(4) a",
             "date_selector": "td:nth-child(5)",
-            "wait_for_selector": "#metadataTable tbody tr.odd, #metadataTable tbody tr.even"
-          }
-        },
-        {
-          "section_label": "Announcements",
-          "source_url": "https://www.dgft.gov.in/CP/",
-          "parser_type": "list",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "selectors": {
-            "item_selector": "ul.marquee li",
-            "title_selector": "a",
-            "link_selector": "a"
+            "wait_for_selector": "#metadataTable tbody tr",
+            "pre_capture_click": "a[href='#/tradenotices']"
           }
         }
       ]
@@ -5590,10 +5525,10 @@
         ]
       },
       "selectors": {
-        "item_selector": "ul#ticker2 li",
-        "title_selector": "article a",
-        "link_selector": "article a",
-        "date_selector": "aside"
+        "item_selector": "ul.ticker li, ul#ticker2 li",
+        "title_selector": "article a, a",
+        "link_selector": "article a, a",
+        "date_selector": null
       },
       "verify_ssl": false
     },
@@ -5606,6 +5541,7 @@
       "parser_type": "list",
       "parser_backend": "bs4",
       "render_js": true,
+      "verify_ssl": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -5673,7 +5609,7 @@
         "row_selector": "tbody#list tr",
         "title_selector": "th[scope='row']",
         "link_selector": "td a.link-primary, td a.tender_link",
-        "date_selector": "td:nth-child(4)"
+        "date_selector": null
       },
       "verify_ssl": false
     },
@@ -6684,13 +6620,13 @@
       "site_key": "dot",
       "ministry": "Ministry of Communications",
       "name": "Department of Telecommunications (DoT)",
-      "url": "https://www.dot.gov.in/whats-new",
       "base_url": "https://www.dot.gov.in",
       "parser_type": "list",
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
       "default_category": "circular",
+      "custom_crawler": "dot",
       "category_mapping": {
         "circular": [
           "circular",
@@ -6797,7 +6733,47 @@
         ]
       },
       "selectors": {},
-      "sections": []
+      "sections": [
+        {
+          "section_label": "What's New",
+          "url": "https://www.dot.gov.in/whats-new",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "news",
+          "selectors": {
+            "row_selector": "table tbody tr, .views-row, .announcementbox",
+            "title_selector": "td.views-field-title, .views-field-title, h3, h2, p.mb-0",
+            "link_selector": "a"
+          }
+        },
+        {
+          "section_label": "Press Releases",
+          "url": "https://www.dot.gov.in/documents/press-release",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "news",
+          "selectors": {
+            "row_selector": "table tbody tr, .views-row, .schemesBox",
+            "title_selector": "td.views-field-title, .views-field-title, a.schemeTitle, h3",
+            "link_selector": "a"
+          }
+        },
+        {
+          "section_label": "Orders and Notices",
+          "url": "https://www.dot.gov.in/documents/orders-and-notices",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": "table tbody tr, .views-row",
+            "title_selector": "td.views-field-title, .views-field-title, h3",
+            "link_selector": "a"
+          }
+        }
+      ]
     },
     {
       "site_key": "employees-provident-fund-organisation",
@@ -6808,7 +6784,7 @@
       "parser_type": "table",
       "parser_backend": "bs4",
       "render_js": true,
-      "active": true,
+      "active": false,
       "default_category": "notification",
       "category_mapping": {
         "notification": [
@@ -7008,7 +6984,8 @@
       "ministry": "Ministry of Science and Technology",
       "name": "Department of Biotechnology (DBT)",
       "base_url": "https://dbt.gov.in",
-      "parser_type": "table",
+      "parser_type": "custom",
+      "custom_crawler": "department-of-bio-technology",
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
@@ -7084,7 +7061,7 @@
       "sections": [
         {
           "section_label": "What's New",
-          "url": "https://dbt.gov.in/archive?category=whats-new",
+          "url": "https://dbt.gov.in/offerings/whats-new-list-page",
           "parser_type": "table",
           "parser_backend": "bs4",
           "render_js": true,
@@ -7092,7 +7069,7 @@
           "selectors": {
             "row_selector": "table.m_b23fa0ef tbody tr",
             "title_selector": "td:nth-child(2) div[aria-label]",
-            "link_selector": "td:nth-child(8) a",
+            "link_selector": "td:nth-child(5) a",
             "date_selector": "td:nth-child(3)",
             "wait_for_selector": "table.m_b23fa0ef tbody tr"
           }
@@ -7529,10 +7506,11 @@
       "ministry": "Ministry of Commerce and Industry",
       "name": "Coffee Board of India",
       "base_url": "https://coffeeboard.gov.in",
-      "parser_type": "list",
+      "parser_type": "custom",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
+      "custom_crawler": "coffee-board",
       "default_category": "news",
       "category_mapping": {
         "recruitment": [
@@ -7699,6 +7677,7 @@
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
+      "custom_crawler": "directorate-general-of-foreign-trade",
       "default_category": "notification",
       "category_mapping": {
         "notification": [
@@ -8144,7 +8123,7 @@
     {
       "site_key": "office-of-economic-adviser",
       "ministry": "Ministry of Commerce and Industry",
-      "name": "Office of the Economic Adviser (OEA) \u00e2\u20ac\u201d DPIIT",
+      "name": "Industry and Internal Trade_Economic Adv (Policies)",
       "base_url": "https://eaindustry.nic.in",
       "active": true,
       "default_category": "notification",
@@ -8694,7 +8673,7 @@
     {
       "site_key": "pharmexcil",
       "ministry": "Ministry of Chemicals and Fertilizers",
-      "name": "Pharmexcil \u2013 News & Government Notifications",
+      "name": "Pharmexcil – News & Government Notifications",
       "base_url": "https://pharmexcil.com",
       "parser_type": "table",
       "parser_backend": "bs4",
@@ -8775,7 +8754,7 @@
     {
       "site_key": "jerc-jk-ladakh",
       "ministry": "Ministry of Power",
-      "name": "Joint Electricity Regulatory Commission \u2013 J&K and Ladakh",
+      "name": "Joint Electricity Regulatory Commission – J&K and Ladakh",
       "url": "https://jercjkl.jk.gov.in/",
       "base_url": "https://jercjkl.jk.gov.in",
       "parser_type": "list",
@@ -8879,7 +8858,8 @@
           },
           "section_label": "Circulars"
         }
-      ]
+      ],
+      "custom_crawler": "archaeological-survey-of-india"
     },
     {
       "site_key": "industry-and-internal-trade-cipam-ip",
@@ -8937,43 +8917,97 @@
       "name": "Ministry of Labour and Employment",
       "url": "https://www.labour.gov.in/whats-new",
       "base_url": "https://www.labour.gov.in",
-      "active": false,
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
       "custom_crawler": "ministry-of-labour"
+    },
+    {
+      "site_key": "ministry-of-power",
+      "ministry": "Ministry of Power",
+      "name": "Ministry of Power",
+      "url": "https://powermin.gov.in/en/circular",
+      "base_url": "https://powermin.gov.in",
+      "active": false,
+      "custom_crawler": "power-ministry",
+      "min_date": "2026-01-01",
+      "default_category": "circular",
+      "note": "Blocked by IP-based CAPTCHA protection"
+    },
+    {
+      "site_key": "ministry-of-power-circulars",
+      "ministry": "Ministry of Power",
+      "name": "Ministry of Power - Circulars",
+      "url": "https://powermin.gov.in/en/circular",
+      "base_url": "https://powermin.gov.in",
+      "active": false,
+      "custom_crawler": "power-ministry",
+      "min_date": "2026-01-01",
+      "default_category": "circular"
+    },
+    {
+      "site_key": "ministry-of-power-pib",
+      "ministry": "Ministry of Power",
+      "name": "Ministry of Power - Press Releases",
+      "url": "https://www.pib.gov.in/newsite/pmreleases.aspx?mincode=52&reg=3&lang=2",
+      "base_url": "https://www.pib.gov.in",
+      "active": false,
+      "custom_crawler": "power-ministry-pib",
+      "min_date": "2026-01-01",
+      "default_category": "news"
     },
     {
       "site_key": "meity",
       "ministry": "Ministry of Electronics and Information Technology",
       "name": "Ministry of Electronics and Information Technology",
+      "url": "https://www.meity.gov.in",
       "base_url": "https://www.meity.gov.in",
       "parser_type": "list",
-      "parser_backend": "scrapy",
-      "render_js": true,
-      "active": false,
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
       "default_category": "notification",
       "category_mapping": {
         "news": [
           "press release",
           "announcement",
-          "update"
+          "update",
+          "achievement",
+          "launch",
+          "foundation stone",
+          "stakeholder consultation"
         ],
         "notification": [
           "notification",
           "notice",
-          "order"
+          "order",
+          "advisory",
+          "direction",
+          "gazette",
+          "competition",
+          "logo"
         ],
         "circular": [
           "circular",
-          "guideline"
+          "guideline",
+          "amendment",
+          "rule",
+          "regulation"
         ],
         "tender": [
           "tender",
           "bid",
-          "rfp"
+          "rfp",
+          "rfq",
+          "eoi",
+          "expression of interest"
         ],
         "recruitment": [
           "recruitment",
           "vacancy",
-          "appointment"
+          "appointment",
+          "deputation"
         ]
       },
       "sections": [
@@ -8981,72 +9015,43 @@
           "section_label": "What's New",
           "source_url": "https://www.meity.gov.in/whats-new",
           "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "date_format": "%d.%m.%Y",
-          "pagination_param": "page",
-          "start_page": 1,
-          "max_pages": 5,
+          "parser_backend": "bs4",
+          "render_js": false,
           "selectors": {
-            "item_selector": "div[role='row'].announcementbox",
-            "title_selector": "p.mb-0",
-            "link_selector": "a.download-btn",
-            "date_selector": "small.ptype",
-            "wait_for_selector": "div[role='row'].announcementbox"
+            "api_type": ""
           }
         },
         {
           "section_label": "Orders & Notices",
           "source_url": "https://www.meity.gov.in/documents/orders-and-notices",
           "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "date_format": "%d.%m.%Y",
-          "pagination_param": "page",
-          "start_page": 1,
-          "max_pages": 5,
+          "parser_backend": "bs4",
+          "render_js": false,
+          "min_date": "2026-01-01",
           "selectors": {
-            "item_selector": "div[role='row'].announcementbox",
-            "title_selector": "p.mb-0",
-            "link_selector": "a.download-btn",
-            "date_selector": "small.ptype",
-            "wait_for_selector": "div[role='row'].announcementbox"
+            "api_type": "Orders and Notices"
           }
         },
         {
           "section_label": "Press Releases",
           "source_url": "https://www.meity.gov.in/documents/press-release",
           "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "date_format": "%d.%m.%Y",
-          "pagination_param": "page",
-          "start_page": 1,
-          "max_pages": 3,
+          "parser_backend": "bs4",
+          "render_js": false,
+          "min_date": "2026-01-01",
           "selectors": {
-            "item_selector": "div[role='row'].announcementbox",
-            "title_selector": "p.mb-0",
-            "link_selector": "a.download-btn",
-            "date_selector": "small.ptype",
-            "wait_for_selector": "div[role='row'].announcementbox"
+            "api_type": "Press Release"
           }
         },
         {
           "section_label": "Gazettes Notifications",
           "source_url": "https://www.meity.gov.in/documents/gazettes-notifications",
           "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "date_format": "%d.%m.%Y",
-          "pagination_param": "page",
-          "start_page": 1,
-          "max_pages": 5,
+          "parser_backend": "bs4",
+          "render_js": false,
+          "min_date": "2026-01-01",
           "selectors": {
-            "item_selector": "div[role='row'].announcementbox",
-            "title_selector": "p.mb-0",
-            "link_selector": "a.download-btn",
-            "date_selector": "small.ptype",
-            "wait_for_selector": "div[role='row'].announcementbox"
+            "api_type": "Gazettes Notifications"
           }
         }
       ]
@@ -9514,6 +9519,177 @@
           }
         }
       ]
+    },
+    {
+      "site_key": "rajasthan-dipr",
+      "ministry": "Government of Rajasthan",
+      "name": "DIPR Rajasthan - Press Releases",
+      "url": "https://dipr.rajasthan.gov.in/pages/press-release-list/85/36?lan=en",
+      "base_url": "https://dipr.rajasthan.gov.in",
+      "parser_type": "table",
+      "parser_backend": "scrapy",
+      "render_js": true,
+      "active": true,
+      "custom_crawler": "rajasthan",
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "press release",
+          "press",
+          "release",
+          "cmo",
+          "chief minister"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "order"
+        ],
+        "circular": [
+          "circular",
+          "guideline"
+        ],
+        "tender": [
+          "tender",
+          "bid"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy"
+        ]
+      },
+      "selectors": {
+        "row_selector": "table tbody tr",
+        "title_selector": "td:nth-child(3)",
+        "link_selector": "td:nth-child(4) a",
+        "date_selector": "td:nth-child(2)",
+        "wait_for_selector": "table tbody tr"
+      }
+    },
+    {
+      "site_key": "ministry-of-road-transport-and-highways",
+      "ministry": "Ministry of Road Transport and Highways",
+      "name": "Ministry of Road Transport and Highways",
+      "url": "https://morth.gov.in/#/whats-new",
+      "base_url": "https://morth.gov.in",
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "category_mapping": {
+        "notification": [
+          "notification",
+          "gazette",
+          "order",
+          "circular",
+          "notice",
+          "amendment",
+          "rule"
+        ],
+        "circular": [
+          "circular",
+          "office memorandum",
+          "om",
+          "instruction",
+          "guideline"
+        ],
+        "news": [
+          "press release",
+          "award",
+          "event",
+          "launch"
+        ]
+      },
+      "selectors": {},
+      "min_date": "2026-01-01"
+    },
+    {
+      "site_key": "department-of-revenue",
+      "ministry": "Department of Revenue",
+      "name": "Department of Revenue",
+      "base_url": "https://dor.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "default_category": "news",
+      "category_mapping": {
+        "notification": [
+          "tender",
+          "notice",
+          "order"
+        ],
+        "news": [
+          "press release",
+          "award",
+          "campaign"
+        ]
+      },
+      "sections": [
+        {
+          "section_label": "What's New",
+          "url": "https://dor.gov.in/whats-new",
+          "parser_type": "table",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "news",
+          "selectors": {
+            "row_selector": "table.responsiveTable.tableData tbody tr",
+            "title_selector": "td.views-field-title",
+            "link_selector": "td.views-field-field-whats-new-document a, td.views-field-title a"
+          }
+        },
+        {
+          "section_label": "Press Releases",
+          "url": "https://dor.gov.in/press-releases",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": true,
+          "default_category": "news",
+          "selectors": {
+            "item_selector": "div.schemesBox",
+            "title_selector": "a.schemeTitle",
+            "link_selector": "a.schemeTitle"
+          }
+        }
+      ]
+    },
+    {
+      "site_key": "epfo",
+      "ministry": "Ministry of Labour and Employment",
+      "name": "Employees Provident Fund Organisation (EPFO)",
+      "base_url": "https://www.epfo.gov.in",
+      "url": "https://www.epfo.gov.in/press-release",
+      "custom_crawler": "epfo",
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "press release",
+          "epfo",
+          "mandaviya",
+          "meeting",
+          "adds",
+          "members",
+          "claim",
+          "settlement"
+        ],
+        "notification": [
+          "notice",
+          "circular",
+          "order"
+        ],
+        "recruitment": [
+          "recruitment",
+          "appointment",
+          "vacancy"
+        ]
+      },
+      "min_date": "2025-01-01"
     }
   ]
 }

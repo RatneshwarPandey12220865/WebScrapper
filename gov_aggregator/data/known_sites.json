@@ -1,6 +1,26 @@
 {
   "sites": [
     {
+      "site_key": "cci",
+      "name": "Competition Commission of India",
+      "registry_url": "https://cci.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://cci.gov.in/",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "cci"
+    },
+    {
+      "site_key": "nse",
+      "name": "National Stock Exchange of India",
+      "registry_url": "https://www.nseindia.com/",
+      "alternate_url": null,
+      "preferred_url": "https://www.nseindia.com/resources/exchange-communication-circulars",
+      "status": "not_working",
+      "status_raw": "blocks automated requests - anti-bot protection",
+      "report_id": "nse"
+    },
+    {
       "site_key": "coffee-board",
       "name": "Coffee Board of India",
       "registry_url": "https://indiacoffee.org",
@@ -61,7 +81,7 @@
       "report_id": "industry_and_internal_trade_cipam_ip"
     },
     {
-      "site_key": "industry-and-internal-trade-economic-adv-policies",
+      "site_key": "office-of-economic-adviser",
       "name": "Industry and Internal Trade_Economic Adv (Policies)",
       "registry_url": "https://eaindustry.nic.in/",
       "alternate_url": null,
@@ -201,10 +221,10 @@
     },
     {
       "site_key": "income-tax",
-      "name": "Income Tax",
-      "registry_url": "https://incometaxindia.gov.in/Pages/press-releases.aspx",
+      "name": "Income Tax — Latest News",
+      "registry_url": "https://www.incometax.gov.in/iec/foportal/latest-news",
       "alternate_url": null,
-      "preferred_url": "https://incometaxindia.gov.in/Pages/press-releases.aspx",
+      "preferred_url": "https://www.incometax.gov.in/iec/foportal/latest-news",
       "status": "working",
       "status_raw": "working",
       "report_id": "income_tax"
@@ -278,16 +298,6 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "department_of_agricultural_research_and_education"
-    },
-    {
-      "site_key": "department-of-agriculture-and-farmers-welfare",
-      "name": "Department of Agriculture and Farmers Welfare",
-      "registry_url": "http://agricoop.gov.in/",
-      "alternate_url": "https://www.agriwelfare.gov.in/",
-      "preferred_url": "https://www.agriwelfare.gov.in/",
-      "status": "not_working",
-      "status_raw": "not working",
-      "report_id": "department_of_agriculture_and_farmers_welfare"
     },
     {
       "site_key": "department-of-fertilizers",
@@ -603,7 +613,7 @@
       "site_key": "department-of-bio-technology",
       "name": "Department of Biotechnology (DBT)",
       "registry_url": "https://dbt.gov.in",
-      "preferred_url": "https://dbt.gov.in/archive?category=whats-new",
+      "preferred_url": "https://dbt.gov.in/offerings/whats-new-list-page",
       "status": "working",
       "status_raw": "working",
       "report_id": "department_of_bio_technology"
@@ -1263,7 +1273,7 @@
       "name": "Ministry of Road Transport and Highways",
       "registry_url": "https://morth.gov.in/index.php",
       "alternate_url": null,
-      "preferred_url": "https://morth.gov.in/index.php",
+      "preferred_url": "https://morth.gov.in/#/whats-new",
       "status": "working",
       "status_raw": "working",
       "report_id": "ministry_of_road_transport_and_highways"
@@ -1450,12 +1460,12 @@
     },
     {
       "site_key": "rajasthan",
-      "name": "Rajasthan",
-      "registry_url": "not working",
-      "alternate_url": "https://reams.rajasthan.gov.in/PrintingStationary/GuestSearch",
-      "preferred_url": "not working",
-      "status": "unknown",
-      "status_raw": null,
+      "name": "Rajasthan DIPR",
+      "registry_url": "https://dipr.rajasthan.gov.in/pages/press-release-list/85/36?lan=en",
+      "alternate_url": null,
+      "preferred_url": "https://dipr.rajasthan.gov.in/pages/press-release-list/85/36?lan=en",
+      "status": "working",
+      "status_raw": "working",
       "report_id": "rajasthan"
     },
     {
