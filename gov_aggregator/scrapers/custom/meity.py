@@ -1,296 +1,215 @@
 """
 Custom crawler for Ministry of Electronics and Information Technology (MeitY).
 
-The current MeitY site uses the same announcementbox-heavy NIC layout seen on
-several other ministry sites. This crawler keeps the parsing generic enough to
-reuse for similar sites while using Playwright to fetch the fully rendered DOM.
+The site migrated to a Next.js + WordPress CMS stack. Content is served via
+WordPress REST API endpoints under the IDN domain (Hindi script TLD) which
+is accessible without bot-protection. www.meity.gov.in returns 403 for
+headless browsers due to Akamai WAF.
+
+API base: https://xn--m1bdba5a7gresc7dsa.xn--11b7cb3a6a.xn--h2brj9c/cms/wp-json/
 """
 
 from __future__ import annotations
 
-import asyncio
-from contextlib import suppress
+import logging
 from datetime import datetime, timezone
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, urljoin
+from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
+import httpx
 
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
-from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig, SiteSection
+from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
-_TIMEOUT_MS = 45_000
-_WAIT_MS = 20_000
+logger = logging.getLogger("gov_aggregator.custom.meity")
+
+_API_BASE = "https://xn--m1bdba5a7gresc7dsa.xn--11b7cb3a6a.xn--h2brj9c/cms/wp-json"
+_SITE_BASE = "https://xn--m1bdba5a7gresc7dsa.xn--11b7cb3a6a.xn--h2brj9c"
+_TIMEOUT = 20.0
+
+# Document type slugs to (API type param, section label)
+_DOCUMENT_SECTIONS = [
+    ("Orders and Notices", "Orders & Notices"),
+    ("Press Release", "Press Releases"),
+    ("Gazettes Notifications", "Gazettes Notifications"),
+]
 
 
 def _parse_date(raw: str | None) -> datetime | None:
     if not raw:
         return None
-
-    cleaned = raw.strip()
-    if not cleaned:
-        return None
-
-    for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d", "%Y"):
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
         try:
-            return datetime.strptime(cleaned, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(raw.strip(), fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
-
     return None
 
 
-def _section_scope_selector(section: SiteSection) -> str | None:
-    wait_selector = section.selectors.get("wait_for_selector")
-    # Only use a scope selector if it's a non-announcementbox container
-    # (e.g. a wrapping div that limits which rows we parse).
-    # Do NOT scope to "div.whats-new-announcements" — the /whats-new page
-    # renders announcementbox rows directly without that wrapper.
-    if wait_selector and "announcementbox" not in wait_selector:
-        return str(wait_selector)
-    return None
+def _extract_link_from_post(post: dict) -> str:
+    """Pull the best download/view link from an acf_data document post."""
+    acf = post.get("acf_data") or {}
+    files = acf.get("file") or []
+    if isinstance(files, list):
+        for f in files:
+            if not isinstance(f, dict):
+                continue
+            pdf_obj = f.get("pdf") or {}
+            pdf_url = pdf_obj.get("url", "").strip() if isinstance(pdf_obj, dict) else ""
+            if pdf_url:
+                return pdf_url
+            ext = (f.get("external_link") or "").strip()
+            if ext:
+                return ext
+    # Fallback: external_link at top-level acf
+    ext = (acf.get("external_link") or "").strip()
+    if ext:
+        return ext
+    return ""
 
 
-def _page_url(section: SiteSection, page_number: int) -> str:
-    if not section.pagination_param:
-        return section.source_url
+def _parse_document_post(post: dict, section_label: str) -> ScrapedItem | None:
+    acf = post.get("acf_data") or {}
+    title = (acf.get("title") or post.get("post_title") or "").strip()
+    if not title:
+        return None
 
-    parts = urlsplit(section.source_url)
-    query = dict(parse_qsl(parts.query, keep_blank_values=True))
-    query[section.pagination_param] = str(page_number)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    link = _extract_link_from_post(post)
+    if not link:
+        return None
+
+    published_at = _parse_date(acf.get("date")) or _parse_date(post.get("post_date"))
+    is_pdf = link.lower().endswith(".pdf")
+
+    return ScrapedItem(
+        title=title,
+        link=link,
+        published_at=published_at,
+        is_pdf=is_pdf,
+        section_label=section_label,
+    )
 
 
-def _extract_nic_announcementbox_items(
-    html: str,
-    *,
-    base_url: str,
+def _parse_whatsnew_post(post: dict) -> ScrapedItem | None:
+    acf = post.get("acf_data") or {}
+    title = (acf.get("title") or post.get("post_title") or "").strip()
+    if not title:
+        return None
+
+    link_type = (acf.get("type") or "").strip()
+    if link_type == "Internal Link":
+        rel = (acf.get("internal_link") or "").strip()
+        link = urljoin(_SITE_BASE, rel) if rel else ""
+    elif link_type == "External Link":
+        link = (acf.get("external_link") or "").strip()
+    elif link_type == "PDF":
+        pdf_obj = acf.get("pdf") or {}
+        link = (pdf_obj.get("url") if isinstance(pdf_obj, dict) else "") or ""
+    else:
+        # Fall through to any available URL field
+        link = (acf.get("external_link") or acf.get("internal_link") or "").strip()
+        if link and not link.startswith("http"):
+            link = urljoin(_SITE_BASE, link)
+
+    if not link:
+        return None
+
+    # NOTE: What's New section deliberately has no date filtering
+    # to ensure all items are returned regardless of publish date
+    is_pdf = link.lower().endswith(".pdf")
+
+    return ScrapedItem(
+        title=title,
+        link=link,
+        published_at=None,  # No date - bypasses global min_date filter
+        is_pdf=is_pdf,
+        section_label="What's New",
+    )
+
+
+async def _fetch_document_section(
+    client: httpx.AsyncClient,
+    doc_type: str,
     section_label: str,
-    scope_selector: str | None = None,
+    max_pages: int = 10,
 ) -> list[ScrapedItem]:
-    soup = BeautifulSoup(html, "html.parser")
-    scope = soup.select_one(scope_selector) if scope_selector else None
-    root = scope or soup
-
     items: list[ScrapedItem] = []
-    for row in root.select("div[role='row'].announcementbox"):
-        title_tag = row.select_one("p.mb-0") or row.select_one("div.mb-0.text-break")
-        title = title_tag.get_text(" ", strip=True) if title_tag else ""
-        if not title:
-            continue
+    seen: set[str] = set()
 
-        link_tag = row.select_one("a.download-btn[href]") or row.select_one("a.link-btn[href]") or row.select_one("a[href]")
-        if not link_tag:
-            continue
-
-        href = (link_tag.get("href") or "").strip()
-        if not href or href == "#":
-            continue
-
-        link = href if href.startswith("http") else urljoin(base_url, href)
-
-        published_at: datetime | None = None
-        for candidate in (
-            row.select_one("small.ptype.mb-0[aria-label]"),
-            row.select_one("small.ptype.mb-0"),
-            row.select_one("small.ptype"),
-        ):
-            if not candidate:
-                continue
-            raw_date = (candidate.get("aria-label") or "").strip() or candidate.get_text(strip=True)
-            published_at = _parse_date(raw_date)
-            if published_at:
-                break
-
-        items.append(
-            ScrapedItem(
-                title=title,
-                link=link,
-                summary=None,
-                published_at=published_at,
-                is_pdf=link.lower().endswith(".pdf") or link_tag.get("type", "").lower() == "pdf",
-                section_label=section_label,
-            )
-        )
-
-    return items
-
-
-async def _launch_browser(playwright):
-    try:
-        return await playwright.chromium.launch(headless=True)
-    except Exception:  # noqa: BLE001
-        return await playwright.chromium.launch(headless=True, channel="msedge")
-
-
-async def _wait_for_rows(page, section: SiteSection) -> None:
-    wait_selector = section.selectors.get("wait_for_selector")
-    if wait_selector:
+    page = 1
+    while page <= max_pages:
+        url = f"{_API_BASE}/document/documents"
+        params = {"type": doc_type, "limit": "50", "page": str(page)}
         try:
-            await page.wait_for_selector(str(wait_selector), timeout=_WAIT_MS)
-        except Exception:  # noqa: BLE001
-            pass
-
-    try:
-        await page.locator("div[role='row'].announcementbox").first.wait_for(timeout=8_000)
-    except Exception:  # noqa: BLE001
-        await page.wait_for_timeout(2_000)
-
-
-async def _fetch_section_items(page, section: SiteSection, base_url: str) -> list[ScrapedItem]:
-    scope_selector = _section_scope_selector(section)
-    items: list[ScrapedItem] = []
-    seen_links: set[str] = set()
-
-    start_page = section.start_page or 1
-    max_pages = section.max_pages or 1
-
-    for offset in range(max_pages):
-        page_number = start_page + offset
-        url = _page_url(section, page_number)
-
-        await page.goto(url, wait_until="domcontentloaded", timeout=_TIMEOUT_MS)
-        await _wait_for_rows(page, section)
-
-        try:
-            await page.wait_for_load_state("networkidle", timeout=5_000)
-        except Exception:  # noqa: BLE001
-            await page.wait_for_timeout(1_500)
-
-        html = await page.content()
-        page_items = _extract_nic_announcementbox_items(
-            html,
-            base_url=base_url,
-            section_label=section.section_label,
-            scope_selector=scope_selector,
-        )
-
-        new_found = 0
-        for item in page_items:
-            if item.link in seen_links:
-                continue
-            seen_links.add(item.link)
-            items.append(item)
-            new_found += 1
-
-        if new_found == 0 and offset > 0:
+            resp = await client.get(url, params=params, timeout=_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("[meity] %s page %d fetch failed: %s", section_label, page, exc)
             break
 
+        posts = data.get("posts") or []
+        total_pages = int(data.get("total_pages") or 1)
+
+        for post in posts:
+            item = _parse_document_post(post, section_label)
+            if item and item.link not in seen:
+                seen.add(item.link)
+                items.append(item)
+
+        if page >= total_pages or not posts:
+            break
+        page += 1
+
+    logger.info("[meity] %s: scraped %d items", section_label, len(items))
     return items
 
 
-def _configured_sections(config: SiteConfig) -> list[SiteSection]:
-    if config.sections:
-        return list(config.sections)
-
-    # Fallback defaults — mirrors sites_config.json entry for meity
-    _wait = {"wait_for_selector": "div[role='row'].announcementbox"}
-    return [
-        SiteSection(
-            source_url="https://www.meity.gov.in/whats-new",
-            parser="list",
-            parser_backend="bs4",
-            render_js=True,
-            section_label="What's New",
-            pagination_param="page",
-            start_page=1,
-            max_pages=5,
-            selectors=_wait,
-        ),
-        SiteSection(
-            source_url="https://www.meity.gov.in/documents/orders-and-notices",
-            parser="list",
-            parser_backend="bs4",
-            render_js=True,
-            section_label="Orders & Notices",
-            pagination_param="page",
-            start_page=1,
-            max_pages=5,
-            selectors=_wait,
-        ),
-        SiteSection(
-            source_url="https://www.meity.gov.in/documents/press-release",
-            parser="list",
-            parser_backend="bs4",
-            render_js=True,
-            section_label="Press Releases",
-            pagination_param="page",
-            start_page=1,
-            max_pages=3,
-            selectors=_wait,
-        ),
-        SiteSection(
-            source_url="https://www.meity.gov.in/documents/publications",
-            parser="list",
-            parser_backend="bs4",
-            render_js=True,
-            section_label="Publications",
-            pagination_param="page",
-            start_page=1,
-            max_pages=3,
-            selectors=_wait,
-        ),
-        SiteSection(
-            source_url="https://www.meity.gov.in/documents",
-            parser="list",
-            parser_backend="bs4",
-            render_js=True,
-            section_label="Documents",
-            pagination_param="page",
-            start_page=1,
-            max_pages=5,
-            selectors=_wait,
-        ),
-    ]
-
-
-async def _crawl_meity_async(config: SiteConfig) -> list[ScrapedItem]:
-    from playwright.async_api import async_playwright
-
-    all_items: list[ScrapedItem] = []
-    base_url = config.base_url or "https://www.meity.gov.in"
-
-    async with async_playwright() as playwright:
-        browser = await _launch_browser(playwright)
-        context = await browser.new_context(
-            user_agent=DEFAULT_HEADERS["User-Agent"],
-            extra_http_headers={key: value for key, value in DEFAULT_HEADERS.items() if key != "User-Agent"},
-            ignore_https_errors=not config.verify_ssl,
-        )
-        page = None
-        try:
-            page = await context.new_page()
-            for section in _configured_sections(config):
-                section_items = await _fetch_section_items(page, section, base_url)
-                all_items.extend(section_items)
-        finally:
-            if page is not None:
-                with suppress(Exception):
-                    await page.close()
-            with suppress(Exception):
-                await context.close()
-            with suppress(Exception):
-                await browser.close()
-
-    unique: list[ScrapedItem] = []
-    seen_links: set[str] = set()
-    for item in all_items:
-        if item.link in seen_links:
-            continue
-        seen_links.add(item.link)
-        unique.append(item)
-
-    return unique
-
-
-def _run_meity_in_worker(config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+async def _fetch_whatsnew(client: httpx.AsyncClient) -> list[ScrapedItem]:
+    url = f"{_API_BASE}/post-page/whats_new"
+    items: list[ScrapedItem] = []
     try:
-        return loop.run_until_complete(_crawl_meity_async(config))
-    finally:
-        loop.close()
+        resp = await client.get(url, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.warning("[meity] What's New fetch failed: %s", exc)
+        return items
+
+    for post in data.get("posts") or []:
+        item = _parse_whatsnew_post(post)
+        if item:
+            items.append(item)
+
+    logger.info("[meity] What's New: scraped %d items", len(items))
+    return items
 
 
 async def crawl_meity(config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _run_meity_in_worker, config)
+    headers = {k: v for k, v in DEFAULT_HEADERS.items()}
+    async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        all_items: list[ScrapedItem] = []
+
+        # What's New
+        all_items.extend(await _fetch_whatsnew(client))
+
+        # Document sections driven by config sections or defaults
+        sections_to_fetch = _DOCUMENT_SECTIONS[:]
+        if config.sections:
+            sections_to_fetch = [
+                (s.selectors.get("api_type", ""), s.section_label)
+                for s in config.sections
+                if s.selectors.get("api_type")
+            ] or _DOCUMENT_SECTIONS[:]
+
+        for doc_type, label in sections_to_fetch:
+            all_items.extend(await _fetch_document_section(client, doc_type, label))
+
+    # Deduplicate by link
+    seen: set[str] = set()
+    unique: list[ScrapedItem] = []
+    for item in all_items:
+        if item.link not in seen:
+            seen.add(item.link)
+            unique.append(item)
+
+    return unique

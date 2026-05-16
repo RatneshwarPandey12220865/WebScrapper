@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import re
 from datetime import datetime, timezone
 from urllib.parse import urljoin
@@ -11,15 +10,12 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 BASE_URL = "https://dbt.gov.in"
 
-# What's New: /archive?category=whats-new  — shows all 10 current items, no pagination
-# Orders:     /archive?category=order-and-notices — full history, possibly paginated
-# DBT Press:  /offerings/dbt-press — 136 items across 14 pages
-WHATS_NEW_URL = "https://dbt.gov.in/archive?category=whats-new"
-ORDERS_URL = "https://dbt.gov.in/archive?category=order-and-notices"
+WHATS_NEW_URL = "https://dbt.gov.in/offerings/whats-new-list-page"
+ORDERS_URL = "https://dbt.gov.in/documents/order-and-notices"
 PRESS_URL = "https://dbt.gov.in/offerings/dbt-press"
 
-TABLE_SELECTOR = "table.m_b23fa0ef tbody tr"
-# Mantine badge label class — multiple badges may exist per page
+TABLE_SELECTOR = "table.mantine-Table-table tbody tr td"   # used for Playwright wait_for_selector
+TABLE_ROW_SELECTOR = "table.mantine-Table-table tbody tr"  # used for BeautifulSoup row iteration
 BADGE_SELECTOR = ".m_5add502a"
 
 DEFAULT_HEADERS = {
@@ -31,7 +27,6 @@ DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.5",
 }
 
-# Prefix that the site injects into every aria-label: "Document title: XYZ"
 _ARIA_PREFIX_RE = re.compile(r"^Document title:\s*", re.IGNORECASE)
 
 
@@ -40,8 +35,8 @@ def _parse_dbt_date(raw: str | None) -> datetime | None:
         return None
     raw = raw.strip()
     for pattern in (
-        r"(\d{2})-(\d{2})-(\d{4})",  # DD-MM-YYYY
-        r"(\d{2})/(\d{2})/(\d{4})",  # DD/MM/YYYY
+        r"(\d{2})-(\d{2})-(\d{4})",
+        r"(\d{2})/(\d{2})/(\d{4})",
     ):
         m = re.search(pattern, raw)
         if m:
@@ -52,29 +47,20 @@ def _parse_dbt_date(raw: str | None) -> datetime | None:
     return None
 
 
-def _extract_table_items(
-    html: str,
-    section_label: str,
-    link_col: int,
-    date_col: int,
-) -> list[ScrapedItem]:
+def _extract_whats_new_items(html: str, section_label: str) -> list[ScrapedItem]:
     """
-    Parse Mantine React table rows into ScrapedItems.
-
-    Column indices (1-based):
-      What's New        — link_col=8, date_col=3
-      Orders & Notices  — link_col=8, date_col=4
-      DBT Press         — link_col=7, date_col=3
+    Parse What's New table (offerings/whats-new-list-page).
+    Cols: S.No | Title | Start Date | End Date | Details (one or more PDF links)
+    Emits one ScrapedItem per PDF link found in the Details cell.
     """
     soup = BeautifulSoup(html, "html.parser")
     items: list[ScrapedItem] = []
 
-    for row in soup.select(TABLE_SELECTOR):
+    for row in soup.select(TABLE_ROW_SELECTOR):
         tds = row.find_all("td")
-        if len(tds) < max(link_col, date_col):
+        if len(tds) < 5:
             continue
 
-        # Title: the site puts aria-label="Document title: XYZ" on the div
         title_td = tds[1]
         title_div = title_td.find("div", attrs={"aria-label": True})
         if title_div:
@@ -85,8 +71,64 @@ def _extract_table_items(
         if not title:
             continue
 
-        # Link: anchor in the designated column
-        anchor = tds[link_col - 1].find("a", href=True)
+        start_date_raw = tds[2].get_text(strip=True)
+        published_at = _parse_dbt_date(start_date_raw)
+
+        # Collect all PDF/document links from the Details cell
+        anchors = [a for a in tds[4].find_all("a", href=True) if a["href"].strip() and a["href"].strip() != "#"]
+        if not anchors:
+            continue
+
+        total = len(anchors)
+        for idx, anchor in enumerate(anchors):
+            href = anchor["href"].strip()
+            link = href if href.startswith("http") else urljoin(BASE_URL, href)
+            is_pdf = link.lower().endswith(".pdf") or "/storage/media" in link.lower()
+            label = section_label if total == 1 else f"{section_label} (PDF {idx + 1} of {total})"
+            items.append(ScrapedItem(
+                title=title,
+                link=link,
+                published_at=published_at,
+                end_date=None,   # What's New only shows published date
+                is_pdf=is_pdf,
+                section_label=label,
+            ))
+
+    return items
+
+
+def _extract_orders_items(html: str, section_label: str) -> list[ScrapedItem]:
+    """
+    Parse Orders & Notices table (documents/order-and-notices).
+    Table columns (1-based index):
+      1: S.No
+      2: Title
+      3: Category
+      4: Start Date
+      5: End Date
+      6: Extension
+      7: Size
+      8: Details (PDF link)
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    items: list[ScrapedItem] = []
+
+    for row in soup.select(TABLE_ROW_SELECTOR):
+        tds = row.find_all("td")
+        if len(tds) < 8:
+            continue
+
+        title_td = tds[1]
+        title_div = title_td.find("div", attrs={"aria-label": True})
+        if title_div:
+            raw_label = title_div["aria-label"].strip()
+            title = _ARIA_PREFIX_RE.sub("", raw_label).strip()
+        else:
+            title = title_td.get_text(strip=True)
+        if not title:
+            continue
+
+        anchor = tds[7].find("a", href=True)
         if not anchor:
             continue
         href = anchor["href"].strip()
@@ -94,11 +136,10 @@ def _extract_table_items(
             continue
         link = href if href.startswith("http") else urljoin(BASE_URL, href)
 
-        # Date
-        date_raw = tds[date_col - 1].get_text(strip=True) if len(tds) >= date_col else None
-        published_at = _parse_dbt_date(date_raw)
+        start_date_raw = tds[3].get_text(strip=True)
+        published_at = _parse_dbt_date(start_date_raw)
 
-        is_pdf = link.lower().endswith(".pdf") or "/storage/media" in link.lower()
+        is_pdf = link.lower().endswith(".pdf") or link.lower().endswith(".jpg") or "/storage/media" in link.lower()
 
         items.append(
             ScrapedItem(
@@ -113,185 +154,192 @@ def _extract_table_items(
     return items
 
 
-# ---------------------------------------------------------------------------
-# Generic paginated section crawler (handles both single-page and multi-page)
-# ---------------------------------------------------------------------------
-
-def _run_section_sync(
-    url: str,
-    section_label: str,
-    link_col: int,
-    date_col: int,
-) -> list[ScrapedItem]:
+def _extract_press_items(html: str, section_label: str) -> list[ScrapedItem]:
     """
-    Launch Playwright in a fresh event loop (safe for run_in_executor).
-
-    Automatically detects pagination via the "Page X of Y" badge.
-    If no such badge exists the page is treated as single-page.
+    Parse DBT Press table (offerings/dbt-press).
+    Table columns (1-based index):
+      1: S.No
+      2: Title
+      3: Start Date
+      4: End Date
+      5: Extension
+      6: Size
+      7: Details (PDF link)
     """
+    soup = BeautifulSoup(html, "html.parser")
+    items: list[ScrapedItem] = []
 
-    async def _async() -> list[ScrapedItem]:
-        from playwright.async_api import async_playwright
+    for row in soup.select(TABLE_ROW_SELECTOR):
+        tds = row.find_all("td")
+        if len(tds) < 7:
+            continue
 
-        all_items: list[ScrapedItem] = []
-        seen_links: set[str] = set()
+        title_td = tds[1]
+        title_div = title_td.find("div", attrs={"aria-label": True})
+        if title_div:
+            raw_label = title_div["aria-label"].strip()
+            title = _ARIA_PREFIX_RE.sub("", raw_label).strip()
+        else:
+            title = title_td.get_text(strip=True)
+        if not title:
+            continue
 
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True, channel="msedge")
-            page = await browser.new_page(user_agent=DEFAULT_HEADERS["User-Agent"])
-            await page.set_extra_http_headers(
-                {k: v for k, v in DEFAULT_HEADERS.items() if k != "User-Agent"}
+        anchor = tds[6].find("a", href=True)
+        if not anchor:
+            continue
+        href = anchor["href"].strip()
+        if not href or href == "#":
+            continue
+        link = href if href.startswith("http") else urljoin(BASE_URL, href)
+
+        start_date_raw = tds[2].get_text(strip=True)
+        published_at = _parse_dbt_date(start_date_raw)
+
+        end_date_raw = tds[3].get_text(strip=True)
+        end_date = _parse_dbt_date(end_date_raw)
+
+        is_pdf = link.lower().endswith(".pdf") or "/storage/media" in link.lower()
+
+        items.append(
+            ScrapedItem(
+                title=title,
+                link=link,
+                published_at=published_at,
+                end_date=end_date,
+                is_pdf=is_pdf,
+                section_label=section_label,
             )
-            try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        )
+
+    return items
+
+
+def _run_whats_new_sync() -> list[ScrapedItem]:
+    from playwright.sync_api import sync_playwright
+
+    all_items: list[ScrapedItem] = []
+    seen_links: set[str] = set()
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            page.goto(WHATS_NEW_URL, wait_until="networkidle", timeout=60_000)
+            page.wait_for_timeout(5000)
+            while True:
                 try:
-                    await page.wait_for_selector(TABLE_SELECTOR, timeout=20_000)
+                    page.wait_for_selector(TABLE_SELECTOR, timeout=30000)
                 except Exception:
-                    await page.wait_for_timeout(4_000)
+                    page.wait_for_timeout(3000)
+                for item in _extract_whats_new_items(page.content(), "What's New"):
+                    if item.link not in seen_links:
+                        seen_links.add(item.link)
+                        all_items.append(item)
+                if not _click_next(page):
+                    break
 
-                # ── Detect total pages ──────────────────────────────────────
-                # There may be two badges: "Total: N" and "Page X of Y".
-                # We iterate all .m_5add502a spans to find the "Page X of Y" one.
-                total_pages = 1
+        finally:
+            browser.close()
+
+    return all_items
+
+
+def _run_orders_sync() -> list[ScrapedItem]:
+    from playwright.sync_api import sync_playwright
+
+    all_items: list[ScrapedItem] = []
+    seen_links: set[str] = set()
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            page.goto(ORDERS_URL, wait_until="networkidle", timeout=60_000)
+            page.wait_for_timeout(5000)
+            while True:
                 try:
-                    badge_texts = await page.locator(BADGE_SELECTOR).all_inner_texts()
-                    for text in badge_texts:
-                        m = re.search(r"Page\s+\d+\s+of\s+(\d+)", text, re.IGNORECASE)
-                        if m:
-                            total_pages = int(m.group(1))
-                            break
+                    page.wait_for_selector(TABLE_SELECTOR, timeout=30000)
                 except Exception:
-                    pass
+                    page.wait_for_timeout(3000)
+                for item in _extract_orders_items(page.content(), "Orders and Notices"):
+                    if item.link not in seen_links:
+                        seen_links.add(item.link)
+                        all_items.append(item)
+                if not _click_next(page):
+                    break
 
-                for current_page in range(1, total_pages + 1):
-                    html = await page.content()
-                    for item in _extract_table_items(html, section_label, link_col, date_col):
-                        if item.link not in seen_links:
-                            seen_links.add(item.link)
-                            all_items.append(item)
+        finally:
+            browser.close()
 
-                    if current_page >= total_pages:
-                        break
+    return all_items
 
-                    # ── Click Next ──────────────────────────────────────────
-                    clicked = False
 
-                    # Strategy 1: explicit aria-label on the Next button
-                    for label in ("Next page", "Next", "next"):
-                        try:
-                            btn = page.locator(f'button[aria-label="{label}"]')
-                            if await btn.count() > 0 and await btn.is_enabled():
-                                await btn.click()
-                                clicked = True
-                                break
-                        except Exception:
-                            continue
+def _click_next(page) -> bool:
+    """Click the Mantine 'Next page' arrow button.
 
-                    # Strategy 2: second-to-last enabled button in the Mantine
-                    #             pagination container (layout: First Prev … Next Last)
-                    if not clicked:
-                        try:
-                            btns = page.locator("div.m_4addd315 button:not([disabled])")
-                            count = await btns.count()
-                            if count >= 2:
-                                await btns.nth(count - 2).click()
-                                clicked = True
-                        except Exception:
-                            pass
-
-                    if not clicked:
-                        break
-
-                    # ── Wait for badge to confirm page advance ──────────────
-                    # Check all badges for "Page {next_page} of ..."
-                    next_page = current_page + 1
-                    try:
-                        await page.wait_for_function(
-                            f"""() => {{
-                                const badges = document.querySelectorAll('{BADGE_SELECTOR}');
-                                for (const b of badges) {{
-                                    if (/Page\\s+{next_page}\\s+of/i.test(b.textContent)) return true;
-                                }}
-                                return false;
-                            }}""",
-                            timeout=10_000,
-                        )
-                    except Exception:
-                        # Fallback: just wait for the table to be non-empty
-                        try:
-                            await page.wait_for_function(
-                                f"document.querySelectorAll('{TABLE_SELECTOR}').length > 0",
-                                timeout=8_000,
-                            )
-                        except Exception:
-                            await page.wait_for_timeout(2_500)
-
-            finally:
-                await browser.close()
-
-        return all_items
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    Mantine pagination renders 4 icon-only nav buttons (first/prev/next/last)
+    that have no data-with-padding attribute, while numbered page buttons do.
+    Index 2 (0-based) among those nav buttons is always 'next'.
+    """
     try:
-        return loop.run_until_complete(_async())
-    finally:
-        loop.close()
+        all_controls = page.query_selector_all(".mantine-Pagination-control")
+        nav_btns = [b for b in all_controls if b.get_attribute("data-with-padding") is None]
+        if len(nav_btns) < 3:
+            return False
+        next_btn = nav_btns[2]
+        if (next_btn.get_attribute("data-disabled") == "true"
+                or next_btn.get_attribute("disabled") is not None):
+            return False
+        next_btn.click()
+        page.wait_for_timeout(2500)
+        return True
+    except Exception:
+        return False
 
 
-# ---------------------------------------------------------------------------
-# Async wrappers (offload Playwright to thread pool)
-# ---------------------------------------------------------------------------
+def _run_press_sync() -> list[ScrapedItem]:
+    from playwright.sync_api import sync_playwright
 
-async def _scrape_whats_new() -> list[ScrapedItem]:
+    all_items: list[ScrapedItem] = []
+    seen_links: set[str] = set()
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            page.goto(PRESS_URL, wait_until="networkidle", timeout=60_000)
+            page.wait_for_timeout(5000)
+            while True:
+                try:
+                    page.wait_for_selector(TABLE_SELECTOR, timeout=30000)
+                except Exception:
+                    page.wait_for_timeout(3000)
+                for item in _extract_press_items(page.content(), "DBT Press"):
+                    if item.link not in seen_links:
+                        seen_links.add(item.link)
+                        all_items.append(item)
+                if not _click_next(page):
+                    break
+
+        finally:
+            browser.close()
+
+    return all_items
+
+
+async def crawl_dbt(_config: SiteConfig) -> list[ScrapedItem]:
     """
-    /archive?category=whats-new — 8 columns
-    Cols: S.No | Title | Start Date(3) | End Date | Category | Ext | Size | Details(8)
+    Crawl DBT sections:
+      • What's New — /offerings/whats-new-list-page
+      • Orders and Notices — /documents/order-and-notices
+      • DBT Press — /offerings/dbt-press
     """
+    import asyncio
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None, _run_section_sync, WHATS_NEW_URL, "What's New", 8, 3
-    )
-
-
-async def _scrape_orders() -> list[ScrapedItem]:
-    """
-    /archive?category=order-and-notices — 8 columns
-    Cols: S.No | Title(2) | Title/Category(3) | Start Date(4) | End Date | Ext | Size | Details(8)
-    """
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None, _run_section_sync, ORDERS_URL, "Orders and Notices", 8, 4
-    )
-
-
-async def _scrape_press() -> list[ScrapedItem]:
-    """
-    /offerings/dbt-press — 7 columns, 14 pages
-    Cols: S.No | Title(2) | Start Date(3) | End Date | Ext | Size | Details(7)
-    """
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None, _run_section_sync, PRESS_URL, "DBT Press", 7, 3
-    )
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-async def crawl_dbt(config: SiteConfig) -> list[ScrapedItem]:
-    """
-    Crawl all three DBT sections in parallel:
-      • What's New         — /archive?category=whats-new (10 items, single page)
-      • Orders and Notices — /archive?category=order-and-notices (paginated)
-      • DBT Press          — /offerings/dbt-press (136 items across 14 pages)
-    """
-    whats_new, orders, press = await asyncio.gather(
-        _scrape_whats_new(),
-        _scrape_orders(),
-        _scrape_press(),
-    )
+    
+    whats_new = await loop.run_in_executor(None, _run_whats_new_sync)
+    orders = await loop.run_in_executor(None, _run_orders_sync)
+    press = await loop.run_in_executor(None, _run_press_sync)
 
     all_items = whats_new + orders + press
 

@@ -30,6 +30,8 @@ MAX_PRESS_PAGES = 5
 PAGE_SIZE = 50
 CONCURRENCY = 4
 
+MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -66,11 +68,21 @@ def _parse_dot_date(raw: str | None) -> datetime | None:
     return None
 
 
+def _passes_min_date(item: ScrapedItem, apply_filter: bool) -> bool:
+    if not apply_filter:
+        return True
+    if item.published_at is None:
+        return True
+    return item.published_at >= MIN_DATE
+
+
 def _extract_announcementbox_items(
     html: str,
     *,
     base_url: str,
     section_label: str,
+    exclude_view_all: bool = False,
+    apply_time_filter: bool = False,
 ) -> list[ScrapedItem]:
     soup = BeautifulSoup(html, "html.parser")
     items: list[ScrapedItem] = []
@@ -90,6 +102,10 @@ def _extract_announcementbox_items(
             continue
 
         link = href if href.startswith("http") else urljoin(base_url, href)
+        is_view_all = "View" in link_tag.get_text(strip=True) and not link.lower().endswith(".pdf")
+
+        if exclude_view_all and is_view_all:
+            continue
 
         published_at: datetime | None = None
         for candidate in (
@@ -103,16 +119,17 @@ def _extract_announcementbox_items(
             if published_at:
                 break
 
-        items.append(
-            ScrapedItem(
-                title=title,
-                link=link,
-                summary=None,
-                published_at=published_at,
-                is_pdf=link.lower().endswith(".pdf") or (link_tag.get("type", "").lower() == "pdf"),
-                section_label=section_label,
-            )
+        item = ScrapedItem(
+            title=title,
+            link=link,
+            summary=None,
+            published_at=published_at,
+            is_pdf=link.lower().endswith(".pdf") or (link_tag.get("type", "").lower() == "pdf"),
+            section_label=section_label,
         )
+
+        if _passes_min_date(item, apply_time_filter):
+            items.append(item)
 
     return items
 
@@ -269,6 +286,7 @@ async def _records_to_items(
     *,
     records: list[dict],
     section_label: str,
+    apply_time_filter: bool = False,
 ) -> list[ScrapedItem]:
     tasks = [
         _record_to_item(
@@ -281,7 +299,10 @@ async def _records_to_items(
         for record in records
     ]
     resolved = await asyncio.gather(*tasks)
-    return [item for item in resolved if item is not None]
+    items = [item for item in resolved if item is not None]
+    if apply_time_filter:
+        items = [item for item in items if _passes_min_date(item, apply_time_filter)]
+    return items
 
 
 async def _fetch_whats_new_items(
@@ -323,6 +344,8 @@ async def _fetch_whats_new_items(
         html,
         base_url=BASE_URL,
         section_label="What's New",
+        exclude_view_all=True,
+        apply_time_filter=False,
     )
     print(f"  [DoT] What's New via HTML fallback: {len(items)} items")
     return items
@@ -337,6 +360,7 @@ async def _scrape_paginated_section(
     category_slug: str,
     page_url: str,
     max_pages: int,
+    apply_time_filter: bool = True,
 ) -> list[ScrapedItem]:
     items: list[ScrapedItem] = []
     seen_links: set[str] = set()
@@ -373,6 +397,7 @@ async def _scrape_paginated_section(
             attachment_cache,
             records=records,
             section_label=section_label,
+            apply_time_filter=apply_time_filter,
         )
         if not page_items:
             break
@@ -398,6 +423,8 @@ async def _scrape_paginated_section(
             html,
             base_url=BASE_URL,
             section_label=section_label,
+            exclude_view_all=True,
+            apply_time_filter=apply_time_filter,
         )
         if not page_items:
             break

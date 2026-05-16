@@ -5,143 +5,167 @@ from datetime import datetime, timezone
 from urllib.parse import urljoin
 
 import httpx
+from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
+_BASE = "https://asi.nic.in"
+_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+# Matches DD-MM-YYYY or DD/MM/YYYY anywhere in text
+_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
 
-def _clean_text(value: str | None) -> str:
+
+def _clean(value: str | None) -> str:
     return " ".join((value or "").split())
 
 
 def _parse_date(raw: str | None) -> datetime | None:
+    """Parse DD-MM-YYYY or DD/MM/YYYY → datetime."""
     if not raw:
         return None
-    cleaned = raw.strip()
-    match = re.search(r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})", cleaned)
-    if match:
+    m = _DATE_RE.search(raw.strip())
+    if m:
         try:
-            day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
-            return datetime(year, month, day, tzinfo=timezone.utc)
+            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
         except ValueError:
             pass
     return None
 
 
-async def crawl_asi(config: SiteConfig) -> list[ScrapedItem]:
+def _parse_table(html: str, section_label: str) -> tuple[list[ScrapedItem], bool]:
+    """
+    Parse one page of a 3-column ASI table (Sr No | Title | Publish Date).
+
+    The server sometimes emits the date td as text inside the title td when
+    parsed with strict parsers, so we use a two-step date extraction:
+      1. Check tds[2] (ideal case)
+      2. Fall back to searching the full row text for DD-MM-YYYY
+
+    Returns (items, hit_cutoff) — hit_cutoff=True stops pagination.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.select_one("table.tabel-border")
+    if not table:
+        return [], True
+
+    rows = table.select("tbody tr")
+    if not rows:
+        return [], True
+
+    items: list[ScrapedItem] = []
+    hit_cutoff = False
+
+    for row in rows:
+        tds = row.find_all("td")
+        if len(tds) < 2:
+            continue
+
+        # Find the anchor link — search all tds in case structure shifts
+        link_tag = None
+        for td in tds:
+            link_tag = td.find("a", href=True)
+            if link_tag:
+                break
+        if not link_tag:
+            continue
+
+        # Title: anchor text only (never includes surrounding td text)
+        title = _clean(link_tag.get_text())
+        if not title:
+            continue
+
+        # ── Date extraction (three-strategy fallback) ──────────────────────
+        date_text = ""
+
+        # Strategy 1: dedicated 3rd column
+        if len(tds) >= 3:
+            date_text = _clean(tds[-1].get_text())   # last td = Publish Date
+
+        # Strategy 2: date leaked into the last part of the title string
+        if not _parse_date(date_text):
+            m = _DATE_RE.search(title)
+            if m:
+                date_text = m.group(0)
+
+        # Strategy 3: scan the full row text
+        if not _parse_date(date_text):
+            row_text = _clean(row.get_text())
+            m = _DATE_RE.search(row_text)
+            if m:
+                date_text = m.group(0)
+
+        # Strip any leaked date from the end of the title
+        title = _DATE_RE.sub("", title).strip(" -–—")
+        title = _clean(title)
+
+        published_at = _parse_date(date_text)
+
+        if published_at and published_at < _MIN_DATE:
+            hit_cutoff = True
+            break
+
+        href = link_tag.get("href", "")
+        link = urljoin(_BASE, href)
+        is_pdf = "/download" in href or "/downloadPdf" in href or href.lower().endswith(".pdf")
+
+        items.append(ScrapedItem(
+            title=title,
+            link=link,
+            published_at=published_at,
+            is_pdf=is_pdf,
+            section_label=section_label,
+        ))
+
+    return items, hit_cutoff
+
+
+async def _scrape_section(
+    client: httpx.AsyncClient,
+    base_url: str,
+    section_label: str,
+    max_pages: int,
+) -> list[ScrapedItem]:
+    """
+    Fetch all pages of a section. First page = base_url (no ?p=),
+    subsequent pages = base_url?p=1, base_url?p=2, …
+    """
     items: list[ScrapedItem] = []
 
-    async with httpx.AsyncClient(follow_redirects=True, headers=DEFAULT_HEADERS, timeout=60) as client:
-        # Section 1: What's New
-        whats_new_base = "https://asi.nic.in/HQ/whatsnew/"
-        for page in range(71):
-            url = f"{whats_new_base}?p={page}"
+    for page in range(max_pages):
+        url = base_url if page == 0 else f"{base_url}?p={page}"
+        try:
             resp = await client.get(url)
-            if resp.status_code != 200:
-                break
-            
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, "html.parser")
-            table = soup.select_one("table.tabel-border")
-            if not table:
-                break
-            
-            rows = table.select("tbody tr")
-            if not rows:
-                break
-            
-            for row in rows:
-                tds = row.find_all("td")
-                if len(tds) < 2:
-                    continue
-                
-                title_cell = tds[1]
-                link_tag = title_cell.select_one("a[href]")
-                if not link_tag:
-                    continue
-                
-                title = _clean_text(link_tag.get_text())
-                if not title:
-                    continue
-                
-                # Date is in a nested td within the title cell (malformed HTML)
-                # or use the last td if available
-                date_text = ""
-                if len(tds) >= 3:
-                    date_text = _clean_text(tds[2].get_text())
-                else:
-                    # Try to find nested td
-                    nested_td = title_cell.select_one("td")
-                    if nested_td:
-                        date_text = _clean_text(nested_td.get_text())
-                
-                # Clean title - remove date suffix if present
-                title = re.sub(r"\d{1,2}[-/]\d{1,2}[-/]\d{4}\s*$", "", title).strip()
-                
-                href = link_tag.get("href", "")
-                link = urljoin("https://asi.nic.in", href)
-                is_pdf = href.lower().endswith(".pdf") or "/download" in href
-                
-                items.append(
-                    ScrapedItem(
-                        title=title,
-                        link=link,
-                        published_at=_parse_date(date_text) if date_text else None,
-                        is_pdf=is_pdf,
-                        section_label="What's New",
-                    )
-                )
+        except httpx.HTTPError:
+            break
+        if resp.status_code != 200:
+            break
 
-        # Section 2: Circulars
-        circulars_base = "https://asi.nic.in/HQ/circulars/"
-        for page in range(14):
-            url = f"{circulars_base}?p={page}"
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                break
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            table = soup.select_one("table.tabel-border")
-            if not table:
-                break
-            
-            rows = table.select("tbody tr")
-            if not rows:
-                break
-            
-            for row in rows:
-                tds = row.find_all("td")
-                if len(tds) < 2:
-                    continue
-                
-                title_cell = tds[1]
-                link_tag = title_cell.select_one("a[href]")
-                if not link_tag:
-                    continue
-                
-                title = _clean_text(link_tag.get_text())
-                if not title:
-                    continue
-                
-                date_text = ""
-                if len(tds) >= 3:
-                    date_text = _clean_text(tds[2].get_text())
-                
-                # Clean title
-                title = re.sub(r"\d{1,2}[-/]\d{1,2}[-/]\d{4}\s*$", "", title).strip()
-                
-                href = link_tag.get("href", "")
-                link = urljoin("https://asi.nic.in", href)
-                is_pdf = href.lower().endswith(".pdf") or "/download" in href
-                
-                items.append(
-                    ScrapedItem(
-                        title=title,
-                        link=link,
-                        published_at=_parse_date(date_text) if date_text else None,
-                        is_pdf=is_pdf,
-                        section_label="Circulars",
-                    )
-                )
+        page_items, hit_cutoff = _parse_table(resp.text, section_label)
+        items.extend(page_items)
+        if hit_cutoff:
+            break
 
     return items
+
+
+async def crawl_asi(_config: SiteConfig) -> list[ScrapedItem]:
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        headers=DEFAULT_HEADERS,
+        timeout=60,
+    ) as client:
+        whats_new = await _scrape_section(
+            client,
+            "https://asi.nic.in/HQ/whatsnew/",
+            "What's New",
+            max_pages=30,
+        )
+        circulars = await _scrape_section(
+            client,
+            "https://asi.nic.in/HQ/circulars/",
+            "Circulars",
+            max_pages=14,
+        )
+
+    return whats_new + circulars

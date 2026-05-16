@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from urllib.parse import quote
 
+import httpx
+from bs4 import BeautifulSoup
+
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
+logger = logging.getLogger("gov_aggregator.custom.income_tax")
+
 WHATS_NEW_URL = "https://incometaxindia.gov.in/Pages/communications/whats-new.aspx"
+LATEST_NEWS_URL = "https://www.incometax.gov.in/iec/foportal/latest-news"
+
 CARD_SELECTOR = ".card-print-btn-with-date-new-tag"
 CARDS_READY_SELECTOR = ".etds-misc-cards"
 TITLE_SELECTOR = "p.card-title-with-arrow"
@@ -29,25 +37,38 @@ def _parse_date(raw: str | None) -> datetime | None:
         return None
     cleaned = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", raw.strip(), flags=re.IGNORECASE)
     try:
-        return datetime.strptime(cleaned, "%B %d, %Y").replace(tzinfo=timezone.utc)
+        return datetime.strptime(cleaned, "%d-%b-%Y").replace(tzinfo=timezone.utc)
     except ValueError:
-        return None
+        try:
+            return datetime.strptime(cleaned, "%B %d, %Y").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+
+
+def _abs_url(href: str, base: str = "https://www.incometax.gov.in") -> str:
+    if not href:
+        return ""
+    if href.startswith("http"):
+        return href
+    if href.startswith("/"):
+        return base + href
+    return base + "/" + href
 
 
 def _is_document_url(url: str) -> bool:
     lowered = url.lower()
-    return any(token in lowered for token in (".pdf", "/download", "download?", "document", "/file", "file?"))
+    return any(token in lowered for token in (".pdf", "/download", "download?", "document", "/file", "file?", "#"))
 
 
 def _fallback_link(title: str, index: int) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or f"item-{index + 1}"
-    return f"{WHATS_NEW_URL}#{quote(slug)}"
+    return f"{LATEST_NEWS_URL}#{quote(slug)}"
 
 
 async def _launch_browser(playwright):
     try:
         return await playwright.chromium.launch(headless=True, channel="msedge")
-    except Exception:  # noqa: BLE001
+    except Exception:
         return await playwright.chromium.launch(headless=True)
 
 
@@ -119,7 +140,7 @@ async def _capture_target(context, index: int, has_download: bool) -> tuple[str 
 
         try:
             await page.wait_for_load_state("networkidle", timeout=5000)
-        except Exception:  # noqa: BLE001
+        except Exception:
             await page.wait_for_timeout(1500)
 
         pdf_url = next((url for url in reversed(captured_urls) if _is_document_url(url)), None)
@@ -129,7 +150,7 @@ async def _capture_target(context, index: int, has_download: bool) -> tuple[str 
             popup = context.pages[-1]
             try:
                 await popup.wait_for_load_state("domcontentloaded", timeout=5000)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             if popup.url and popup.url != "about:blank":
                 detail_url = popup.url
@@ -142,81 +163,114 @@ async def _capture_target(context, index: int, has_download: bool) -> tuple[str 
         await page.close()
 
 
-async def scrape_income_tax(config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _run_income_tax_in_worker, config)
+def _parse_latest_news_html(html: str) -> list[ScrapedItem]:
+    """Parse the latest-news page HTML."""
+    items = []
+    soup = BeautifulSoup(html, "html.parser")
 
+    for row in soup.select("div.views-row"):
+        content_span = row.select_one("span.field-content")
+        if not content_span:
+            continue
 
-def _run_income_tax_in_worker(config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(_scrape_income_tax_async(config))
-    finally:
-        loop.close()
+        date_div = content_span.select_one("div.up-date")
+        date_text = _clean_text(date_div.get_text()) if date_div else ""
 
+        gry_ft = content_span.select_one("div.gry-ft")
+        if not gry_ft:
+            continue
 
-async def _scrape_income_tax_async(config: SiteConfig) -> list[ScrapedItem]:
-    from playwright.async_api import async_playwright
+        link_a = gry_ft.find("a", href=True)
+        link = _abs_url(link_a.get("href")) if link_a else ""
 
-    items: list[ScrapedItem] = []
+        all_text = gry_ft.get_text()
+        title = all_text.split("Click here")[0].strip()
 
-    async with async_playwright() as playwright:
-        browser = await _launch_browser(playwright)
-        context = await browser.new_context(
-            user_agent=DEFAULT_HEADERS["User-Agent"],
-            extra_http_headers={key: value for key, value in DEFAULT_HEADERS.items() if key != "User-Agent"},
+        if not title:
+            continue
+
+        items.append(
+            ScrapedItem(
+                title=title,
+                link=link,
+                published_at=_parse_date(date_text),
+                is_pdf=link.lower().endswith(".pdf") if link else False,
+                section_label="Latest News",
+            )
         )
-        try:
-            page = await context.new_page()
-            await page.goto(config.source_url or WHATS_NEW_URL, wait_until="networkidle", timeout=60000)
-            wait_for_selector = config.selectors.get("wait_for_selector", CARDS_READY_SELECTOR)
-            await page.wait_for_selector(wait_for_selector, timeout=30000)
-
-            cards = await _extract_cards(page)
-            await page.close()
-
-            for card in cards:
-                title = str(card["title"])
-                if not title:
-                    continue
-
-                pdf_url, detail_url = await _capture_target(context, int(card["index"]), bool(card["has_download"]))
-                link = pdf_url or detail_url or _fallback_link(title, int(card["index"]))
-                items.append(
-                    ScrapedItem(
-                        title=title,
-                        link=link,
-                        summary=str(card["tag"]) if card["tag"] else None,
-                        published_at=_parse_date(str(card["date_raw"]) if card["date_raw"] else None),
-                        is_pdf=pdf_url is not None,
-                        section_label=str(card["tag"]) if card["tag"] else "",
-                    )
-                )
-        finally:
-            await context.close()
-            await browser.close()
 
     return items
 
 
+async def _fetch_latest_news_page(client: httpx.AsyncClient, page_num: int) -> list[ScrapedItem]:
+    """Fetch a single page of latest news."""
+    if page_num == 0:
+        url = LATEST_NEWS_URL
+    elif page_num == 1:
+        url = f"{LATEST_NEWS_URL}?page=%2C1&link=5"
+    else:
+        url = f"{LATEST_NEWS_URL}?page=%2C2&link=6"
+
+    try:
+        logger.info(f"[income-tax] Fetching: {url}")
+        response = await client.get(url, timeout=30.0)
+        response.raise_for_status()
+        html = response.text
+        
+        items = _parse_latest_news_html(html)
+        logger.info(f"[income-tax] Page {page_num}: {len(items)} items")
+        return items
+    except Exception as e:
+        logger.warning(f"[income-tax] Failed to fetch latest-news page {page_num}: {e}")
+        return []
+
+
+async def scrape_income_tax(config: SiteConfig) -> list[ScrapedItem]:
+    import httpx
+
+    all_items: list[ScrapedItem] = []
+
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        headers=DEFAULT_HEADERS,
+        timeout=30.0,
+    ) as client:
+        for page_num in range(3):
+            page_items = await _fetch_latest_news_page(client, page_num)
+            all_items.extend(page_items)
+            logger.info(f"[income-tax] Latest News page {page_num + 1}: {len(page_items)} items")
+
+            if not page_items:
+                break
+
+        all_items.sort(
+            key=lambda i: i.published_at or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+
+    return all_items
+
+
 if __name__ == "__main__":
     from gov_aggregator.scrapers.config import load_site_configs
+    import asyncio
 
     configs = {site.site_key: site for site in load_site_configs()}
-    result = _run_income_tax_in_worker(configs["income-tax"])
-    print(
-        json.dumps(
-            [
-                {
-                    "title": item.title,
-                    "section_label": item.section_label,
-                    "published_at": item.published_at.isoformat() if item.published_at else None,
-                    "link": item.link,
-                    "is_pdf": item.is_pdf,
-                }
-                for item in result
-            ],
-            indent=2,
+    config = configs.get("income-tax")
+    if config:
+        result = asyncio.run(scrape_income_tax(config))
+        print(
+            json.dumps(
+                [
+                    {
+                        "title": item.title,
+                        "section_label": item.section_label,
+                        "published_at": item.published_at.isoformat() if item.published_at else None,
+                        "link": item.link,
+                        "is_pdf": item.is_pdf,
+                    }
+                    for item in result
+                ],
+                indent=2,
+            )
         )
-    )

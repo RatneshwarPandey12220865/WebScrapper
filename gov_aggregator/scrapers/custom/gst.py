@@ -66,6 +66,24 @@ def _build_link(record: dict) -> tuple[str, bool]:
     return f"{DETAIL_BASE}/{record_id}", False
 
 
+def _get_category_from_module(module: str) -> str:
+    """Map module to category."""
+    module_lower = (module or "").lower()
+    if module_lower == "registration":
+        return "notification"
+    if module_lower == "returns":
+        return "circular"
+    if module_lower == "refunds":
+        return "circular"
+    if module_lower == "payments":
+        return "notification"
+    if module_lower == "e-invoice":
+        return "notification"
+    if module_lower == "others":
+        return "news"
+    return "circular"
+
+
 def _shape_record(record: dict) -> ScrapedItem | None:
     title = (record.get("title") or "").strip()
     if not title:
@@ -73,7 +91,7 @@ def _shape_record(record: dict) -> ScrapedItem | None:
 
     published_at = _parse_date(record.get("date") or "")
 
-    # Apply cutoff — skip items before July 2025
+    # Apply cutoff — skip items before October 2025
     if published_at and published_at < CUTOFF:
         return None
 
@@ -82,7 +100,8 @@ def _shape_record(record: dict) -> ScrapedItem | None:
         return None
 
     module = (record.get("module") or "").strip()
-    section_label = f"GST Advisory — {module}" if module else "GST Advisory"
+    section_label = f"GST — {module}" if module else "GST News & Updates"
+    category = _get_category_from_module(module)
 
     # Brief summary from content (strip HTML tags)
     content_html = record.get("content") or ""

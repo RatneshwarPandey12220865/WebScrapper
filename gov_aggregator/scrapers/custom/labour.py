@@ -1,233 +1,319 @@
+"""
+Custom crawler for Ministry of Labour and Employment (www.labour.gov.in).
+
+The site is a Next.js SPA — all pages are client-side rendered and return
+an empty shell (~7 KB) to plain HTTP requests. Every section requires
+Playwright. A single browser session handles all sections to minimise
+overhead.
+
+Sections scraped:
+  1. What's New announcements      (/whats-new)
+  2. Schemes and Services          (/whats-new  +  detail pages for internal links)
+  3. Press Release                 (/whats-new  +  /documents/press-release paginated)
+  4. Orders & Notices              (/documents/orders-and-notices paginated)
+  5. Gazette Notifications         (/documents/gazettes-notifications paginated)
+"""
+
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
-import httpx
+from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
+logger = logging.getLogger("gov_aggregator.custom.labour")
 
-def _clean_text(value: str | None) -> str:
-    return " ".join((value or "").split())
+_BASE = "https://www.labour.gov.in"
+_GOTO_TIMEOUT = 30_000   # ms
+_WAIT_TIMEOUT  = 12_000  # ms
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _clean(text: str | None) -> str:
+    return " ".join((text or "").split())
 
 
 def _parse_date(raw: str | None) -> datetime | None:
-    if not raw:
-        return None
-    cleaned = raw.strip()
-    if not cleaned:
-        return None
-    # Match dates like "dated 16-03-2026" or "07.04.2026" or "16.03.2026"
-    match = re.search(r"(\d{1,2})[-.](\d{1,2})[-.](\d{4})", cleaned)
-    if match:
+    m = re.search(r"(\d{1,2})[-./](\d{1,2})[-./](\d{4})", raw or "")
+    if m:
         try:
-            day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
-            return datetime(year, month, day, tzinfo=timezone.utc)
+            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
         except ValueError:
             pass
     return None
 
 
-async def crawl_labour(config: SiteConfig) -> list[ScrapedItem]:
-    items: list[ScrapedItem] = []
+def _abs(href: str) -> str:
+    if not href:
+        return ""
+    return href if href.startswith("http") else urljoin(_BASE, href)
 
-    async with httpx.AsyncClient(follow_redirects=True, headers=DEFAULT_HEADERS, timeout=60) as client:
-        # Section 1: What's New (Announcements)
-        whats_new_url = "https://www.labour.gov.in/whats-new"
-        resp = await client.get(whats_new_url)
-        if resp.status_code == 200:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, "html.parser")
-            
-            # Announcements section
-            announcement_rows = soup.select(".whats-new-announcements .announcementbox")
-            for row in announcement_rows:
-                title_elem = row.select_one("p.mb-0")
-                link_elem = row.select_one("a.download-btn")
-                
-                if not title_elem:
-                    continue
-                
-                title = _clean_text(title_elem.get_text())
-                if not title:
-                    continue
-                
-                # Extract date from title (e.g., "FAQs on Labour Codes dated 16-03-2026")
-                parsed_date = _parse_date(title)
-                
-                href = ""
-                if link_elem:
-                    href = link_elem.get("href", "")
-                    if href and not href.startswith("http"):
-                        href = urljoin("https://www.labour.gov.in", href)
-                
-                is_pdf = href.lower().endswith(".pdf") if href else False
-                
-                items.append(
-                    ScrapedItem(
-                        title=title,
-                        link=href,
-                        published_at=parsed_date,
-                        is_pdf=is_pdf,
-                        section_label="What's New",
-                    )
-                )
 
-        # Section 2: Orders and Notices
-        orders_url = "https://www.labour.gov.in/documents/orders-and-notices"
-        for page in range(10):
-            url = orders_url if page == 0 else f"{orders_url}?page={page}"
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                break
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            rows = soup.select('[role="table"][aria-label="Orders and Notices data"] .announcementbox')
-            
-            if not rows:
-                break
-            
-            for row in rows:
-                title_elem = row.select_one("p.mb-0")
-                date_elem = row.select_one("small[aria-label]")  # Date is in aria-label like "19.07.2021"
-                link_elem = row.select_one("a.download-btn")
-                
-                if not title_elem:
-                    continue
-                
-                title = _clean_text(title_elem.get_text())
-                if not title:
-                    continue
-                
-                # Try to get date from aria-label
-                date_text = ""
-                if date_elem:
-                    date_text = date_elem.get("aria-label", "")
-                
-                parsed_date = _parse_date(date_text) if date_text else None
-                
-                href = ""
-                if link_elem:
-                    href = link_elem.get("href", "")
-                    if href and not href.startswith("http"):
-                        href = urljoin("https://www.labour.gov.in", href)
-                
-                is_pdf = href.lower().endswith(".pdf") if href else False
-                
-                if href:
-                    items.append(
-                        ScrapedItem(
-                            title=title,
-                            link=href,
-                            published_at=parsed_date,
-                            is_pdf=is_pdf,
-                            section_label="Orders & Notices",
-                        )
-                    )
+def _select_english(page) -> None:
+    try:
+        page.get_by_role("combobox", name="भाषा अनुवादक").select_option("en")
+        page.wait_for_timeout(1500)
+    except Exception:
+        pass
 
-        # Section 3: Press Release
-        press_url = "https://www.labour.gov.in/documents/press-release"
-        for page in range(10):
-            url = press_url if page == 0 else f"{press_url}?page={page}"
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                break
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            rows = soup.select('[role="table"][aria-label="Press Release data"] .announcementbox')
-            
-            if not rows:
-                break
-            
-            for row in rows:
-                title_elem = row.select_one("p.mb-0")
-                date_elem = row.select_one("small[aria-label]")  # Date is in aria-label like "07.04.2026"
-                link_elem = row.select_one("a.download-btn")
-                
-                if not title_elem:
-                    continue
-                
-                title = _clean_text(title_elem.get_text())
-                if not title:
-                    continue
-                
-                date_text = ""
-                if date_elem:
-                    date_text = date_elem.get("aria-label", "")
-                
-                parsed_date = _parse_date(date_text) if date_text else None
-                
-                href = ""
-                if link_elem:
-                    href = link_elem.get("href", "")
-                    if href and not href.startswith("http"):
-                        href = urljoin("https://www.labour.gov.in", href)
-                
-                is_pdf = href.lower().endswith(".pdf") if href else False
-                
-                if href:
-                    items.append(
-                        ScrapedItem(
-                            title=title,
-                            link=href,
-                            published_at=parsed_date,
-                            is_pdf=is_pdf,
-                            section_label="Press Release",
-                        )
-                    )
 
-        # Section 4: Gazette Notifications
-        gazette_url = "https://www.labour.gov.in/documents/gazettes-notifications"
-        for page in range(10):
-            url = gazette_url if page == 0 else f"{gazette_url}?page={page}"
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                break
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            rows = soup.select('[role="table"][aria-label="Gazettes Notifications data"] .announcementbox')
-            
-            if not rows:
-                break
-            
-            for row in rows:
-                title_elem = row.select_one("p.mb-0")
-                date_elem = row.select_one("small[aria-label]")
-                link_elem = row.select_one("a.download-btn")
-                
-                if not title_elem:
-                    continue
-                
-                title = _clean_text(title_elem.get_text())
-                if not title:
-                    continue
-                
-                date_text = ""
-                if date_elem:
-                    date_text = date_elem.get("aria-label", "")
-                
-                parsed_date = _parse_date(date_text) if date_text else None
-                
-                href = ""
-                if link_elem:
-                    href = link_elem.get("href", "")
-                    if href and not href.startswith("http"):
-                        href = urljoin("https://www.labour.gov.in", href)
-                
-                is_pdf = href.lower().endswith(".pdf") if href else False
-                
-                if href:
-                    items.append(
-                        ScrapedItem(
-                            title=title,
-                            link=href,
-                            published_at=parsed_date,
-                            is_pdf=is_pdf,
-                            section_label="Gazette Notifications",
-                        )
-                    )
+# ---------------------------------------------------------------------------
+# HTML parsers (operate on BeautifulSoup objects)
+# ---------------------------------------------------------------------------
 
+def _parse_announcement_rows(soup: BeautifulSoup, section_label: str) -> list[ScrapedItem]:
+    items = []
+    container = soup.select_one('[aria-label="What\'s new announcements"]') or soup
+    for row in container.select("div.announcementbox"):
+        t_el = row.select_one("p.mb-0")
+        a_el = row.select_one("a.download-btn[href]")
+        title = _clean(t_el.get_text() if t_el else "")
+        link  = _abs(a_el["href"]) if a_el else ""
+        if not title or not link:
+            continue
+        items.append(ScrapedItem(
+            title=title, link=link,
+            published_at=_parse_date(title),
+            is_pdf=link.lower().endswith(".pdf"),
+            section_label=section_label,
+        ))
     return items
+
+
+def _parse_doc_table(soup: BeautifulSoup, aria_label: str, section_label: str) -> list[ScrapedItem]:
+    items = []
+    table = soup.select_one(f'[role="table"][aria-label="{aria_label}"]')
+    if not table:
+        return items
+    for row in table.select("div.announcementbox"):
+        t_el   = row.select_one("p.mb-0")
+        date_el = row.select_one("small[aria-label]")
+        a_el   = row.select_one("a.download-btn[href]")
+        title  = _clean(t_el.get_text() if t_el else "")
+        link   = _abs(a_el["href"]) if a_el else ""
+        if not title or not link:
+            continue
+        date_str = (date_el.get("aria-label", "") if date_el else "") or title
+        items.append(ScrapedItem(
+            title=title, link=link,
+            published_at=_parse_date(date_str),
+            is_pdf=link.lower().endswith(".pdf"),
+            section_label=section_label,
+        ))
+    return items
+
+
+def _parse_schemes_section(soup: BeautifulSoup) -> tuple[list[ScrapedItem], list[tuple[str, str]]]:
+    """
+    Returns:
+        direct_items  – items whose link is already a direct PDF / external URL
+        detail_needed – [(title, detail_url)] for internal /offerings/... pages
+    """
+    direct: list[ScrapedItem] = []
+    detail_needed: list[tuple[str, str]] = []
+
+    table = soup.select_one('[role="table"][aria-label="schemes_and_services data"]')
+    if not table:
+        return direct, detail_needed
+
+    for row in table.select("div.announcementbox"):
+        t_el = row.select_one("div.text-break, p.mb-0")
+        a_el = row.select_one("a.link-btn[href]")
+        if not t_el or not a_el:
+            continue
+        title = _clean(t_el.get_text())
+        href  = a_el["href"]
+        if not title or not href:
+            continue
+
+        if href.startswith("http"):
+            direct.append(ScrapedItem(
+                title=title, link=href,
+                is_pdf=href.lower().endswith(".pdf"),
+                section_label="Schemes and Services",
+            ))
+        else:
+            detail_needed.append((title, _abs(href)))
+
+    return direct, detail_needed
+
+
+def _parse_press_release_whats_new(soup: BeautifulSoup) -> list[ScrapedItem]:
+    """Parse the Press Release sub-table embedded in the /whats-new page."""
+    return _parse_doc_table(soup, "press-release data", "Press Release")
+
+
+# ---------------------------------------------------------------------------
+# Paginated document page fetcher
+# ---------------------------------------------------------------------------
+
+def _fetch_paginated(page, url_base: str, aria_label: str, section_label: str,
+                     max_pages: int = 10) -> list[ScrapedItem]:
+    items: list[ScrapedItem] = []
+    for page_num in range(max_pages):
+        url = url_base if page_num == 0 else f"{url_base}?page={page_num}"
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=_GOTO_TIMEOUT)
+            page.wait_for_selector("div.announcementbox", timeout=_WAIT_TIMEOUT)
+        except Exception:
+            break
+        soup = BeautifulSoup(page.content(), "html.parser")
+        rows = _parse_doc_table(soup, aria_label, section_label)
+        if not rows:
+            break
+        items.extend(rows)
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Detail page fetcher (Schemes and Services internal links)
+# ---------------------------------------------------------------------------
+
+def _fetch_scheme_detail(page, scheme_title: str, detail_url: str) -> list[ScrapedItem]:
+    results: list[ScrapedItem] = []
+    try:
+        page.goto(detail_url, wait_until="domcontentloaded", timeout=_GOTO_TIMEOUT)
+        try:
+            page.wait_for_selector("a.download-btn", timeout=_WAIT_TIMEOUT)
+        except Exception:
+            pass
+        _select_english(page)
+
+        soup = BeautifulSoup(page.content(), "html.parser")
+
+        # Primary: docsCard layout
+        for card in soup.select("div.docsCard"):
+            t_el = card.select_one("p")
+            a_el = card.select_one("a.download-btn[href]")
+            title = _clean(t_el.get_text() if t_el else scheme_title)
+            link  = _abs(a_el["href"]) if a_el else ""
+            if link:
+                results.append(ScrapedItem(
+                    title=title or scheme_title, link=link,
+                    is_pdf=link.lower().endswith(".pdf"),
+                    section_label="Schemes and Services",
+                ))
+
+        # Fallback: any PDF anchor
+        if not results:
+            for a in soup.select("a[href$='.pdf'], a[href$='.PDF']"):
+                link = _abs(a["href"])
+                if not link:
+                    continue
+                row = a.find_parent(attrs={"role": "row"})
+                t_el = row.select_one("p, div.text-break") if row else None
+                title = _clean(t_el.get_text() if t_el else a.get_text()) or scheme_title
+                results.append(ScrapedItem(
+                    title=title, link=link, is_pdf=True,
+                    section_label="Schemes and Services",
+                ))
+
+    except Exception as exc:
+        logger.warning("[labour] detail page failed for %s: %s", scheme_title, exc)
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Main sync crawl (runs in thread executor)
+# ---------------------------------------------------------------------------
+
+def _sync_crawl() -> list[ScrapedItem]:
+    from playwright.sync_api import sync_playwright
+
+    all_items: list[ScrapedItem] = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        ctx = browser.new_context(user_agent=DEFAULT_HEADERS["User-Agent"])
+        page = ctx.new_page()
+
+        # ── 1 & 2 & 3a: /whats-new page ──────────────────────────────────
+        try:
+            page.goto(f"{_BASE}/whats-new", wait_until="domcontentloaded", timeout=_GOTO_TIMEOUT)
+            _select_english(page)
+            try:
+                page.wait_for_selector("div.announcementbox", timeout=_WAIT_TIMEOUT)
+            except Exception:
+                pass
+
+            soup = BeautifulSoup(page.content(), "html.parser")
+
+            # 1. What's New announcements
+            wn_items = _parse_announcement_rows(soup, "What's New")
+            logger.info("[labour] What's New: %d items", len(wn_items))
+            all_items.extend(wn_items)
+
+            # 2. Schemes and Services
+            direct_schemes, detail_needed = _parse_schemes_section(soup)
+            logger.info("[labour] Schemes direct: %d, need detail: %d",
+                        len(direct_schemes), len(detail_needed))
+            all_items.extend(direct_schemes)
+
+            for scheme_title, detail_url in detail_needed:
+                detail_items = _fetch_scheme_detail(page, scheme_title, detail_url)
+                logger.info("[labour] Scheme '%s': %d PDF(s)", scheme_title, len(detail_items))
+                all_items.extend(detail_items)
+
+            # 3a. Press Release block on /whats-new
+            pr_items = _parse_press_release_whats_new(soup)
+            logger.info("[labour] Press Release (whats-new): %d items", len(pr_items))
+            all_items.extend(pr_items)
+
+        except Exception as exc:
+            logger.warning("[labour] /whats-new failed: %s", exc)
+
+        # ── 3b. /documents/press-release (paginated) ──────────────────────
+        pr_doc = _fetch_paginated(
+            page, f"{_BASE}/documents/press-release",
+            "press-release data", "Press Release",
+        )
+        logger.info("[labour] Press Release (documents): %d items", len(pr_doc))
+        all_items.extend(pr_doc)
+
+        # ── 4. Orders & Notices (paginated) ───────────────────────────────
+        orders = _fetch_paginated(
+            page, f"{_BASE}/documents/orders-and-notices",
+            "Orders and Notices data", "Orders & Notices",
+        )
+        logger.info("[labour] Orders & Notices: %d items", len(orders))
+        all_items.extend(orders)
+
+        # ── 5. Gazette Notifications (paginated) ──────────────────────────
+        gazette = _fetch_paginated(
+            page, f"{_BASE}/documents/gazettes-notifications",
+            "Gazettes Notifications data", "Gazette Notifications",
+        )
+        logger.info("[labour] Gazette Notifications: %d items", len(gazette))
+        all_items.extend(gazette)
+
+        ctx.close()
+        browser.close()
+
+    # Deduplicate by link
+    seen: set[str] = set()
+    unique: list[ScrapedItem] = []
+    for item in all_items:
+        if item.link and item.link not in seen:
+            seen.add(item.link)
+            unique.append(item)
+
+    return unique
+
+
+# ---------------------------------------------------------------------------
+# Async entry point
+# ---------------------------------------------------------------------------
+
+async def crawl_labour(_config: SiteConfig) -> list[ScrapedItem]:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _sync_crawl)
