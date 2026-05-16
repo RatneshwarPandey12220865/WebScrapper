@@ -391,6 +391,7 @@ def parse_list_bs4(config: SiteConfig, html: str) -> list[ScrapedItem]:
     soup = BeautifulSoup(html, "html.parser")
     selectors = config.selectors
     containers = soup.select(selectors.get("item_selector", "li"))
+    exclude_pattern = selectors.get("exclude_title_pattern")
     items: list[ScrapedItem] = []
     for container in containers:
         item = _build_bs4_item(
@@ -402,6 +403,8 @@ def parse_list_bs4(config: SiteConfig, html: str) -> list[ScrapedItem]:
             date_selector=selectors.get("date_selector"),
         )
         if item:
+            if exclude_pattern and re.search(exclude_pattern, item.title, re.IGNORECASE):
+                continue
             items.append(item)
     return items
 
@@ -451,6 +454,7 @@ def parse_list_scrapy(config: SiteConfig, html: str) -> list[ScrapedItem]:
     root = ScrapySelector(text=html)
     selectors = config.selectors
     containers = root.css(selectors.get("item_selector", "li"))
+    exclude_pattern = selectors.get("exclude_title_pattern")
     items: list[ScrapedItem] = []
     for container in containers:
         item = _build_scrapy_item(
@@ -462,6 +466,8 @@ def parse_list_scrapy(config: SiteConfig, html: str) -> list[ScrapedItem]:
             date_selector=selectors.get("date_selector"),
         )
         if item:
+            if exclude_pattern and re.search(exclude_pattern, item.title, re.IGNORECASE):
+                continue
             items.append(item)
     return items
 

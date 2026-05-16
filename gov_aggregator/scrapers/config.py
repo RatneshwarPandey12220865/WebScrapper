@@ -138,6 +138,7 @@ def _site_config(site: dict) -> SiteConfig:
         verify_ssl=site.get("verify_ssl", True),
         sections=sections,
         min_date=site.get("min_date"),
+        custom_crawler=site.get("custom_crawler"),
     )
 
 

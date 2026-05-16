@@ -42,10 +42,9 @@ class SiteConfig:
     max_pages: int = 1
     max_items: int | None = None
     verify_ssl: bool = True
-    # Optional multi-section support: when set, engine crawls all sections
-    # and merges results under this single site_key.
     sections: list[SiteSection] = field(default_factory=list)
     min_date: str | None = None
+    custom_crawler: str | None = None
 
 
 @dataclass(slots=True)
@@ -54,5 +53,6 @@ class ScrapedItem:
     link: str
     summary: str | None = None
     published_at: datetime | None = None
+    end_date: datetime | None = None
     is_pdf: bool = False
     section_label: str = ""  # filled in by engine when multi-section

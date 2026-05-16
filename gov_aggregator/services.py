@@ -43,6 +43,7 @@ DEFAULT_CATEGORY_MAPPING: dict[str, list[str]] = {
 
 SITE_KEY_ALIASES: dict[str, str] = {
     "dgft": "directorate-general-of-foreign-trade",
+    "rajasthan": "rajasthan-dipr",
 }
 
 SESSION_CACHE: dict[str, dict[str, Any]] = {}
@@ -84,6 +85,17 @@ def load_known_sites() -> list[dict[str, Any]]:
     return payload.get("sites", [])
 
 
+def _effective_data_since(config: SiteConfig | None, site_key: str = "") -> str | None:
+    """Return ISO date string for the earliest item this site will return, or None if no filter."""
+    if config is None:
+        return None
+    if config.min_date:
+        return config.min_date
+    if (config.site_key or site_key) in _GLOBAL_MIN_DATE_EXEMPT:
+        return None  # custom scraper manages its own cutoff
+    return GLOBAL_MIN_DATE.strftime("%Y-%m-%d")
+
+
 def _category_mapping_for(config: SiteConfig | None) -> dict[str, list[str]]:
     mapping = dict(DEFAULT_CATEGORY_MAPPING)
     if config and config.category_mapping:
@@ -120,6 +132,7 @@ def get_site_catalog() -> list[dict[str, Any]]:
                 "render_js": config.render_js if config else False,
                 "default_category": config.default_category if config else "news",
                 "category_mapping": _category_mapping_for(config),
+                "data_since": _effective_data_since(config, resolved_site_key),
             }
         )
         seen_keys.add(site_key)
@@ -146,6 +159,7 @@ def get_site_catalog() -> list[dict[str, Any]]:
                 "render_js": config.render_js,
                 "default_category": config.default_category,
                 "category_mapping": _category_mapping_for(config),
+                "data_since": _effective_data_since(config),
             }
         )
 
@@ -161,6 +175,7 @@ def site_catalog_payload() -> dict[str, Any]:
             "supported_sites": sum(1 for site in sites if site["supported"]),
             "unsupported_sites": sum(1 for site in sites if not site["supported"]),
             "cache_ttl_seconds": int(CACHE_TTL.total_seconds()),
+            "global_min_date": GLOBAL_MIN_DATE.strftime("%Y-%m-%d"),
         },
     }
 
@@ -191,6 +206,7 @@ def _shape_item(config: SiteConfig, item: ScrapedItem, *, crawl_time: str, previ
         "category": _classify_item(config, item),
         "description": item.summary,
         "publish_date": published_at.isoformat() if published_at else None,
+        "end_date": item.end_date.isoformat() if item.end_date else None,
         "pdf_url": item.link if item.is_pdf else None,
         "external_link": None if item.is_pdf else item.link,
         "link": item.link,
@@ -242,7 +258,13 @@ def _result_sort_key(item: dict[str, Any]) -> tuple[str, str]:
     return (item.get("publish_date") or "", item.get("crawl_time") or "")
 
 
-_GLOBAL_MIN_DATE_EXEMPT = {"department-of-bio-technology", "cbic-customs"}
+_GLOBAL_MIN_DATE_EXEMPT = {
+    "department-of-bio-technology",
+    "cbic-customs",
+    "cochin-sez",
+    "department-of-agriculture-and-farmers-welfare-whatsnew",
+    "department-of-fisheries",
+}
 
 
 def _passes_global_min_date(item: dict[str, Any]) -> bool:
@@ -275,6 +297,7 @@ def _status_payload(
     item_count: int = 0,
     new_count: int = 0,
     from_cache: bool = False,
+    data_since: str | None = None,
 ) -> dict[str, Any]:
     return {
         "site_key": site_key,
@@ -284,6 +307,7 @@ def _status_payload(
         "item_count": item_count,
         "new_count": new_count,
         "from_cache": from_cache,
+        "data_since": data_since,
     }
 
 
@@ -357,15 +381,16 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                     item_count=len(cached),
                     new_count=sum(1 for item in cached if item.get("is_new")),
                     from_cache=True,
+                    data_since=_effective_data_since(configs.get(resolved_site_key), resolved_site_key),
                 )
             )
             continue
 
-        if resolved_site_key in CUSTOM_CRAWLERS:
-            config = configs[resolved_site_key]
+        config = configs[resolved_site_key]
+        if config.custom_crawler and config.custom_crawler in CUSTOM_CRAWLERS:
             try:
                 previous_links = _previous_links(resolved_site_key)
-                custom_items = await CUSTOM_CRAWLERS[resolved_site_key](config)
+                custom_items = await CUSTOM_CRAWLERS[config.custom_crawler](config)
                 shaped_items = [
                     _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                     for item in custom_items
@@ -380,6 +405,7 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                         message="Crawl completed successfully.",
                         item_count=len(shaped_items),
                         new_count=sum(1 for item in shaped_items if item["is_new"]),
+                        data_since=_effective_data_since(config),
                     )
                 )
             except Exception as exc:  # noqa: BLE001
@@ -425,6 +451,7 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
                     message="Crawl completed successfully.",
                     item_count=len(shaped_items),
                     new_count=sum(1 for item in shaped_items if item["is_new"]),
+                    data_since=_effective_data_since(config),
                 )
             )
 
