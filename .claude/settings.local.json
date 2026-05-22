@@ -3,7 +3,16 @@
     "allow": [
       "Bash(python -c ' *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pande\\\\Desktop\\\\a\\\\KPMG\\\\KSyder\\\\kspyder2.0 - Copy \\(6\\) - Copy\" -Recurse -Force)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(python -c \"import json; data=json.load\\(open\\('gov_aggregator/data/sites_config.json', encoding='utf-8-sig'\\)\\); sites=data.get\\('sites',data\\); print\\(f'Total sites: {len\\(sites\\)}'\\); print\\('Site keys:', [s.get\\(\\\\\"site_key\\\\\"\\) for s in sites]\\)\")",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Test-Path *)",
+      "Bash(python *)",
+      "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f)",
+      "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\")",
+      "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" -not -name \"*.pyc\")",
+      "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" -not -name \"*.pyc\" -not -path \"*/node_modules/*\")",
+      "Bash(ls \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy/gov_aggregator/scrapers/custom/\")"
     ]
   }
 }

@@ -11,6 +11,7 @@ from .ayush import crawl_ayush
 from .cbic import crawl_cbic_customs
 from .cci import crawl_cci
 from .coffee_board import crawl_coffee_board
+from .dahd import crawl_dahd
 from .chandigarh import crawl_chandigarh
 from .chemexcil import crawl_chemexcil
 from .commerce import crawl_commerce
@@ -79,6 +80,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "rajasthan": crawl_rajasthan,
     "rbi": crawl_rbi,
     "coffee-board": crawl_coffee_board,
+    "department-of-animal-husbandry-and-dairying": crawl_dahd,
     "department-of-fertilizers": crawl_fertilizers,
     "department-of-fisheries": crawl_fisheries,
     "icmr": crawl_icmr,
@@ -118,6 +120,7 @@ __all__ = [
     "crawl_rajasthan",
     "crawl_rbi",
     "crawl_coffee_board",
+    "crawl_dahd",
     "crawl_fertilizers",
     "crawl_fisheries",
     "crawl_sebi",

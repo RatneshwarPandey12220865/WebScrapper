@@ -1,371 +1,491 @@
 """Custom scraper for Department of Fisheries (dof.gov.in).
 
-Sections:
-  • What's New      — all items (announcements with direct PDF links)
-  • Press Release   — all items
-  • Circulars       — Jan 2026+
-  • Orders          — Jan 2026+
-  • Office Orders   — Jan 2026+
+The site is a Next.js CSR app backed by a WordPress REST API at /cms/wp-json.
+httpx calls to the WP JSON endpoints bypass the Akamai bot protection that
+blocks headless Playwright.
 
-Strategy: httpx first (site is SSR); Playwright fallback if httpx is blocked.
+Sections scraped:
+  • What's New     — /post-page/whats_new
+  • Tenders        — /post-page/tenders_post
+  • Documents      — /document/documents?document_category=<slug>  (multiple categories)
+  • Press Releases — /document/documents?document_category=press-release
+
+Skipped (as requested):
+  • Schemes & Services — post_type: schemes_and_services (static info pages)
+  • Resources/Gallery  — post_type: photos_post, videos_post
+
+API structures observed per post type
+--------------------------------------
+whats_new:
+    acf_data = {"type": "PDF", "file": [<int id>]}
+    date:  post_date
+
+tenders_post:
+    acf_data = {"tender_id": "...", "name": "...",
+                "published_date": "DD.MM.YYYY", "file": [<int id>]}
+    date:  acf_data.published_date
+
+documents / press-release posts (GET /document/documents?document_category=<slug>):
+    Response: {"posts": [{post_type, post_title, post_date, acf_data, documents_category}]}
+    Each post's acf_data.file is a LIST of entries — one ScrapedItem per entry:
+
+      type "PDF":  {"type":"PDF", "title":"...", "file":[<int id>], ...}
+                   → resolve PDF URL via GET /post-page/post?id=<id>
+
+      type "Link": {"type":"Link", "title":"...", "external_link":"https://...", ...}
+                   → use external_link directly (e.g. PIB press releases)
+
+Each PDF file id resolved via: GET /post-page/post?id=<id>
+  → response["posts"]["acf_data"]["pdf"]["url"]  or  response["posts"]["guid"]
 """
 from __future__ import annotations
 
 import asyncio
 import re
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from typing import Any
 
 import httpx
-from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
-_BASE = "https://dof.gov.in"
-_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
-_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+_CMS = "https://www.dof.gov.in/cms/wp-json"
+_POST_URL = f"{_CMS}/post-page/post"
 
-_DATE_RE = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b")
-
+# Headers for /post-page/* and /document/* endpoints (no apikey needed).
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
+        "Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Cache-Control": "max-age=0",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9,en-IN;q=0.8",
+    "Referer": "https://www.dof.gov.in/",
 }
 
+# Headers for WP v2 REST API endpoints — apikey required (confirmed via HAR).
+_HEADERS_WP = {**_HEADERS, "apikey": "4bW5t13453pa"}
+
+_TIMEOUT = httpx.Timeout(30.0)
+
+# What's New + Tenders use the simple post-page listing endpoints.
+_POST_SECTIONS: list[tuple[str, str]] = [
+    ("whats_new",    "What's New"),
+    ("tenders_post", "Tenders"),
+]
+
+# Document categories to scrape via /document/documents?document_category=<slug>.
+# Maps category_slug → section_label shown in the UI.
+# "press-release" is the WP taxonomy slug observed in the browser HAR response.
+_DOC_CATEGORIES: list[tuple[str, str]] = [
+    ("press-release", "Press Releases"),
+    # Additional categories discovered dynamically at runtime (see _discover_extra_categories).
+    # Fallback hardcoded categories are also appended if discovery fails.
+]
+
+_FALLBACK_DOC_CATEGORIES: list[tuple[str, str]] = [
+    ("reports",       "Documents"),
+    ("circulars",     "Documents"),
+    ("notifications", "Documents"),
+    ("annual-reports","Documents"),
+    ("budget",        "Documents"),
+    ("guidelines",    "Documents"),
+]
+
+_DATE_RE = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b")
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
 
 def _parse_date(raw: str | None) -> datetime | None:
     if not raw:
         return None
-    m = _DATE_RE.search(raw.strip())
-    if not m:
-        return None
+    m = _DATE_RE.search(str(raw))
+    if m:
+        try:
+            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)),
+                            tzinfo=timezone.utc)
+        except ValueError:
+            pass
     try:
-        return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
+        return datetime.strptime(str(raw).strip()[:19], "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
     except ValueError:
+        pass
+    return None
+
+
+async def _fetch_json(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: dict | None = None,
+    **params: Any,
+) -> Any:
+    hdrs = headers if headers is not None else _HEADERS
+    r = await client.get(url, params=params, headers=hdrs, timeout=_TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+async def _resolve_pdf_url(client: httpx.AsyncClient, file_id: int) -> str:
+    """Resolve a WP attachment ID → direct PDF URL."""
+    try:
+        data = await _fetch_json(client, _POST_URL, _HEADERS_WP, id=file_id)
+        post = data.get("posts") or {}
+        if isinstance(post, list):
+            post = post[0] if post else {}
+        acf = post.get("acf_data") or {}
+        pdf_obj = acf.get("pdf")
+        if isinstance(pdf_obj, dict):
+            url = pdf_obj.get("url", "")
+            if url:
+                return url
+        return post.get("guid", "")
+    except Exception:
+        return ""
+
+
+# ── What's New / Tenders resolver ────────────────────────────────────────────
+
+def _extract_simple_file_id(acf: dict) -> int | None:
+    """whats_new / tenders_post: acf["file"] = [int_id]."""
+    file_val = acf.get("file")
+    if not file_val or not isinstance(file_val, list):
         return None
+    first = file_val[0]
+    return first if isinstance(first, int) else None
 
 
-def _parse_rows(
-    html: str,
+async def _resolve_post(
+    client: httpx.AsyncClient,
+    post: dict,
     section_label: str,
-    min_date: datetime | None,
-    seen: set[str],
-) -> list[ScrapedItem]:
-    """Parse dof.gov.in ARIA-role row layout: div[role=row].announcementbox."""
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Find all rows — BS4 find_all is more reliable than CSS attribute selectors
-    rows = [
-        tag for tag in soup.find_all("div", attrs={"role": "row"})
-        if "announcementbox" in tag.get("class", [])
-    ]
-
-    items: list[ScrapedItem] = []
-
-    for row in rows:
-        # Title — first non-trivial text in <p class="mb-0"> or <div class="mb-0 text-break">
-        title = ""
-        for el in row.find_all(["p", "div"]):
-            cls = el.get("class", [])
-            if "mb-0" in cls:
-                t = el.get_text(strip=True)
-                # skip size labels like "454.21 KB" or "Type/Size:"
-                if t and len(t) > 5 and not re.match(r"^[\d.,]+ (KB|MB|GB)$", t, re.I):
-                    title = t
-                    break
+    sem: asyncio.Semaphore,
+) -> ScrapedItem | None:
+    try:
+        title = (post.get("post_title") or "").strip()
         if not title:
-            continue
+            return None
 
-        # Date — <small class="ptype"> containing a date string
-        published_at = None
-        for small in row.find_all("small"):
-            if "ptype" in small.get("class", []):
-                d = _parse_date(small.get_text(strip=True))
-                if d:
-                    published_at = d
-                    break
+        acf = post.get("acf_data") or {}
+        published_at = (
+            _parse_date(acf.get("published_date"))
+            or _parse_date(acf.get("date"))
+            or _parse_date(acf.get("file_date"))
+            or _parse_date(post.get("post_date"))
+        )
 
-        # Link — only <a class="download-btn"> (skips detail/nav links)
+        file_id = _extract_simple_file_id(acf)
         link = ""
         is_pdf = False
-        for a in row.find_all("a", href=True):
-            if "download-btn" in a.get("class", []):
-                href = a["href"].strip()
-                if href and href != "#":
-                    link = urljoin(_BASE, href) if not href.startswith("http") else href
-                    is_pdf = href.lower().endswith(".pdf") or "/static/uploads/" in href
-                    break
+        if file_id:
+            async with sem:
+                link = await _resolve_pdf_url(client, file_id)
+            if link:
+                is_pdf = link.lower().endswith(".pdf") or "/static/uploads/" in link
 
-        if not link or link in seen:
-            continue
-        seen.add(link)
-
-        if min_date and published_at and published_at < min_date:
-            continue
-
-        items.append(ScrapedItem(
-            title=title,
-            link=link,
-            published_at=published_at,
-            is_pdf=is_pdf,
-            section_label=section_label,
-        ))
-
-    return items
+        return ScrapedItem(
+            title=title, link=link, published_at=published_at,
+            is_pdf=is_pdf, section_label=section_label,
+        )
+    except Exception:
+        return None
 
 
-def _has_more_pages(html: str, current_page: int) -> bool:
-    soup = BeautifulSoup(html, "html.parser")
-    nxt = str(current_page + 1)
-    for a in soup.find_all("a", href=True):
-        href = a.get("href", "")
-        if f"page={nxt}" in href or f"page/{nxt}" in href:
-            return True
-    for btn in soup.find_all(["a", "button"]):
-        text = btn.get_text(strip=True).lower()
-        if text in ("next", "›", "»") and not btn.get("disabled") and btn.get("aria-disabled") != "true":
-            return True
-    return False
+# ── Document / Press Release file-entry expansion ────────────────────────────
 
+async def _items_from_file_entry(
+    client: httpx.AsyncClient,
+    entry: dict,
+    post_title: str,
+    post_date: str | None,
+    section_label: str,
+    sem: asyncio.Semaphore,
+) -> ScrapedItem | None:
+    """Convert one acf_data.file[] entry into a ScrapedItem.
 
-# ── httpx-based fetcher (preferred — works when site is SSR) ─────────────────
+    Handles both observed entry shapes:
 
-def _fetch_html(url: str, client: httpx.Client) -> str | None:
+      type "PDF"  → {"type":"PDF", "title":"...", "file":[<int id>], ...}
+                    Resolve file ID → PDF URL via /post-page/post?id=<id>
+
+      type "Link" → {"type":"Link", "title":"...", "external_link":"https://...", ...}
+                    Use external_link directly (e.g. PIB press releases).
+    """
     try:
-        r = client.get(url, timeout=30)
-        if r.status_code == 200:
-            html = r.text
-            # Verify the page actually contains our rows (not a bot-wall/redirect)
-            if "announcementbox" in html:
-                return html
-            print(f"[fisheries] httpx {url}: got {r.status_code} but no announcementbox (len={len(html)})")
-        else:
-            print(f"[fisheries] httpx {url}: status {r.status_code}")
-    except Exception as e:
-        print(f"[fisheries] httpx {url}: {e}")
-    return None
+        entry_type = (entry.get("type") or "").strip()
+        title = (entry.get("title") or post_title).strip()
+        if not title:
+            return None
 
+        # Date: prefer the entry's own date, fall back to the parent post date
+        published_at = _parse_date(entry.get("date")) or _parse_date(post_date)
 
-def _scrape_http(
-    client: httpx.Client,
-    base_url: str,
-    section_label: str,
-    min_date: datetime | None,
-    seen: set[str],
-) -> list[ScrapedItem]:
-    items: list[ScrapedItem] = []
-    page_num = 1
-    while True:
-        url = base_url if page_num == 1 else f"{base_url}?page={page_num}"
-        html = _fetch_html(url, client)
-        if not html:
-            break
-        new_items = _parse_rows(html, section_label, min_date, seen)
-        print(f"[fisheries] {section_label} p{page_num}: {len(new_items)} items")
-        if not new_items:
-            break
-        items.extend(new_items)
-        if not _has_more_pages(html, page_num):
-            break
-        page_num += 1
-    return items
-
-
-# ── Playwright fallback ──────────────────────────────────────────────────────
-
-def _scrape_playwright(
-    page,
-    base_url: str,
-    section_label: str,
-    min_date: datetime | None,
-    seen: set[str],
-) -> list[ScrapedItem]:
-    items: list[ScrapedItem] = []
-    page_num = 1
-    while True:
-        url = base_url if page_num == 1 else f"{base_url}?page={page_num}"
-        try:
-            page.goto(url, wait_until="networkidle", timeout=60000)
-            try:
-                page.wait_for_selector("div.announcementbox", timeout=20000)
-            except Exception:
-                page.wait_for_timeout(4000)
-        except Exception as e:
-            print(f"[fisheries] PW {section_label} p{page_num}: {e}")
-            break
-        html = page.content()
-        has_rows = "announcementbox" in html
-        new_items = _parse_rows(html, section_label, min_date, seen)
-        print(f"[fisheries] PW {section_label} p{page_num}: {len(new_items)} items (has_rows={has_rows})")
-        if not new_items:
-            break
-        items.extend(new_items)
-        if not _has_more_pages(html, page_num):
-            break
-        page_num += 1
-    return items
-
-
-def _find_section_url(html: str, pattern: str) -> str | None:
-    soup = BeautifulSoup(html, "html.parser")
-    pat = re.compile(pattern, re.IGNORECASE)
-    for a in soup.find_all("a", href=True):
-        if pat.search(a.get_text(strip=True)) or pat.search(a["href"]):
-            href = a["href"].strip()
-            if href and "#" not in href:
-                return urljoin(_BASE, href) if not href.startswith("http") else href
-    return None
-
-
-def _crawl_sync() -> list[ScrapedItem]:
-    all_items: list[ScrapedItem] = []
-    seen: set[str] = set()
-
-    # ── Try httpx first ──────────────────────────────────────────────────────
-    with httpx.Client(headers=_HEADERS, follow_redirects=True) as client:
-        # Quick probe: can we get the whats-new page with announcementbox rows?
-        probe = _fetch_html(f"{_BASE}/whats-new", client)
-        use_http = probe is not None
-        print(f"[fisheries] httpx probe: {'OK' if use_http else 'BLOCKED — switching to Playwright'}")
-
-        if use_http:
-            # What's New
-            all_items += _parse_rows(probe, "What's New", None, seen)
-            # check for more pages on whats-new
-            page_num = 2
-            while _has_more_pages(probe if page_num == 2 else "", page_num - 1):
-                html = _fetch_html(f"{_BASE}/whats-new?page={page_num}", client)
-                if not html:
-                    break
-                new = _parse_rows(html, "What's New", None, seen)
-                if not new:
-                    break
-                all_items += new
-                probe = html
-                page_num += 1
-
-            # Press Release — try common URL patterns
-            for pr_path in ("/media/press-release", "/media/press-releases", "/offerings/press-release"):
-                pr_html = _fetch_html(f"{_BASE}{pr_path}", client)
-                if pr_html:
-                    all_items += _scrape_http(client, f"{_BASE}{pr_path}", "Press Release", None, seen)
-                    break
-
-            # Orders-and-notices sub-sections
-            on_html = _fetch_html(f"{_BASE}/documents/orders-and-notices", client)
-            if on_html:
-                circ_url = _find_section_url(on_html, r"circular")
-                if circ_url:
-                    all_items += _scrape_http(client, circ_url, "Circulars", _MIN_DATE, seen)
-
-                ord_url = None
-                for a in BeautifulSoup(on_html, "html.parser").find_all("a", href=True):
-                    txt = a.get_text(strip=True)
-                    if re.search(r"\border\b", txt, re.I) and not re.search(r"office|circular|notice", txt, re.I):
-                        href = a["href"].strip()
-                        ord_url = urljoin(_BASE, href) if not href.startswith("http") else href
-                        break
-                if ord_url:
-                    all_items += _scrape_http(client, ord_url, "Orders", _MIN_DATE, seen)
-
-                off_url = _find_section_url(on_html, r"office.?order")
-                if off_url:
-                    all_items += _scrape_http(client, off_url, "Office Orders", _MIN_DATE, seen)
-
-    if use_http:
-        print(f"[fisheries] httpx total: {len(all_items)}")
-        return all_items
-
-    # ── Playwright fallback ──────────────────────────────────────────────────
-    print("[fisheries] Using Playwright fallback")
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
-        try:
-            ctx = browser.new_context(
-                user_agent=_HEADERS["User-Agent"],
-                viewport={"width": 1920, "height": 1080},
-                locale="en-US",
-                timezone_id="Asia/Kolkata",
-                extra_http_headers={
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Sec-Fetch-Dest": "document",
-                    "Sec-Fetch-Mode": "navigate",
-                    "Sec-Fetch-Site": "none",
-                    "Sec-Fetch-User": "?1",
-                },
+        # ── Link type (e.g. press releases pointing to PIB) ──────────────
+        if entry_type == "Link":
+            link = (entry.get("external_link") or "").strip()
+            if not link:
+                return None
+            return ScrapedItem(
+                title=title, link=link, published_at=published_at,
+                is_pdf=False, section_label=section_label,
             )
-            page = ctx.new_page()
 
-            # What's New
-            all_items += _scrape_playwright(page, f"{_BASE}/whats-new", "What's New", None, seen)
+        # ── PDF type ─────────────────────────────────────────────────────
+        if entry_type == "PDF":
+            file_val = entry.get("file") or []
+            if not isinstance(file_val, list) or not file_val:
+                return None
+            file_id = file_val[0] if isinstance(file_val[0], int) else None
+            if not file_id:
+                return None
+            async with sem:
+                link = await _resolve_pdf_url(client, file_id)
+            if not link:
+                return None
+            is_pdf = link.lower().endswith(".pdf") or "/static/uploads/" in link
+            return ScrapedItem(
+                title=title, link=link, published_at=published_at,
+                is_pdf=is_pdf, section_label=section_label,
+            )
 
-            # Press Release
-            pr_items = _scrape_playwright(page, f"{_BASE}/media/press-release", "Press Release", None, seen)
-            if not pr_items:
-                try:
-                    page.goto(_BASE, wait_until="domcontentloaded", timeout=60000)
-                    page.wait_for_timeout(2000)
-                    page.get_by_role("menuitem", name=re.compile("press release", re.I)).click()
-                    page.wait_for_load_state("networkidle")
-                    page.wait_for_timeout(2000)
-                    pr_url = page.url.split("?")[0]
-                    pr_items = _scrape_playwright(page, pr_url, "Press Release", None, seen)
-                except Exception as e:
-                    print(f"[fisheries] PW Press Release nav: {e}")
-            all_items += pr_items
+        # ── Unknown / fallback ────────────────────────────────────────────
+        # Try external_link first, then file ID
+        link = (entry.get("external_link") or "").strip()
+        if link:
+            return ScrapedItem(
+                title=title, link=link, published_at=published_at,
+                is_pdf=False, section_label=section_label,
+            )
+        file_val = entry.get("file") or []
+        if isinstance(file_val, list) and file_val and isinstance(file_val[0], int):
+            async with sem:
+                link = await _resolve_pdf_url(client, file_val[0])
+            if link:
+                is_pdf = link.lower().endswith(".pdf") or "/static/uploads/" in link
+                return ScrapedItem(
+                    title=title, link=link, published_at=published_at,
+                    is_pdf=is_pdf, section_label=section_label,
+                )
 
-            # Orders-and-notices sub-sections
-            page.goto(f"{_BASE}/documents/orders-and-notices", wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(2000)
-            on_html = page.content()
+        return None
+    except Exception:
+        return None
 
-            circ_url = _find_section_url(on_html, r"circular")
-            if circ_url:
-                all_items += _scrape_playwright(page, circ_url, "Circulars", _MIN_DATE, seen)
 
-            page.goto(f"{_BASE}/documents/orders-and-notices", wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(1500)
-            on_html = page.content()
-            ord_url = None
-            for a in BeautifulSoup(on_html, "html.parser").find_all("a", href=True):
-                txt = a.get_text(strip=True)
-                if re.search(r"\border\b", txt, re.I) and not re.search(r"office|circular|notice", txt, re.I):
-                    href = a["href"].strip()
-                    ord_url = urljoin(_BASE, href) if not href.startswith("http") else href
-                    break
-            if ord_url:
-                all_items += _scrape_playwright(page, ord_url, "Orders", _MIN_DATE, seen)
+async def _items_from_doc_post(
+    client: httpx.AsyncClient,
+    post: dict,
+    section_label: str,
+    sem: asyncio.Semaphore,
+) -> list[ScrapedItem]:
+    """Expand ALL acf_data.file entries of a document post into ScrapedItems."""
+    try:
+        post_title = (post.get("post_title") or "").strip()
+        acf = post.get("acf_data") or {}
+        post_date = acf.get("date") or post.get("post_date")
+        file_entries = acf.get("file") or []
 
-            page.goto(f"{_BASE}/documents/orders-and-notices", wait_until="networkidle", timeout=60000)
-            page.wait_for_timeout(1500)
-            on_html = page.content()
-            off_url = _find_section_url(on_html, r"office.?order")
-            if off_url:
-                all_items += _scrape_playwright(page, off_url, "Office Orders", _MIN_DATE, seen)
+        if not isinstance(file_entries, list) or not file_entries:
+            return []
 
-        finally:
-            browser.close()
+        results = await asyncio.gather(
+            *[
+                _items_from_file_entry(client, entry, post_title, post_date, section_label, sem)
+                for entry in file_entries
+                if isinstance(entry, dict)
+            ],
+            return_exceptions=True,
+        )
+        return [r for r in results if isinstance(r, ScrapedItem)]
+    except Exception:
+        return []
 
-    print(f"[fisheries] Playwright total: {len(all_items)}")
-    return all_items
 
+# ── Category discovery ────────────────────────────────────────────────────────
+
+async def _discover_extra_categories(client: httpx.AsyncClient) -> list[tuple[str, str]]:
+    """Discover additional document categories (excluding press-release, already explicit).
+
+    Tries:
+      1. WP taxonomy REST API: GET /wp/v2/documents_category?per_page=100
+      2. WP child pages:       GET /wp/v2/pages?parent=<documents_page_id>
+    Falls back to _FALLBACK_DOC_CATEGORIES.
+    """
+    try:
+        # Approach 1: taxonomy terms
+        cats_resp = await _fetch_json(
+            client,
+            f"{_CMS}/wp/v2/documents_category",
+            _HEADERS_WP,
+            per_page=100,
+        )
+        if isinstance(cats_resp, list) and cats_resp:
+            discovered = []
+            skip = {"press-release", "general_press_release"}
+            for term in cats_resp:
+                if not isinstance(term, dict):
+                    continue
+                slug = term.get("slug", "")
+                name = term.get("name", slug)
+                if slug and slug not in skip:
+                    discovered.append((slug, "Documents"))
+            if discovered:
+                print(f"[fisheries] Discovered {len(discovered)} document categories via taxonomy")
+                return discovered
+    except Exception as exc:
+        print(f"[fisheries] Taxonomy discovery failed: {exc}")
+
+    try:
+        # Approach 2: child pages under "documents"
+        parent_resp = await _fetch_json(
+            client, f"{_CMS}/wp/v2/pages", _HEADERS_WP, slug="documents", _fields="id",
+        )
+        if isinstance(parent_resp, list) and parent_resp:
+            parent_id = parent_resp[0].get("id") if isinstance(parent_resp[0], dict) else None
+            if parent_id:
+                children = await _fetch_json(
+                    client, f"{_CMS}/wp/v2/pages", _HEADERS_WP,
+                    parent=parent_id, _fields="slug,title", per_page=100,
+                )
+                if isinstance(children, list):
+                    discovered = [
+                        (p["slug"], "Documents")
+                        for p in children
+                        if isinstance(p, dict) and p.get("slug")
+                        and p["slug"] not in {"press-release", "general_press_release"}
+                    ]
+                    if discovered:
+                        print(f"[fisheries] Discovered {len(discovered)} categories via child pages")
+                        return discovered
+    except Exception as exc:
+        print(f"[fisheries] Child-page discovery failed: {exc}")
+
+    print("[fisheries] Using fallback document categories")
+    return _FALLBACK_DOC_CATEGORIES
+
+
+# ── Fetch all posts for one document category ─────────────────────────────────
+
+async def _fetch_category_posts(
+    client: httpx.AsyncClient,
+    category_slug: str,
+    section_label: str,
+    sem: asyncio.Semaphore,
+) -> list[ScrapedItem]:
+    """Fetch all document posts for one category and expand their file entries."""
+    all_posts: list[dict] = []
+
+    for page_num in range(1, 11):   # up to 10 pages × 100 = 1000 items
+        try:
+            result = await _fetch_json(
+                client,
+                f"{_CMS}/document/documents",
+                None,
+                document_category=category_slug,
+                limit=100,
+                page=page_num,
+                modified_date="",
+            )
+        except Exception as exc:
+            print(f"[fisheries] {section_label}/{category_slug} page {page_num} failed: {exc}")
+            break
+
+        if not isinstance(result, dict):
+            break
+
+        posts = result.get("posts", [])
+        if isinstance(posts, dict):
+            posts = [posts]
+        if not isinstance(posts, list) or not posts:
+            break
+
+        all_posts.extend(p for p in posts if isinstance(p, dict))
+        if len(posts) < 100:
+            break
+
+    if not all_posts:
+        return []
+
+    print(f"[fisheries] {section_label}/{category_slug}: {len(all_posts)} posts")
+
+    # Expand each post's file array into individual ScrapedItems
+    results = await asyncio.gather(
+        *[_items_from_doc_post(client, post, section_label, sem) for post in all_posts],
+        return_exceptions=True,
+    )
+    items: list[ScrapedItem] = []
+    for r in results:
+        if isinstance(r, list):
+            items.extend(r)
+    return items
+
+
+# ── main entry point ──────────────────────────────────────────────────────────
 
 async def crawl_fisheries(_config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(_EXECUTOR, _crawl_sync)
+    sem = asyncio.Semaphore(3)
+
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+
+        # ── What's New + Tenders ──────────────────────────────────────────
+        listing_results = await asyncio.gather(
+            *[_fetch_json(client, f"{_CMS}/post-page/{slug}") for slug, _ in _POST_SECTIONS],
+            return_exceptions=True,
+        )
+
+        all_posts: list[tuple[dict, str]] = []
+        seen_ids: set[int] = set()
+
+        for (slug, label), result in zip(_POST_SECTIONS, listing_results):
+            if isinstance(result, Exception):
+                print(f"[fisheries] {label} listing failed: {result}")
+                continue
+            raw_posts = result.get("posts", []) if isinstance(result, dict) else []
+            if isinstance(raw_posts, dict):
+                raw_posts = [raw_posts]
+            added = 0
+            for post in raw_posts:
+                if not isinstance(post, dict):
+                    continue
+                pid = post.get("ID")
+                if pid is None or pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+                all_posts.append((post, label))
+                added += 1
+            print(f"[fisheries] {label}: {added} posts")
+
+        resolve_results = await asyncio.gather(
+            *[_resolve_post(client, post, label, sem) for post, label in all_posts],
+            return_exceptions=True,
+        )
+        items: list[ScrapedItem] = [r for r in resolve_results if isinstance(r, ScrapedItem)]
+
+        # ── Documents + Press Releases ────────────────────────────────────
+        # Discover extra doc categories (excluding press-release, already in _DOC_CATEGORIES)
+        extra_cats = await _discover_extra_categories(client)
+        all_doc_cats = _DOC_CATEGORIES + extra_cats
+
+        doc_results = await asyncio.gather(
+            *[
+                _fetch_category_posts(client, slug, label, sem)
+                for slug, label in all_doc_cats
+            ],
+            return_exceptions=True,
+        )
+
+        seen_links: set[str] = set()
+        for result in doc_results:
+            if not isinstance(result, list):
+                continue
+            for item in result:
+                key = item.link or item.title
+                if key and key not in seen_links:
+                    seen_links.add(key)
+                    items.append(item)
+
+    print(f"[fisheries] done — {len(items)} items scraped")
+    return items

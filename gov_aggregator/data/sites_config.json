@@ -4199,7 +4199,7 @@
       "base_url": "https://www.cbic.gov.in",
       "parser_type": "list",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -4228,40 +4228,8 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "View Sticker",
-          "url": "https://www.cbic.gov.in/entities/view-sticker",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "wait_for_selector": "table",
-          "pre_capture_js": "async () => { await new Promise(r => setTimeout(r, 5000)); }",
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": "table.table-bordered tbody tr",
-            "title_selector": "td:nth-child(2)",
-            "link_selector": "td:nth-child(3) a, td:nth-child(3) span",
-            "date_selector": null
-          }
-        },
-        {
-          "section_label": "Citizen Corner",
-          "url": "https://www.cbic.gov.in/entities/citizen-corner",
-          "parser_type": "list",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "wait_for_selector": "ul",
-          "pre_capture_js": "async () => { await new Promise(r => setTimeout(r, 5000)); }",
-          "default_category": "notification",
-          "selectors": {
-            "item_selector": "ul.all-new-list li a",
-            "title_selector": null,
-            "link_selector": null,
-            "date_selector": null
-          }
-        }
-      ]
+      "custom_crawler": "cbic-customs",
+      "source_url": "https://www.cbic.gov.in/"
     },
     {
       "site_key": "department-of-atomic-energy",
@@ -4828,6 +4796,19 @@
             "link_selector": "td:nth-child(4) a",
             "date_selector": "td:nth-child(3) a",
             "wait_for_selector": "table#tender tbody tr"
+          }
+        },
+        {
+          "section_label": "Media Corner",
+          "url": "https://cpcb.nic.in/media-corner-new/",
+          "parser_type": "list",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "default_category": "news",
+          "selectors": {
+            "item_selector": "div.heading",
+            "title_selector": "a",
+            "link_selector": "a"
           }
         }
       ]
@@ -7505,6 +7486,7 @@
       "site_key": "coffee-board",
       "ministry": "Ministry of Commerce and Industry",
       "name": "Coffee Board of India",
+      "source_url": "https://coffeeboard.gov.in/",
       "base_url": "https://coffeeboard.gov.in",
       "parser_type": "custom",
       "parser_backend": "bs4",
@@ -8895,6 +8877,7 @@
       "site_key": "department-of-animal-husbandry-and-dairying",
       "ministry": "Ministry of Fisheries, Animal Husbandry and Dairying",
       "name": "Department of Animal Husbandry and Dairying",
+      "source_url": "https://dahd.gov.in/whats-new",
       "url": "https://dahd.gov.in/whats-new",
       "base_url": "https://dahd.gov.in",
       "parser_type": "list",
@@ -8902,14 +8885,8 @@
       "render_js": false,
       "active": true,
       "default_category": "news",
-      "pagination_param": "page",
-      "start_page": 0,
-      "max_pages": 10,
-      "selectors": {
-        "item_selector": ".view-what-s-new ol li",
-        "title_selector": ".views-field-title a",
-        "link_selector": ".views-field-title a"
-      }
+      "custom_crawler": "department-of-animal-husbandry-and-dairying",
+      "selectors": {}
     },
     {
       "site_key": "ministry-of-labour",
