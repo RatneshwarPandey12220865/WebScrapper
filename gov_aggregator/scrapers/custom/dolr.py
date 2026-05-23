@@ -32,6 +32,9 @@ def _parse_date(raw: str | None) -> datetime | None:
 
 _DATE_CELL_RE = re.compile(r"^\s*(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s*$")
 
+# Notifications-only floor — drop anything dated before 2026-01-01 per spec.
+_NOTIF_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
 
 def _parse_date_strict_dmy(raw: str | None) -> datetime | None:
     """Strict DD/MM/YYYY — the cell must BE a date, not merely contain one.
@@ -138,9 +141,12 @@ async def crawl_dolr(config: SiteConfig) -> list[ScrapedItem]:
                 if not title:
                     continue
                 date_text = _clean_text(date_elem.get_text()) if date_elem else ""
-                # Notifications: only keep rows whose date cell is an explicit DD/MM/YYYY.
+                # Notifications: only keep rows whose date cell is an explicit DD/MM/YYYY
+                # AND whose date is on/after 2026-01-01 (per spec).
                 parsed_date = _parse_date_strict_dmy(date_text)
                 if not parsed_date:
+                    continue
+                if parsed_date < _NOTIF_MIN_DATE:
                     continue
                 href = link_elem.get("href", "")
                 link = urljoin("https://dolr.gov.in", href) if href else ""
