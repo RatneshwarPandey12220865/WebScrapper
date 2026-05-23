@@ -1732,7 +1732,6 @@
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
-      "custom_crawler": "department-of-land-resources",
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
