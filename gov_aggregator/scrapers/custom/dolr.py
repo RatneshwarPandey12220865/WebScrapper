@@ -104,8 +104,7 @@ async def crawl_dolr(config: SiteConfig) -> list[ScrapedItem]:
                 if not title:
                     continue
                 date_text = _clean_text(date_elem.get_text()) if date_elem else ""
-                # Orders & Notices: only keep rows whose date cell is an explicit DD/MM/YYYY.
-                parsed_date = _parse_date_strict_dmy(date_text)
+                parsed_date = _parse_date(date_text) if date_text else None
                 if not parsed_date:
                     continue
                 href = link_elem.get("href", "")
