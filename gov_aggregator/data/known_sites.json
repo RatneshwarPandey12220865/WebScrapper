@@ -1568,12 +1568,12 @@
     },
     {
       "site_key": "civil-aviation",
-      "name": "Civil Aviation",
+      "name": "Ministry of Civil Aviation",
       "registry_url": "https://www.civilaviation.gov.in/",
       "alternate_url": null,
       "preferred_url": "https://www.civilaviation.gov.in/",
-      "status": "working",
-      "status_raw": "working",
+      "status": "not_supported",
+      "status_raw": "scraper available but site not fully supported",
       "report_id": "civil_aviation"
     },
     {
