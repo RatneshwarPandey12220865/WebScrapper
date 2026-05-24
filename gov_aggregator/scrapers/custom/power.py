@@ -20,15 +20,11 @@ _HEADERS = {
     "Referer": "https://powermin.gov.in/",
 }
 
-_CIRCULAR_URL = (
-    "https://powermin.gov.in/en/circular"
-    "?field_date_value%5Bvalue%5D%5Bdate%5D=01%2F01%2F2026"
-    "&field_division_value=All&title="
-)
+_CIRCULAR_URL = "https://powermin.gov.in/en/circular"
 
 
 def _parse_date(raw: str | None) -> datetime | None:
-    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d %b %Y", "%B %d, %Y", "%Y-%m-%d"):
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y", "%d-%m-%Y", "%d %b %Y", "%B %d, %Y", "%Y-%m-%d"):
         try:
             return datetime.strptime((raw or "").strip(), fmt).replace(tzinfo=timezone.utc)
         except ValueError:
@@ -46,8 +42,11 @@ def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[Scra
         if not title:
             continue
 
-        date_td = row.select_one("td.views-field-field-date span")
-        published_at = _parse_date(date_td.get_text().strip() if date_td else None)
+        date_span = row.select_one("td.views-field-field-date span[content]")
+        raw_date = (date_span.get("content") or date_span.get_text()).strip() if date_span else None
+        published_at = _parse_date(raw_date)
+        if published_at and published_at < _MIN_DATE:
+            continue
 
         division_td = row.select_one("td.views-field-field-division")
         label = " ".join(division_td.get_text().split()) if division_td else section_label
