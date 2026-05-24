@@ -6,6 +6,7 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 from .agriculture import crawl_agriculture
 from .andhra_pradesh import crawl_andhra_pradesh
+from .dasd_kerala import crawl_dasd_kerala
 from .asi import crawl_asi
 from .csez import crawl_csez
 from .ayush import crawl_ayush
@@ -48,6 +49,7 @@ CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
 CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "andhra-pradesh-official-portal": crawl_andhra_pradesh,
+    "dasd-kerala": crawl_dasd_kerala,
     "archaeological-survey-of-india": crawl_asi,
     "cochin-sez": crawl_csez,
     "department-of-agriculture-and-farmers-welfare-whatsnew": crawl_agriculture,
@@ -94,6 +96,7 @@ __all__ = [
     "CustomCrawler",
     "crawl_agriculture",
     "crawl_andhra_pradesh",
+    "crawl_dasd_kerala",
     "crawl_asi",
     "crawl_csez",
     "crawl_ayush",

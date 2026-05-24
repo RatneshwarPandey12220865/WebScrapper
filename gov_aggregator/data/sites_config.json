@@ -9678,6 +9678,16 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "andhra-pradesh-official-portal"
+    },
+    {
+      "site_key": "dasd-kerala",
+      "ministry": "Government of Kerala",
+      "name": "Directorate of Arecanut and Spices Development (DASD)",
+      "source_url": "https://dasd.kerala.gov.in/",
+      "base_url": "https://dasd.kerala.gov.in",
+      "parser": "custom",
+      "active": true,
+      "custom_crawler": "dasd-kerala"
     }
   ]
 }
