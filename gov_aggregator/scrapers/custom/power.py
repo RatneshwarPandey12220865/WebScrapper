@@ -20,9 +20,11 @@ _HEADERS = {
     "Referer": "https://powermin.gov.in/",
 }
 
-_SECTIONS = [
-    ("Circulars", "/en/content/circulars"),
-]
+_CIRCULAR_URL = (
+    "https://powermin.gov.in/en/circular"
+    "?field_date_value%5Bvalue%5D%5Bdate%5D=01%2F01%2F2026"
+    "&field_division_value=All&title="
+)
 
 
 def _parse_date(raw: str | None) -> datetime | None:
@@ -38,22 +40,20 @@ def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[Scra
     soup = BeautifulSoup(html, "html.parser")
     items = []
 
-    for row in soup.select(".view-id-circular table tbody tr"):
+    for row in soup.select(".view-id-circular .views-table tbody tr"):
         subject_td = row.select_one("td.views-field-title-1")
         title = " ".join(subject_td.get_text().split()) if subject_td else ""
         if not title:
             continue
 
-        date_td = row.select_one("td.views-field-field-date")
+        date_td = row.select_one("td.views-field-field-date span")
         published_at = _parse_date(date_td.get_text().strip() if date_td else None)
-        if published_at and published_at < _MIN_DATE:
-            continue
 
         division_td = row.select_one("td.views-field-field-division")
         label = " ".join(division_td.get_text().split()) if division_td else section_label
         label = label or section_label
 
-        a = row.select_one("td.views-field-field-circular-upload-file-1 a")
+        a = row.select("td")[-1].select_one("a") if row.select("td") else None
         if not a:
             continue
         href = (a.get("href") or "").strip()
@@ -67,7 +67,7 @@ def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[Scra
             section_label=label,
         ))
 
-    next_a = soup.select_one("li.pager-next a") or soup.select_one("li.pager__item--next a")
+    next_a = soup.select_one(".pager-next a") or soup.select_one("li.pager__item--next a")
     next_url = urljoin(page_url, next_a["href"]) if next_a else None
     return items, next_url
 
@@ -82,20 +82,19 @@ async def crawl_power(_config: SiteConfig) -> list[ScrapedItem]:
         except Exception:
             pass
 
-        for label, path in _SECTIONS:
-            url: str | None = _BASE + path
-            while url:
-                try:
-                    resp = await client.get(url)
-                    resp.raise_for_status()
-                    items, url = _parse_page(resp.text, label, url)
-                    all_items.extend(items)
-                    logger.info("[power] %s: %d items, next=%s", label, len(items), url)
-                    if not items:
-                        break
-                except Exception as exc:
-                    logger.warning("[power] %s fetch failed %s: %s", label, url, exc)
+        url: str | None = _CIRCULAR_URL
+        while url:
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                items, url = _parse_page(resp.text, "Circulars", url)
+                all_items.extend(items)
+                logger.info("[power] Circulars: %d items, next=%s", len(items), url)
+                if not items:
                     break
+            except Exception as exc:
+                logger.warning("[power] fetch failed %s: %s", url, exc)
+                break
 
     logger.info("[power] total: %d items", len(all_items))
     return all_items
