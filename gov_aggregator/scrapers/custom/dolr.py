@@ -290,14 +290,24 @@ async def crawl_dolr(config: SiteConfig) -> list[ScrapedItem]:
 
     # Dedup across sections by PDF link — the same PDF often shows up in
     # both What's New (resolved via the detail page) and one of the
-    # /document-category/* listings. The first emission wins, so the
-    # section ordering above (What's New → Orders & Notices → Notifications
-    # → Circulars) decides which section_label survives.
-    seen_links: set[str] = set()
-    unique_items: list[ScrapedItem] = []
+    # /document-category/* listings.
+    #
+    # When that happens, prefer the SPECIFIC section label (Orders &
+    # Notices, Notifications, Circulars) over the catch-all "What's New"
+    # feed, so the Orders & Notices section stays visible in the UI and
+    # the item carries its proper date from the listing.
+    #
+    # If both versions share the same specificity, the first-seen wins.
+    _WN_LABEL = "What's New"
+    by_link: dict[str, ScrapedItem] = {}
     for item in items:
-        if not item.link or item.link in seen_links:
+        if not item.link:
             continue
-        seen_links.add(item.link)
-        unique_items.append(item)
-    return unique_items
+        existing = by_link.get(item.link)
+        if existing is None:
+            by_link[item.link] = item
+            continue
+        # Replace a What's New entry when a more specific section also has it.
+        if existing.section_label == _WN_LABEL and item.section_label != _WN_LABEL:
+            by_link[item.link] = item
+    return list(by_link.values())
