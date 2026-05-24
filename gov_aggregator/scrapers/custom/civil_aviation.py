@@ -22,8 +22,9 @@ _HEADERS = {
 }
 
 _SECTIONS = [
-    ("Circulars",  "/ministry-documents/circulars"),
-    ("Rules",      "/ministry-documents/rules"),
+    ("Circulars", "/ministry-documents/circulars"),
+    ("Rules",     "/ministry-documents/rules"),
+    ("Orders",    "/ministry-documents/orders"),
 ]
 
 
