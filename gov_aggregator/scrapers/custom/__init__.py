@@ -9,6 +9,7 @@ from .andhra_pradesh import crawl_andhra_pradesh
 from .civil_aviation import crawl_civil_aviation
 from .dasd_kerala import crawl_dasd_kerala
 from .dopt import crawl_dopt
+from .doppw import crawl_doppw
 from .asi import crawl_asi
 from .csez import crawl_csez
 from .ayush import crawl_ayush
@@ -54,6 +55,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "civil-aviation": crawl_civil_aviation,
     "dasd-kerala": crawl_dasd_kerala,
     "dopt": crawl_dopt,
+    "doppw": crawl_doppw,
     "archaeological-survey-of-india": crawl_asi,
     "cochin-sez": crawl_csez,
     "department-of-agriculture-and-farmers-welfare-whatsnew": crawl_agriculture,
@@ -103,6 +105,7 @@ __all__ = [
     "crawl_civil_aviation",
     "crawl_dasd_kerala",
     "crawl_dopt",
+    "crawl_doppw",
     "crawl_asi",
     "crawl_csez",
     "crawl_ayush",

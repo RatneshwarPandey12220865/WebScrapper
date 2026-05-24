@@ -9708,6 +9708,16 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "dopt"
+    },
+    {
+      "site_key": "doppw",
+      "ministry": "Ministry of Personnel, Public Grievances and Pensions",
+      "name": "Department of Pension and Pensioners Welfare (DoPPW)",
+      "source_url": "https://www.doppw.gov.in",
+      "base_url": "https://www.doppw.gov.in",
+      "parser": "custom",
+      "active": true,
+      "custom_crawler": "doppw"
     }
   ]
 }

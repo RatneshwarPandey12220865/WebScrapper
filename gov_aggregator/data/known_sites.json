@@ -1689,6 +1689,16 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "dopt"
+    },
+    {
+      "site_key": "doppw",
+      "name": "Department of Pension and Pensioners Welfare (DoPPW)",
+      "registry_url": "https://www.doppw.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://www.doppw.gov.in/",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "doppw"
     }
   ]
 }
