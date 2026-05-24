@@ -38,11 +38,11 @@ def _parse_date(raw: str | None) -> datetime | None:
     return None
 
 
-def _parse_doc_table(html: str, section_label: str, apply_date_filter: bool) -> list[ScrapedItem]:
+def _parse_doc_table_page(html: str, section_label: str, apply_date_filter: bool, page_url: str) -> tuple[list[ScrapedItem], str | None]:
     soup = BeautifulSoup(html, "html.parser")
     block = soup.select_one("div#block-views-block-ministry-documents-block-1")
     if not block:
-        return []
+        return [], None
     items = []
     for row in block.select("table tbody tr"):
         title_td = row.select_one("td.views-field-title")
@@ -70,7 +70,9 @@ def _parse_doc_table(html: str, section_label: str, apply_date_filter: bool) -> 
             is_pdf=link.lower().endswith(".pdf"),
             section_label=section_label,
         ))
-    return items
+    next_a = soup.select_one("li.pager__item--next a")
+    next_url = urljoin(page_url, next_a["href"]) if next_a else None
+    return items, next_url
 
 
 def _parse_infocus(html: str, page_url: str) -> tuple[list[ScrapedItem], str | None]:
@@ -109,14 +111,19 @@ async def crawl_civil_aviation(_config: SiteConfig) -> list[ScrapedItem]:
 
     async with httpx.AsyncClient(follow_redirects=True, headers=_HEADERS, timeout=30) as client:
         for label, path, date_filter in _SECTIONS:
-            try:
-                resp = await client.get(_BASE + path)
-                resp.raise_for_status()
-                items = _parse_doc_table(resp.text, label, date_filter)
-                logger.info("[civil_aviation] %s: %d items", label, len(items))
-                all_items.extend(items)
-            except Exception as exc:
-                logger.warning("[civil_aviation] %s fetch failed: %s", label, exc)
+            url: str | None = _BASE + path
+            while url:
+                try:
+                    resp = await client.get(url)
+                    resp.raise_for_status()
+                    items, url = _parse_doc_table_page(resp.text, label, date_filter, url)
+                    logger.info("[civil_aviation] %s page: %d items, next=%s", label, len(items), url)
+                    all_items.extend(items)
+                    if not items:
+                        break
+                except Exception as exc:
+                    logger.warning("[civil_aviation] %s fetch failed: %s", label, exc)
+                    break
 
         # In Focus (paginated, date filtered)
         url: str | None = _BASE + "/In-focus"
