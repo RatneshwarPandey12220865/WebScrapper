@@ -25,7 +25,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 class CrawlRequest(BaseModel):
     site_keys: list[str] = Field(default_factory=list)
-    use_cache: bool = True
+    use_cache: bool = False
 
 
 @app.get("/", response_class=FileResponse)
