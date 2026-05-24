@@ -73,7 +73,7 @@ def _parse_listing(html: str, page_url: str) -> tuple[list[tuple[str, str, str |
         title = " ".join(a.get_text().split())
         href = (a.get("href") or "").strip()
         detail_url = href if href.startswith("http") else urljoin(_BASE, href)
-        date_td = row.select_one(".views-field-created, .views-field-field-date")
+        date_td = row.select_one(".views-field-changed, .views-field-created, .views-field-field-date")
         date_raw = date_td.get_text().strip() if date_td else None
         entries.append((title, detail_url, date_raw))
 
