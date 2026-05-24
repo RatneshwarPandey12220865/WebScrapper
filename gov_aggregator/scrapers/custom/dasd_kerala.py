@@ -51,5 +51,25 @@ async def crawl_dasd_kerala(_config: SiteConfig) -> list[ScrapedItem]:
             seen.add(link)
             items.append(ScrapedItem(title=title, link=link, section_label=section_label))
 
+    # News & Events carousel
+    for slide in soup.select(".psacp-post-carousel-wrap .psacp-post-slide"):
+        a = slide.select_one(".psacp-post-title a")
+        if not a:
+            continue
+        title = " ".join(a.get_text().split())
+        link = (a.get("href") or "").strip()
+        if not title or not link or link in seen:
+            continue
+        seen.add(link)
+        date_el = slide.select_one(".psacp-post-date")
+        from datetime import datetime, timezone
+        published_at = None
+        if date_el:
+            try:
+                published_at = datetime.strptime(" ".join(date_el.get_text().split()), "%B %d, %Y").replace(tzinfo=timezone.utc)
+            except ValueError:
+                pass
+        items.append(ScrapedItem(title=title, link=link, published_at=published_at, section_label="News & Events"))
+
     logger.info("[dasd_kerala] %d items", len(items))
     return items
