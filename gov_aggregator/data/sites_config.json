@@ -8914,28 +8914,6 @@
       "note": "Blocked by IP-based CAPTCHA protection"
     },
     {
-      "site_key": "ministry-of-power-circulars",
-      "ministry": "Ministry of Power",
-      "name": "Ministry of Power - Circulars",
-      "url": "https://powermin.gov.in/en/circular",
-      "base_url": "https://powermin.gov.in",
-      "active": true,
-      "custom_crawler": "power-ministry",
-      "min_date": "2026-01-01",
-      "default_category": "circular"
-    },
-    {
-      "site_key": "ministry-of-power-pib",
-      "ministry": "Ministry of Power",
-      "name": "Ministry of Power - Press Releases",
-      "url": "https://www.pib.gov.in/newsite/pmreleases.aspx?mincode=52&reg=3&lang=2",
-      "base_url": "https://www.pib.gov.in",
-      "active": true,
-      "custom_crawler": "power-ministry-pib",
-      "min_date": "2026-01-01",
-      "default_category": "news"
-    },
-    {
       "site_key": "meity",
       "ministry": "Ministry of Electronics and Information Technology",
       "name": "Ministry of Electronics and Information Technology",
