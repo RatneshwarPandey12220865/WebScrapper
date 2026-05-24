@@ -40,11 +40,8 @@ def _parse_date(raw: str | None) -> datetime | None:
 
 def _parse_doc_table_page(html: str, section_label: str, apply_date_filter: bool, page_url: str) -> tuple[list[ScrapedItem], str | None]:
     soup = BeautifulSoup(html, "html.parser")
-    block = soup.select_one("div#block-views-block-ministry-documents-block-1")
-    if not block:
-        return [], None
     items = []
-    for row in block.select("table tbody tr"):
+    for row in soup.select("table.cols-5 tbody tr"):
         title_td = row.select_one("td.views-field-title")
         title = " ".join((title_td.get_text() if title_td else "").split())
         if not title:
@@ -78,7 +75,7 @@ def _parse_doc_table_page(html: str, section_label: str, apply_date_filter: bool
 def _parse_infocus(html: str, page_url: str) -> tuple[list[ScrapedItem], str | None]:
     soup = BeautifulSoup(html, "html.parser")
     items = []
-    for row in soup.select(".scroll-table1 tbody tr"):
+    for row in soup.select("table.cols-5 tbody tr"):
         title_td = row.select_one(".views-field-title")
         title = " ".join((title_td.get_text() if title_td else "").split())
         if not title:
