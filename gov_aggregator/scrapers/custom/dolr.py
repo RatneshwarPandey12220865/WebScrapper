@@ -288,26 +288,9 @@ async def crawl_dolr(config: SiteConfig) -> list[ScrapedItem]:
             if new_in_page == 0:
                 break
 
-    # Dedup across sections by PDF link — the same PDF often shows up in
-    # both What's New (resolved via the detail page) and one of the
-    # /document-category/* listings.
-    #
-    # When that happens, prefer the SPECIFIC section label (Orders &
-    # Notices, Notifications, Circulars) over the catch-all "What's New"
-    # feed, so the Orders & Notices section stays visible in the UI and
-    # the item carries its proper date from the listing.
-    #
-    # If both versions share the same specificity, the first-seen wins.
-    _WN_LABEL = "What's New"
-    by_link: dict[str, ScrapedItem] = {}
-    for item in items:
-        if not item.link:
-            continue
-        existing = by_link.get(item.link)
-        if existing is None:
-            by_link[item.link] = item
-            continue
-        # Replace a What's New entry when a more specific section also has it.
-        if existing.section_label == _WN_LABEL and item.section_label != _WN_LABEL:
-            by_link[item.link] = item
-    return list(by_link.values())
+    # No cross-section dedup: per spec, show every What's New item AND
+    # every Orders & Notices/Notifications/Circulars item. When the same
+    # PDF appears in two sections the dashboard's grouping logic now
+    # includes section_label, so the two rows render side-by-side rather
+    # than collapsing into a "↳ additional PDF" annotation.
+    return items

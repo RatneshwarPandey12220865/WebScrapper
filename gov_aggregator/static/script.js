@@ -299,12 +299,18 @@ function renderResults() {
 
   emptyStateNode.style.display = "none";
 
-  // Mark consecutive rows with same title+site as part of a multi-PDF group
+  // Mark consecutive rows with same title+site+section as part of a multi-PDF group.
+  // section_label is included so a single item that legitimately appears in
+  // two different sections (e.g. DOLR "What's New" + "Orders & Notices")
+  // renders as two full rows rather than collapsing into "↳ additional PDF".
+  const sameGroup = (a, b) =>
+    a && b &&
+    a.title === b.title &&
+    a.site_key === b.site_key &&
+    (a.section_label || "") === (b.section_label || "");
   results.forEach((item, i) => {
-    const prev = results[i - 1];
-    const next = results[i + 1];
-    item._groupFirst = !prev || prev.title !== item.title || prev.site_key !== item.site_key;
-    item._groupLast  = !next || next.title !== item.title || next.site_key !== item.site_key;
+    item._groupFirst = !sameGroup(results[i - 1], item);
+    item._groupLast  = !sameGroup(results[i + 1], item);
     item._inGroup    = !item._groupFirst || !item._groupLast;
   });
 
