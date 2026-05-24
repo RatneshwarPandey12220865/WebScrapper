@@ -288,4 +288,16 @@ async def crawl_dolr(config: SiteConfig) -> list[ScrapedItem]:
             if new_in_page == 0:
                 break
 
-    return items
+    # Dedup across sections by PDF link — the same PDF often shows up in
+    # both What's New (resolved via the detail page) and one of the
+    # /document-category/* listings. The first emission wins, so the
+    # section ordering above (What's New → Orders & Notices → Notifications
+    # → Circulars) decides which section_label survives.
+    seen_links: set[str] = set()
+    unique_items: list[ScrapedItem] = []
+    for item in items:
+        if not item.link or item.link in seen_links:
+            continue
+        seen_links.add(item.link)
+        unique_items.append(item)
+    return unique_items
