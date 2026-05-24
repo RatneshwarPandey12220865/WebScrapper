@@ -21,7 +21,7 @@ _HEADERS = {
 }
 
 _SECTIONS = [
-    ("Circulars", "/en/circular"),
+    ("Circulars", "/en/content/circulars"),
 ]
 
 
@@ -38,7 +38,7 @@ def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[Scra
     soup = BeautifulSoup(html, "html.parser")
     items = []
 
-    for row in soup.select(".view-content table tbody tr"):
+    for row in soup.select(".view-id-circular table tbody tr"):
         subject_td = row.select_one("td.views-field-title-1")
         title = " ".join(subject_td.get_text().split()) if subject_td else ""
         if not title:
@@ -53,7 +53,7 @@ def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[Scra
         label = " ".join(division_td.get_text().split()) if division_td else section_label
         label = label or section_label
 
-        a = row.select_one("td.views-field-field-download-link a")
+        a = row.select_one("td.views-field-field-circular-upload-file-1 a")
         if not a:
             continue
         href = (a.get("href") or "").strip()

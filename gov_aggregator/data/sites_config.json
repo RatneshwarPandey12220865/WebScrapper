@@ -8905,7 +8905,7 @@
       "site_key": "ministry-of-power",
       "ministry": "Ministry of Power",
       "name": "Ministry of Power",
-      "url": "https://powermin.gov.in/en/circular",
+      "url": "https://powermin.gov.in/en/content/circulars",
       "base_url": "https://powermin.gov.in",
       "active": true,
       "custom_crawler": "power-ministry",
