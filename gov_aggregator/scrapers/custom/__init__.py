@@ -47,7 +47,7 @@ from .sebi import crawl_sebi
 CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
 CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
-    "andhra-pradesh": crawl_andhra_pradesh,
+    "andhra-pradesh-official-portal": crawl_andhra_pradesh,
     "archaeological-survey-of-india": crawl_asi,
     "cochin-sez": crawl_csez,
     "department-of-agriculture-and-farmers-welfare-whatsnew": crawl_agriculture,

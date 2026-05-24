@@ -9670,14 +9670,14 @@
       "min_date": "2025-01-01"
     },
     {
-      "site_key": "andhra-pradesh",
-      "ministry": "State Government",
-      "name": "Government of Andhra Pradesh",
+      "site_key": "andhra-pradesh-official-portal",
+      "ministry": "Government of Andhra Pradesh",
+      "name": "Andhra Pradesh - Official State Portal",
       "source_url": "https://www.ap.gov.in/#/",
       "base_url": "https://www.ap.gov.in",
       "parser": "custom",
       "active": true,
-      "custom_crawler": "andhra-pradesh"
+      "custom_crawler": "andhra-pradesh-official-portal"
     }
   ]
 }
