@@ -21,10 +21,11 @@ _HEADERS = {
     "Connection": "keep-alive",
 }
 
+# (label, path, apply_date_filter)
 _SECTIONS = [
-    ("Circulars", "/ministry-documents/circulars"),
-    ("Rules",     "/ministry-documents/rules"),
-    ("Orders",    "/ministry-documents/orders"),
+    ("Circulars",        "/ministry-documents/circulars",        False),
+    ("Orders",           "/ministry-documents/orders-documents", False),
+    ("Rules",            "/ministry-documents/rules",            True),
 ]
 
 
@@ -37,7 +38,7 @@ def _parse_date(raw: str | None) -> datetime | None:
     return None
 
 
-def _parse_doc_table(html: str, section_label: str, page_url: str) -> list[ScrapedItem]:
+def _parse_doc_table(html: str, section_label: str, apply_date_filter: bool) -> list[ScrapedItem]:
     soup = BeautifulSoup(html, "html.parser")
     block = soup.select_one("div#block-views-block-ministry-documents-block-1")
     if not block:
@@ -57,9 +58,10 @@ def _parse_doc_table(html: str, section_label: str, page_url: str) -> list[Scrap
         published_at = _parse_date(date_td.get_text().strip() if date_td else None)
         end_td = row.select_one("td.views-field-field-end-date")
         end_date = _parse_date(end_td.get_text().strip() if end_td else None)
-        ref = end_date or published_at
-        if ref and ref < _MIN_DATE:
-            continue
+        if apply_date_filter:
+            ref = end_date or published_at
+            if ref and ref < _MIN_DATE:
+                continue
         items.append(ScrapedItem(
             title=title,
             link=link,
@@ -106,18 +108,17 @@ async def crawl_civil_aviation(_config: SiteConfig) -> list[ScrapedItem]:
     all_items: list[ScrapedItem] = []
 
     async with httpx.AsyncClient(follow_redirects=True, headers=_HEADERS, timeout=30) as client:
-        # Circulars and Rules
-        for label, path in _SECTIONS:
+        for label, path, date_filter in _SECTIONS:
             try:
                 resp = await client.get(_BASE + path)
                 resp.raise_for_status()
-                items = _parse_doc_table(resp.text, label, resp.url.__str__())
+                items = _parse_doc_table(resp.text, label, date_filter)
                 logger.info("[civil_aviation] %s: %d items", label, len(items))
                 all_items.extend(items)
             except Exception as exc:
                 logger.warning("[civil_aviation] %s fetch failed: %s", label, exc)
 
-        # In Focus (paginated)
+        # In Focus (paginated, date filtered)
         url: str | None = _BASE + "/In-focus"
         while url:
             try:
