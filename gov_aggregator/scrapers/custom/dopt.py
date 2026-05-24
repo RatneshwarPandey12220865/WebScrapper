@@ -21,7 +21,7 @@ _HEADERS = {
 
 
 def _parse_date(raw: str | None) -> datetime | None:
-    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%B %d, %Y", "%d %b %Y", "%Y-%m-%d"):
+    for fmt in ("%A, %B %d, %Y - %H:%M", "%d/%m/%Y", "%d-%m-%Y", "%B %d, %Y", "%d %b %Y", "%Y-%m-%d"):
         try:
             return datetime.strptime((raw or "").strip(), fmt).replace(tzinfo=timezone.utc)
         except ValueError:
@@ -37,15 +37,18 @@ def _parse_page(html: str, page_url: str) -> tuple[list[ScrapedItem], str | None
         if row.select_one("th"):
             continue
         cols = row.select("td")
-        if len(cols) < 2:
+        if len(cols) < 3:
             continue
-        a = cols[1].select_one("a")
+        # col 0: serial, col 1: title text, col 2: download link, col 3: date
+        title = " ".join(cols[1].get_text().split())
+        if not title:
+            continue
+        a = cols[2].select_one("a")
         if not a:
             continue
-        title = " ".join(a.get_text().split())
         href = (a.get("href") or "").strip()
         link = href if href.startswith("http") else urljoin(_BASE, href)
-        raw_date = cols[2].get_text().strip() if len(cols) > 2 else None
+        raw_date = cols[3].get_text().strip() if len(cols) > 3 else None
         published_at = _parse_date(raw_date)
         if published_at and published_at < _MIN_DATE:
             continue
