@@ -9698,6 +9698,16 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "civil-aviation"
+    },
+    {
+      "site_key": "dopt",
+      "ministry": "Ministry of Personnel, Public Grievances and Pensions",
+      "name": "Department of Personnel and Training (DoPT)",
+      "source_url": "https://dopt.gov.in/whats-new",
+      "base_url": "https://dopt.gov.in",
+      "parser": "custom",
+      "active": true,
+      "custom_crawler": "dopt"
     }
   ]
 }

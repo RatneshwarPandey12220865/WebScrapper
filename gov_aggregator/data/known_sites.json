@@ -1679,6 +1679,16 @@
       "preferred_url": "https://www.nccd.gov.in/",
       "status": "working",
       "status_raw": "configured"
+    },
+    {
+      "site_key": "dopt",
+      "name": "Department of Personnel and Training (DoPT)",
+      "registry_url": "https://dopt.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://dopt.gov.in/whats-new",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "dopt"
     }
   ]
 }
