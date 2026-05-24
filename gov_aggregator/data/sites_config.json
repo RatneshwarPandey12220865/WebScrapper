@@ -8907,7 +8907,7 @@
       "name": "Ministry of Power",
       "url": "https://powermin.gov.in/en/circular",
       "base_url": "https://powermin.gov.in",
-      "active": false,
+      "active": true,
       "custom_crawler": "power-ministry",
       "min_date": "2026-01-01",
       "default_category": "circular",
@@ -8919,7 +8919,7 @@
       "name": "Ministry of Power - Circulars",
       "url": "https://powermin.gov.in/en/circular",
       "base_url": "https://powermin.gov.in",
-      "active": false,
+      "active": true,
       "custom_crawler": "power-ministry",
       "min_date": "2026-01-01",
       "default_category": "circular"
@@ -8930,7 +8930,7 @@
       "name": "Ministry of Power - Press Releases",
       "url": "https://www.pib.gov.in/newsite/pmreleases.aspx?mincode=52&reg=3&lang=2",
       "base_url": "https://www.pib.gov.in",
-      "active": false,
+      "active": true,
       "custom_crawler": "power-ministry-pib",
       "min_date": "2026-01-01",
       "default_category": "news"
