@@ -9688,6 +9688,16 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "dasd-kerala"
+    },
+    {
+      "site_key": "civil-aviation",
+      "ministry": "Ministry of Civil Aviation",
+      "name": "Ministry of Civil Aviation",
+      "source_url": "https://www.civilaviation.gov.in/",
+      "base_url": "https://www.civilaviation.gov.in",
+      "parser": "custom",
+      "active": true,
+      "custom_crawler": "civil-aviation"
     }
   ]
 }
