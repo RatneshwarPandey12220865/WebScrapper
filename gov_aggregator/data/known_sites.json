@@ -1699,6 +1699,16 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "doppw"
+    },
+    {
+      "site_key": "darpg",
+      "name": "Department of Administrative Reforms and Public Grievances (DARPG)",
+      "registry_url": "https://darpg.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://darpg.gov.in/en/whats-new",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "darpg"
     }
   ]
 }
