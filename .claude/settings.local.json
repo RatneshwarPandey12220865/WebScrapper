@@ -12,7 +12,13 @@
       "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\")",
       "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" -not -name \"*.pyc\")",
       "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -type f -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" -not -name \"*.pyc\" -not -path \"*/node_modules/*\")",
-      "Bash(ls \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy/gov_aggregator/scrapers/custom/\")"
+      "Bash(ls \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy/gov_aggregator/scrapers/custom/\")",
+      "Bash(python -c \":*)",
+      "Bash(find \"C:/Users/pande/Desktop/a/KPMG/KSyder/kspyder2.0 - Copy \\(6\\) - Copy\" -name \"*.js\" -not -path \"*/node_modules/*\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gh repo *)",
+      "Bash(gh pr *)"
     ]
   }
 }

@@ -9688,16 +9688,6 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "dasd-kerala"
-    },
-    {
-      "site_key": "dasd-national",
-      "ministry": "Ministry of Agriculture and Farmers Welfare",
-      "name": "Directorate of Arecanut and Spices Development (DASD)",
-      "source_url": "https://www.dasd.gov.in/",
-      "base_url": "https://www.dasd.gov.in",
-      "parser": "custom",
-      "active": true,
-      "custom_crawler": "dasd-national"
     }
   ]
 }

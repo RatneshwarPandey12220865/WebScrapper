@@ -24,20 +24,32 @@ async def crawl_dasd_kerala(_config: SiteConfig) -> list[ScrapedItem]:
 
     soup = BeautifulSoup(resp.text, "html.parser")
     items: list[ScrapedItem] = []
+    seen: set[str] = set()
 
+    # Scrolling widget (psacp plugin)
     for li in soup.select("ul.psacp-vscroll-wdgt-wrap li"):
         a = li.select_one(".psacp-post-title a")
         if not a:
             continue
         title = " ".join(a.get_text().split())
         link = (a.get("href") or "").strip()
-        if not title or not link:
+        if not title or not link or link in seen:
             continue
-        items.append(ScrapedItem(
-            title=title,
-            link=link,
-            section_label="What's New",
-        ))
+        seen.add(link)
+        items.append(ScrapedItem(title=title, link=link, section_label="What's New"))
+
+    # Elementor news widget
+    container = soup.select_one(".elementor-element-fc3c10f .elementor-widget-wrap")
+    if container:
+        section_label = " ".join((container.select_one("h2.elementor-heading-title") or BeautifulSoup("", "html.parser")).get_text().split()) or "News"
+        for widget in container.select(".elementor-inner-section .elementor-widget-container"):
+            a = widget.select_one("a[href]")
+            title = " ".join(widget.get_text().split())
+            link = (a.get("href") or "").strip() if a else ""
+            if not title or not link or link in seen:
+                continue
+            seen.add(link)
+            items.append(ScrapedItem(title=title, link=link, section_label=section_label))
 
     logger.info("[dasd_kerala] %d items", len(items))
     return items

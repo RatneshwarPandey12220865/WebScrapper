@@ -320,16 +320,6 @@
       "report_id": "department_of_fisheries"
     },
     {
-      "site_key": "directorate-of-arecanut-and-spices-development-spices",
-      "name": "Directorate of Arecanut and Spices Development (Spices)",
-      "registry_url": "https://www.dasd.gov.in/",
-      "alternate_url": "https://spicenurseries.in/",
-      "preferred_url": "https://spicenurseries.in/",
-      "status": "not_working",
-      "status_raw": "not working",
-      "report_id": "directorate_of_arecanut_and_spices_development_spices"
-    },
-    {
       "site_key": "directorate-of-marketing-and-inspection-for-pulses-grading-and-marking",
       "name": "Directorate of Marketing and Inspection (DMI)",
       "registry_url": "http://dmi.gov.in/",
