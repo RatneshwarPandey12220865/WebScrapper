@@ -172,25 +172,30 @@ function renderSiteList() {
 
 // ── Metrics ────────────────────────────────────────────────────────────────
 function renderMetrics() {
-  const total = crawlResults.length;
-  const pdfs = crawlResults.filter((item) => item.pdf_url).length;
-  const newItems = crawlResults.filter((item) => item.is_new).length;
-  const sites = new Set(crawlResults.map((item) => item.site_key)).size;
+  const filtered = filteredResults();
+  const isFiltered = filtered.length !== crawlResults.length;
+
+  const totalAll   = crawlResults.length;
+  const total      = filtered.length;
+  const pdfs       = filtered.filter((item) => item.pdf_url).length;
+  const newItems   = filtered.filter((item) => item.is_new).length;
+  const sites      = new Set(crawlResults.map((item) => item.site_key)).size;
+  const failures   = siteStatuses.filter((s) => s.state === "error").length;
 
   const cards = [
-    { label: "Selected", value: selectedSites.size },
-    { label: "Crawled", value: sites },
-    { label: "Total items", value: total },
-    { label: "New", value: newItems },
-    { label: "PDFs", value: pdfs },
-    { label: "Failures", value: siteStatuses.filter((s) => s.state === "error").length },
+    { label: "Selected",    value: selectedSites.size,                          mod: false },
+    { label: "Crawled",     value: sites,                                        mod: false },
+    { label: "Items shown", value: isFiltered ? `${total} / ${totalAll}` : total, mod: isFiltered },
+    { label: "New",         value: newItems,                                     mod: isFiltered },
+    { label: "PDFs",        value: pdfs,                                         mod: isFiltered },
+    { label: "Failures",    value: failures,                                     mod: false },
   ];
 
   metricsNode.innerHTML = cards
     .map(
       (c) => `
-        <article class="metric-card">
-          <span class="metric-card__label">${c.label}</span>
+        <article class="metric-card${c.mod ? " metric-card--filtered" : ""}">
+          <span class="metric-card__label">${c.label}${c.mod ? " <span class='metric-filter-tag'>filtered</span>" : ""}</span>
           <strong class="metric-card__value">${c.value}</strong>
         </article>
       `
@@ -304,7 +309,8 @@ function actionLinks(item) {
 function renderResults() {
   const results = filteredResults();
   renderActiveFilterChips();
-  resultSummaryNode.textContent = `${results.length} item${results.length !== 1 ? "s" : ""} shown`;
+  renderMetrics();
+  resultSummaryNode.textContent = `${results.length} item${results.length !== 1 ? "s" : ""} shown${results.length !== crawlResults.length ? ` (${crawlResults.length} total)` : ""}`;
 
   if (!results.length) {
     resultsBodyNode.innerHTML = "";

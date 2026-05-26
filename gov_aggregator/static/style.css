@@ -464,6 +464,26 @@ button, input, select, textarea { font: inherit; }
 .metric-card--warn   .metric-card__value { color: var(--amber-600); }
 .metric-card--danger .metric-card__value { color: var(--red-600); }
 
+.metric-card--filtered {
+  border-color: #fcd34d;
+  background: var(--amber-100);
+}
+.metric-card--filtered .metric-card__value { color: var(--amber-600); }
+
+.metric-filter-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--amber-600);
+  color: #fff;
+  vertical-align: middle;
+}
+
 /* ── Content cards ────────────────────────────────────────────────────────── */
 .content-card {
   background: var(--surface);
