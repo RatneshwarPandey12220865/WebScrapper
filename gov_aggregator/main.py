@@ -220,3 +220,96 @@ async def export_summary(request: ExportSummaryRequest) -> FileResponse:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename=filename,
     )
+
+
+@app.get("/api/export/site/{site_key}")
+async def export_site(
+    site_key: str,
+    job_id: str,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> FileResponse:
+    """Generate and stream a single-site detail Excel for a completed job."""
+    from gov_aggregator.exporters.excel_site_detail import (
+        _safe_filename,
+        generate_site_detail_excel,
+    )
+
+    with JOBS_LOCK:
+        job = ACTIVE_JOBS.get(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=409, detail=f"Job not finished (status: {job['status']}).")
+
+    crawl_result = job["result"]
+    date_from = date_from or job.get("date_from")
+    date_to   = date_to   or job.get("date_to")
+
+    items_for_site = [i for i in crawl_result.get("items", []) if i.get("site_key") == site_key]
+    if not items_for_site:
+        raise HTTPException(status_code=404, detail=f"No items found for site '{site_key}'.")
+
+    status = next(
+        (s for s in crawl_result.get("site_statuses", []) if s["site_key"] == site_key),
+        {"site_key": site_key, "site_name": site_key, "ministry": ""},
+    )
+
+    ministry = status.get("ministry") or "Unknown"
+    filename = _safe_filename(ministry, site_key, date_from)
+    output_path = EXPORTS_DIR / filename
+
+    await generate_site_detail_excel(
+        site_key=site_key,
+        items=items_for_site,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        output_path=str(output_path),
+    )
+
+    return FileResponse(
+        path=str(output_path),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+    )
+
+
+@app.get("/api/export/all")
+async def export_all(
+    job_id: str,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> FileResponse:
+    """Generate ZIP of all per-site detail Excels + summary for a completed job."""
+    from gov_aggregator.exporters.zip_builder import generate_all_site_files
+
+    with JOBS_LOCK:
+        job = ACTIVE_JOBS.get(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=409, detail=f"Job not finished (status: {job['status']}).")
+
+    date_from = date_from or job.get("date_from")
+    date_to   = date_to   or job.get("date_to")
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    df_label = (date_from or "open").replace("-", "")
+    dt_label = (date_to   or "open").replace("-", "")
+    zip_filename = f"KSyder_Export_{df_label}_to_{dt_label}_{ts}.zip"
+
+    zip_path = await generate_all_site_files(
+        crawl_result=job["result"],
+        date_from=date_from,
+        date_to=date_to,
+        output_dir=str(EXPORTS_DIR),
+    )
+
+    return FileResponse(
+        path=zip_path,
+        media_type="application/zip",
+        filename=zip_filename,
+    )

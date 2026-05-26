@@ -24,6 +24,7 @@ const statStatus       = document.getElementById("statStatus");
 const cancelCrawlBtn   = document.getElementById("cancelCrawlBtn");
 const loadResultsBtn   = document.getElementById("loadResultsBtn");
 const exportSummaryBtn = document.getElementById("exportSummaryBtn");
+const exportAllBtn     = document.getElementById("exportAllBtn");
 
 const keywordSearch = document.getElementById("keywordSearch");
 const websiteFilter = document.getElementById("websiteFilter");
@@ -618,6 +619,7 @@ function openBulkModal() {
   modalSpinner.style.display = "block";
   loadResultsBtn.style.display = "none";
   exportSummaryBtn.style.display = "none";
+  exportAllBtn.style.display = "none";
   cancelCrawlBtn.disabled = false;
   cancelCrawlBtn.textContent = "Cancel";
   bulkCrawlModal.style.display = "flex";
@@ -627,6 +629,7 @@ function closeBulkModal() {
   bulkCrawlModal.style.display = "none";
   activeBulkJobStatus = null;
   exportSummaryBtn.style.display = "none";
+  exportAllBtn.style.display = "none";
   stopPoll();
 }
 
@@ -657,6 +660,7 @@ function updateModalProgress(job) {
     modalSpinner.style.display = "none";
     loadResultsBtn.style.display = "inline-flex";
     exportSummaryBtn.style.display = "inline-flex";
+    exportAllBtn.style.display = "inline-flex";
     cancelCrawlBtn.textContent = "Close";
   } else if (job.status === "cancelled") {
     modalSubtitle.textContent = "Crawl was cancelled.";
@@ -743,6 +747,40 @@ async function exportSummaryExcel() {
   }
 }
 
+async function exportAllZip() {
+  if (!activeBulkJobId) return;
+  exportAllBtn.disabled = true;
+  exportAllBtn.textContent = "Building ZIP…";
+  try {
+    const dateFrom = dateFromFilter.value || null;
+    const dateTo   = dateToFilter.value   || null;
+    let url = `/api/export/all?job_id=${encodeURIComponent(activeBulkJobId)}`;
+    if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+    if (dateTo)   url += `&date_to=${encodeURIComponent(dateTo)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const blob = await resp.blob();
+    const disposition = resp.headers.get("content-disposition") || "";
+    const fnMatch = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
+    const filename = fnMatch ? fnMatch[1].replace(/['"]/g, "").trim() : "KSyder_Export.zip";
+    const url2 = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url2;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url2);
+    showToast(`ZIP exported: ${filename}`, "success");
+  } catch (err) {
+    showToast(`ZIP export failed: ${err.message}`, "error");
+  } finally {
+    exportAllBtn.disabled = false;
+    exportAllBtn.textContent = "⬇ Export All Sites (ZIP)";
+  }
+}
+
 async function crawlAllSites() {
   crawlAllButton.disabled = true;
   openBulkModal();
@@ -817,6 +855,7 @@ crawlAllButton.addEventListener("click", crawlAllSites);
 cancelCrawlBtn.addEventListener("click", cancelBulkCrawl);
 loadResultsBtn.addEventListener("click", loadBulkResults);
 exportSummaryBtn.addEventListener("click", exportSummaryExcel);
+exportAllBtn.addEventListener("click", exportAllZip);
 
 [keywordSearch, websiteFilter, categoryFilter].forEach((node) => {
   node.addEventListener("input", renderResults);

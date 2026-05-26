@@ -1050,3 +1050,16 @@ button, input, select, textarea { font: inherit; }
 }
 .btn--export:hover:not(:disabled) { opacity: 0.88; }
 .btn--export:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--export-zip {
+  background: linear-gradient(135deg, #5a2d82 0%, #3d1a5e 100%);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn--export-zip:hover:not(:disabled) { opacity: 0.88; }
+.btn--export-zip:disabled { opacity: 0.5; cursor: not-allowed; }

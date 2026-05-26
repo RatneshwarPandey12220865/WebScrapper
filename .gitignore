@@ -7,5 +7,6 @@ venv/
 dist/
 build/
 
-# Phase 3 — generated Excel exports (keep folder, ignore contents)
+# Phase 3/4 — generated Excel/ZIP exports (keep folder, ignore contents)
 exports/*.xlsx
+exports/*.zip
