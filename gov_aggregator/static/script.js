@@ -530,7 +530,7 @@ function loadRangeFromStorage() {
     }
   } catch (_) {}
   // Recalculate dates for time-relative presets so they stay current on next-day loads
-  if (activeRange.preset && activeRange.preset !== "custom" && activeRange.preset !== null) {
+  if (activeRange.preset && activeRange.preset !== "custom" && activeRange.preset !== "alltime" && activeRange.preset !== null) {
     const recalc = _presetDates(activeRange.preset);
     activeRange = { ...activeRange, from: recalc.from, to: recalc.to };
   }
@@ -555,12 +555,15 @@ function applyRange(from, to, preset) {
 }
 
 function renderDRW() {
-  const presetBtns = document.querySelectorAll(".drw__preset");
-  presetBtns.forEach(btn => {
-    btn.classList.toggle("drw__preset--active", btn.dataset.preset === activeRange.preset);
-  });
-
+  const sel = document.getElementById("drwPresetSelect");
   const customRow = document.getElementById("drwCustomRow");
+  const badge = document.getElementById("drwActive");
+
+  // Sync dropdown value
+  const selectVal = activeRange.preset || "alltime";
+  if (sel) sel.value = selectVal;
+
+  // Show/hide custom row
   if (activeRange.preset === "custom") {
     customRow.style.display = "flex";
     const drwFrom = document.getElementById("drwFrom");
@@ -571,33 +574,33 @@ function renderDRW() {
     customRow.style.display = "none";
   }
 
-  const activeLabel = document.getElementById("drwActive");
+  // Badge
   if (activeRange.from || activeRange.to) {
-    activeLabel.textContent = `${_fmtDateLabel(activeRange.from)} → ${_fmtDateLabel(activeRange.to)}`;
+    badge.textContent = `${_fmtDateLabel(activeRange.from)} → ${_fmtDateLabel(activeRange.to)}`;
+    badge.className = "drw__badge";
   } else {
-    activeLabel.textContent = "All time (from Jan 2026)";
+    badge.textContent = "All time (from Jan 2026)";
+    badge.className = "drw__badge drw__badge--default";
   }
 }
 
 function initDRW() {
   loadRangeFromStorage();
 
-  document.querySelectorAll(".drw__preset").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const preset = btn.dataset.preset;
-      if (preset === "custom") {
-        // Just show the custom row, don't apply yet
-        activeRange = { ...activeRange, preset: "custom" };
-        renderDRW();
-        return;
-      }
-      if (preset === "clear") {
-        applyRange(null, null, null);
-        return;
-      }
-      const { from, to } = _presetDates(preset);
-      applyRange(from, to, preset);
-    });
+  const sel = document.getElementById("drwPresetSelect");
+  sel.addEventListener("change", () => {
+    const preset = sel.value;
+    if (preset === "custom") {
+      activeRange = { ...activeRange, preset: "custom" };
+      renderDRW();
+      return;
+    }
+    if (preset === "alltime") {
+      applyRange(null, null, null);
+      return;
+    }
+    const { from, to } = _presetDates(preset);
+    applyRange(from, to, preset);
   });
 
   document.getElementById("drwApply").addEventListener("click", () => {

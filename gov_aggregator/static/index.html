@@ -148,28 +148,34 @@
 
       <!-- Date Range Widget -->
       <div class="date-range-widget" id="dateRangeWidget">
-        <div class="drw__presets">
+        <div class="drw__left">
+          <svg class="drw__icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+          </svg>
           <span class="drw__label">Date Range</span>
-          <button class="drw__preset" data-preset="today" type="button">Today</button>
-          <button class="drw__preset" data-preset="yesterday" type="button">Yesterday</button>
-          <button class="drw__preset" data-preset="last7" type="button">Last 7 Days</button>
-          <button class="drw__preset" data-preset="thismonth" type="button">This Month</button>
-          <button class="drw__preset" data-preset="custom" type="button">Custom</button>
-          <button class="drw__preset drw__preset--clear" data-preset="clear" type="button" id="drwClearBtn">All Time</button>
         </div>
-        <div class="drw__custom" id="drwCustomRow" style="display:none">
-          <label class="drw__field">
-            <span>From</span>
-            <input id="drwFrom" type="date" class="drw__input">
-          </label>
-          <span class="drw__sep">→</span>
-          <label class="drw__field">
-            <span>To</span>
-            <input id="drwTo" type="date" class="drw__input">
-          </label>
-          <button id="drwApply" class="btn btn--primary btn--sm" type="button">Apply</button>
+        <div class="drw__controls">
+          <div class="drw__select-wrap">
+            <select id="drwPresetSelect" class="drw__select">
+              <option value="alltime">All Time (from Jan 2026)</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last7">Last 7 Days</option>
+              <option value="thismonth">This Month</option>
+              <option value="custom">Custom Range…</option>
+            </select>
+            <svg class="drw__select-chevron" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </div>
+          <div class="drw__custom" id="drwCustomRow" style="display:none">
+            <input id="drwFrom" type="date" class="drw__input" title="From date">
+            <span class="drw__sep">→</span>
+            <input id="drwTo" type="date" class="drw__input" title="To date">
+            <button id="drwApply" class="btn btn--primary btn--sm" type="button">Apply</button>
+          </div>
         </div>
-        <div class="drw__active" id="drwActive"></div>
+        <div class="drw__badge" id="drwActive"></div>
       </div>
 
       <!-- Metrics row -->
