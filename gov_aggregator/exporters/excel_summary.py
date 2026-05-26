@@ -6,6 +6,7 @@ Produces KSyder_Summary_<date_from>_to_<date_to>_<ts>.xlsx with two sheets:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,7 +31,6 @@ except ImportError:  # pragma: no cover
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 _NAVY    = "1e3a5f"
-_GRAY_H  = "d9d9d9"   # ministry-group header row
 _GRAY_F  = "bfbfbf"   # footer totals row
 _RED_BG  = "ffcccc"   # 0 items in range
 _YEL_BG  = "fff3cc"   # 1-5 items
@@ -351,6 +351,6 @@ async def generate_summary_excel(
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(out)
+    await asyncio.to_thread(wb.save, out)
     logger.info("Summary Excel saved: %s (%d sites)", out, len(rows))
     return str(out.resolve())

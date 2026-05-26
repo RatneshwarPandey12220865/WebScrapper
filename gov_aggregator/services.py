@@ -355,21 +355,30 @@ def _status_payload(
     }
 
 
-def _unsupported_status(site: dict[str, Any]) -> dict[str, Any]:
+def _unsupported_status(site: dict[str, Any], config: "SiteConfig | None" = None) -> dict[str, Any]:
     return _status_payload(
         site_key=site["site_key"],
         site_name=site["name"],
+        ministry=config.ministry if config else "",
         state="unsupported",
         message="This site is in the inventory but does not have scraper selectors configured yet.",
     )
 
 
-def _error_status(site_key: str, site_name: str, message: str) -> dict[str, Any]:
+def _error_status(
+    site_key: str,
+    site_name: str,
+    message: str,
+    ministry: str = "",
+    crawl_time: str | None = None,
+) -> dict[str, Any]:
     return _status_payload(
         site_key=site_key,
         site_name=site_name,
+        ministry=ministry,
         state="error",
         message=message,
+        crawl_time=crawl_time,
     )
 
 def _clean_title(title: str | None) -> str:
@@ -462,7 +471,7 @@ async def crawl_site_keys(
             continue
 
         if not site["supported"] or resolved_site_key not in configs:
-            statuses.append(_unsupported_status(site))
+            statuses.append(_unsupported_status(site, configs.get(resolved_site_key)))
             continue
 
         if use_cache and _is_cache_fresh(resolved_site_key):
@@ -514,7 +523,7 @@ async def crawl_site_keys(
                 error_msg = str(exc)
                 if is_ssl_error(exc):
                     error_msg = f"[SSL ERROR] {error_msg}"
-                statuses.append(_error_status(site_key, site["name"], error_msg))
+                statuses.append(_error_status(site_key, site["name"], error_msg, ministry=config.ministry, crawl_time=crawl_time))
             continue
 
         to_crawl.append((site_key, site, configs[resolved_site_key]))
@@ -531,11 +540,11 @@ async def crawl_site_keys(
         for requested_site_key, site, config in to_crawl:
             result = result_map.get(config.site_key)
             if result is None:
-                statuses.append(_error_status(requested_site_key, site["name"], "No crawl result was returned."))
+                statuses.append(_error_status(requested_site_key, site["name"], "No crawl result was returned.", ministry=config.ministry, crawl_time=crawl_time))
                 continue
 
             if result.error:
-                statuses.append(_error_status(requested_site_key, site["name"], result.error))
+                statuses.append(_error_status(requested_site_key, site["name"], result.error, ministry=config.ministry, crawl_time=crawl_time))
                 continue
 
             previous_links = _previous_links(config.site_key)
