@@ -173,106 +173,275 @@ UI additions:
 
 ## Phase 2 — PDF Date Extraction
 
-**Goal:** For items where `published_at` is `None` (common for PDF-only items), automatically extract the publication date from the PDF document itself using multiple strategies in priority order.
+**Goal:** For items where `published_at` is `None` (common for PDF-only items), automatically extract the publication date from the PDF document itself.
+
+**Why this is needed:** Many Indian government websites list circulars and orders as bare PDF links with no date visible in the HTML. The date only exists inside the document itself — either as selectable text or as a scanned/printed image.
 
 ---
 
-### 2.1 — Extraction Strategy (Priority Order)
+### 2.0 — PDF Types & What Tool Handles Each
+
+Government PDFs fall into three tiers. The extractor handles all three:
+
+| Tier | Description | How common | Tool used |
+|---|---|---|---|
+| 1 | Digital PDF — selectable text | ~60–70% | `pypdf` text extraction + regex |
+| 2 | Scanned PDF — image only, clean print | ~25–30% | `pdf2image` → `pytesseract` OCR |
+| 3 | Scanned PDF — skewed, noisy, low quality | ~5% | OpenCV preprocessing → `pytesseract` OCR |
+
+**Why not CNN / deep learning for Tier 2–3?**
+CNNs are designed for recognizing objects in natural images (faces, vehicles). A printed date like `15 May 2026` on a government letterhead is structured, typed text — Tesseract OCR handles this with 95%+ accuracy and has done so for decades. CNN would only be justified for handwritten dates or severely degraded documents, which are rare in official circulars. OpenCV is still used here but only as an image **pre-processor** (deskew, denoise, binarize) before passing to Tesseract — not for date recognition itself.
+
+---
+
+### 2.1 — Extraction Pipeline (Tier-by-Tier)
 
 **File:** `gov_aggregator/scrapers/pdf_date_extractor.py` (new)
 
-The extractor tries each strategy in sequence and returns the first successful result:
+The extractor runs each tier in sequence, stopping at the first success:
 
-**Strategy 1 — PDF Metadata (Most Reliable)**
-```
-PDF files store XMP metadata in their header.
-Fields: /CreationDate, /ModDate → typically "D:20260515120000+05'30'"
-Library: pypdf (pure Python, no binary dependencies)
-Download: first 8KB of the file only (metadata lives in header)
-```
+---
 
-**Strategy 2 — First-Page Text Scan**
+#### Tier 1 — PDF Metadata (fastest, no download needed beyond header)
+
 ```
-Extract text from page 1 only (first 500 characters).
-Run regex patterns against the text:
-  - DD/MM/YYYY        → e.g. "15/05/2026"
-  - DD-Mon-YYYY       → e.g. "15 May 2026", "15-May-2026"
-  - Month DD, YYYY    → e.g. "May 15, 2026"
-  - YYYY-MM-DD        → e.g. "2026-05-15"
-  - DD.MM.YYYY        → e.g. "15.05.2026"
-Take the earliest date found (likely the issue/circular date, not page numbers).
+PDF files store XMP/DocInfo metadata in the file header.
+Fields checked: /CreationDate, /ModDate
+Format:         "D:20260515120000+05'30'" → parsed to 2026-05-15
+Library:        pypdf (pure Python, zero binary dependencies)
+Download:       first 8 KB only — metadata lives in the PDF header
 ```
 
-**Strategy 3 — Filename Date**
-```
-Many govt PDFs embed dates in filename:
-  circular_15052026.pdf       → 15/05/2026
-  notification_2026-05-15.pdf → 2026-05-15
-  order_May_15_2026.pdf       → May 15 2026
-Run regex against the last segment of the URL path.
-```
+```python
+from pypdf import PdfReader
+import io
 
-**Strategy 4 — URL Path Date**
-```
-Many govt URLs embed dates in directory structure:
-  /uploads/2026/05/15/circular.pdf → 2026-05-15
-  /docs/2026-05/notification.pdf   → 2026-05 (day unknown, use 1st)
-Extract from URL path segments using regex.
-```
-
-**Strategy 5 — Fallback**
-```
-Return None. Do not fabricate a date.
-Log: "Could not extract date from PDF: {url}"
+async def _extract_from_metadata(pdf_bytes: bytes) -> date | None:
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    meta = reader.metadata
+    for field in ["/CreationDate", "/ModDate"]:
+        raw = meta.get(field)
+        if raw:
+            # Format: D:YYYYMMDDHHmmSS or D:YYYYMMDD
+            m = re.match(r"D:(\d{4})(\d{2})(\d{2})", raw)
+            if m:
+                return date(int(m[1]), int(m[2]), int(m[3]))
+    return None
 ```
 
 ---
 
-### 2.2 — Caching Extracted Dates
+#### Tier 1b — First-Page Text Extraction (digital PDFs with selectable text)
 
-**File:** `gov_aggregator/data/pdf_date_cache.json` (new, auto-created)
+```
+Extract raw text from page 1 only (first 800 characters).
+Run regex patterns against the extracted text.
+Library: pypdf (same dependency, no extra install)
+```
 
-Structure:
+Date patterns matched (in priority order):
+```
+DD Month YYYY     →  "15 May 2026", "15th May, 2026"
+DD/MM/YYYY        →  "15/05/2026"
+DD-MM-YYYY        →  "15-05-2026"
+DD.MM.YYYY        →  "15.05.2026"
+YYYY-MM-DD        →  "2026-05-15"
+Month DD, YYYY    →  "May 15, 2026"
+DD Mon YYYY       →  "15 May 26" (2-digit year, resolved to 20xx)
+```
+
+Take the **earliest valid date** found in the header region — circular/order dates are typically at the top of page 1, not embedded in body text.
+
+---
+
+#### Tier 2 — OCR on Scanned PDF (image-only, clean quality)
+
+Triggered only when Tier 1 / 1b return no text (i.e. `pypdf` extracts 0 characters from page 1).
+
+```
+Step 1: Convert page 1 to a PIL image at 200 DPI
+        Library: pdf2image (wraps poppler — system install needed)
+
+Step 2: Crop top 25% of the image
+        Most govt circulars have the date in the header/letterhead
+
+Step 3: Pass cropped image directly to Tesseract OCR
+        Library: pytesseract
+        Config:  --psm 6 (assume uniform block of text)
+                 lang=eng
+
+Step 4: Run same regex patterns against OCR output text
+```
+
+```python
+from pdf2image import convert_from_bytes
+import pytesseract
+
+async def _extract_via_ocr(pdf_bytes: bytes) -> date | None:
+    images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
+    if not images:
+        return None
+    page = images[0]
+    # Crop top 25% — date is almost always in the header
+    w, h = page.size
+    header = page.crop((0, 0, w, h // 4))
+    text = pytesseract.image_to_string(header, config="--psm 6")
+    return _parse_date_from_text(text)
+```
+
+---
+
+#### Tier 3 — OpenCV Pre-processing + OCR (noisy/skewed scans)
+
+Triggered when Tier 2 OCR returns no date (OCR produced text but no date matched).
+
+```
+Step 1: Convert PIL image to OpenCV numpy array (BGR)
+
+Step 2: Pre-processing pipeline:
+  a. Convert to grayscale
+  b. Adaptive thresholding (binarize — black text on white bg)
+  c. Deskew: detect skew angle via Hough line transform, rotate to correct
+  d. Denoise: cv2.fastNlMeansDenoising()
+  e. Upscale 1.5× if image resolution < 150 DPI
+
+Step 3: Convert back to PIL, pass to Tesseract (same as Tier 2)
+
+Step 4: Run regex patterns against output text
+```
+
+```python
+import cv2
+import numpy as np
+
+def _preprocess_image(pil_img) -> "PIL.Image":
+    img = np.array(pil_img)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Adaptive threshold — handles uneven lighting in scans
+    binary = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 31, 10
+    )
+    # Deskew
+    coords = np.column_stack(np.where(binary < 128))
+    if len(coords) > 100:
+        angle = cv2.minAreaRect(coords)[-1]
+        if angle < -45: angle += 90
+        (h, w) = binary.shape
+        M = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+        binary = cv2.warpAffine(binary, M, (w, h), flags=cv2.INTER_CUBIC,
+                                 borderMode=cv2.BORDER_REPLICATE)
+    denoised = cv2.fastNlMeansDenoising(binary, h=10)
+    return Image.fromarray(denoised)
+```
+
+---
+
+#### Strategy 4 — Filename Date (no download needed)
+
+```
+Run regex against the last segment of the PDF URL (filename).
+Many govt PDFs embed dates in their filename:
+  circular_15052026.pdf        → 15 May 2026
+  notification_2026-05-15.pdf  → 15 May 2026
+  order_May_15_2026.pdf        → 15 May 2026
+  SO_1234_dt_15_5_2026.pdf     → 15 May 2026
+```
+
+---
+
+#### Strategy 5 — URL Path Date (no download needed)
+
+```
+Run regex against the full URL path segments.
+Many govt portals embed the upload date in the directory:
+  /uploads/2026/05/15/circular.pdf  → 2026-05-15
+  /docs/2026-05/notification.pdf    → 2026-05-01 (day unknown → 1st)
+  /files/26052026/order.pdf         → 2026-05-26
+```
+
+Strategies 4 and 5 run **before** any PDF download — they cost zero network requests.
+
+---
+
+#### Strategy 6 — Fallback
+
+```
+Return None. Do not fabricate or guess a date.
+Log at WARNING level: "PDF date extraction failed: {url} — all strategies exhausted"
+Item publish_date stays None and passes through the date filter unchanged.
+```
+
+---
+
+### 2.2 — Full Extraction Order (Optimised for Speed)
+
+```
+1. Strategy 4 — Filename regex        (0ms, no download)
+2. Strategy 5 — URL path regex        (0ms, no download)
+3. Download first 8 KB of PDF         (~100–300ms)
+4. Tier 1  — PDF metadata             (parse in memory)
+5. Tier 1b — pypdf text extraction    (parse in memory)
+   → If text found AND date matched: done
+   → If text found BUT no date: skip Tier 2/3 (it's a digital PDF with no date in header)
+   → If NO text found: PDF is scanned → proceed to Tier 2
+6. Download full page 1 as image      (~300–800ms additional)
+7. Tier 2  — Direct OCR on header crop
+   → If date found: done
+   → If not: proceed to Tier 3
+8. Tier 3  — OpenCV preprocessing → OCR
+9. Strategy 6 — Fallback (return None)
+```
+
+---
+
+### 2.3 — Caching Extracted Dates
+
+**File:** `gov_aggregator/data/pdf_date_cache.json` (auto-created on first run)
+
 ```json
 {
   "https://example.gov.in/docs/circular.pdf": {
     "date": "2026-05-15",
     "extracted_at": "2026-05-26T10:30:00",
-    "strategy_used": "pdf_metadata"
+    "strategy_used": "ocr_tier2",
+    "confidence": "high"
   }
 }
 ```
 
-- Check cache before downloading any PDF
+- Check cache **before** any download — zero cost on repeat crawls
 - Cache is persistent across server restarts (JSON file on disk)
-- Entries never expire (PDF dates don't change)
-- Cache saved after every 10 new extractions (avoid write on every item)
+- PDF dates never change — entries never expire
+- Cache written to disk every 10 new extractions (batched writes)
+- `strategy_used` field: `metadata` / `text_tier1` / `filename` / `url_path` / `ocr_tier2` / `ocr_tier3`
 
 ---
 
-### 2.3 — Integration Point
+### 2.4 — Integration Point
 
 **File:** `gov_aggregator/services.py` → `_shape_item()`
 
 ```python
-# Inside _shape_item(), after building the item dict:
+# After shaping item, if publish_date is still None:
 if item.published_at is None and item.is_pdf and item.link:
-    extracted = await extract_pdf_date(item.link)  # async, checks cache first
-    if extracted:
-        item_dict["publish_date"] = extracted.isoformat()
+    if config.extract_pdf_dates:  # opt-in per site config
+        extracted = await extract_pdf_date(item.link)
+        if extracted:
+            item_dict["publish_date"] = extracted.isoformat()
+            item_dict["date_source"] = "pdf_extracted"
 ```
 
-- Only triggers when `published_at is None` AND `is_pdf=True`
-- Runs async, doesn't block other items
-- Adds ~200–500ms per uncached PDF (only first-page download)
+- New field `date_source` added to shaped item: `"html"` (normal) vs `"pdf_extracted"`
+- Only triggers when `published_at is None` AND `is_pdf=True` AND site has opted in
+- Async — does not block other items being shaped in parallel
 
 ---
 
-### 2.4 — Config Flag (Opt-In Per Site)
+### 2.5 — Config Flag (Opt-In Per Site)
 
 **File:** `gov_aggregator/data/sites_config.json`
 
-Add optional field to site config:
 ```json
 {
   "site_key": "rbi",
@@ -280,8 +449,37 @@ Add optional field to site config:
 }
 ```
 
-- Default: `false` globally (opt-in, not forced on all 178 sites)
-- Can also set `extract_pdf_dates: true` in `metadata` block to enable globally
+Set globally in the `metadata` block to enable for all sites:
+```json
+{
+  "metadata": {
+    "extract_pdf_dates_global": true
+  }
+}
+```
+
+Default is `false` — not forced on all 178 sites since PDF downloads add latency.
+
+---
+
+### 2.6 — System Dependencies (One-Time Setup)
+
+```bash
+# Windows
+winget install oschwartz10612.poppler    # for pdf2image
+# OR download poppler binaries and add to PATH
+
+# pip packages
+pip install pypdf>=4.0.0
+pip install pdf2image>=1.17.0
+pip install pytesseract>=0.3.13
+pip install opencv-python>=4.9.0
+pip install Pillow>=10.0.0              # already likely installed
+
+# Tesseract OCR engine (separate install)
+# Windows: https://github.com/UB-Mannheim/tesseract/wiki
+# Add Tesseract to PATH after install
+```
 
 ---
 
@@ -289,14 +487,14 @@ Add optional field to site config:
 
 | File | Action | What Changes |
 |---|---|---|
-| `gov_aggregator/scrapers/pdf_date_extractor.py` | **Create** | Full extractor module with 4 strategies + cache logic |
-| `gov_aggregator/data/pdf_date_cache.json` | **Create** | Auto-created on first run |
-| `gov_aggregator/services.py` | Modify | Call extractor in `_shape_item()` when date missing |
+| `gov_aggregator/scrapers/pdf_date_extractor.py` | **Create** | Full 3-tier extractor: metadata → text → OCR → OpenCV+OCR → filename → URL |
+| `gov_aggregator/data/pdf_date_cache.json` | **Create** | Auto-created on first run, persists across restarts |
+| `gov_aggregator/services.py` | Modify | Call extractor in `_shape_item()`, add `date_source` field |
 | `gov_aggregator/scrapers/schemas.py` | Modify | Add `extract_pdf_dates: bool = False` to `SiteConfig` |
 | `gov_aggregator/scrapers/config.py` | Modify | Parse `extract_pdf_dates` from JSON config |
-| `gov_aggregator/requirements.txt` | Modify | Add `pypdf>=4.0.0` |
+| `gov_aggregator/requirements.txt` | Modify | Add `pypdf`, `pdf2image`, `pytesseract`, `opencv-python` |
 
-**Estimated effort:** 4–6 hours
+**Estimated effort:** 6–8 hours (increased from original due to 3-tier OCR pipeline)
 
 ---
 
