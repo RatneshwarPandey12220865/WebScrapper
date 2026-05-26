@@ -438,11 +438,11 @@
       "site_key": "industry-and-internal-trade-ip",
       "ministry": "Ministry of Commerce and Industry",
       "name": "Intellectual Property India",
-      "url": "https://ipindia.gov.in/Home/Latestnews/1?CatID=1&pg=1",
+      "url": "https://ipindia.gov.in/dynamic/news-updates",
       "base_url": "https://ipindia.gov.in",
-      "parser_type": "list",
+      "parser_type": "custom",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "pagination_param": "pg",
       "start_page": 1,
       "max_pages": 2,
@@ -476,12 +476,8 @@
           "ipr"
         ]
       },
-      "selectors": {
-        "item_selector": "#news-container ul li",
-        "title_selector": "a",
-        "link_selector": "a",
-        "date_selector": "p[class^='newsDate-']"
-      }
+      "selectors": {},
+      "custom_crawler": "industry-and-internal-trade-ip"
     },
     {
       "site_key": "ministry-of-steel",
@@ -7095,8 +7091,9 @@
       "url": "https://www.commerce.gov.in/press-releases/",
       "base_url": "https://www.commerce.gov.in",
       "parser_type": "custom",
+      "custom_crawler": "minisry-of-commerce",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
       "default_category": "news",
       "category_mapping": {
@@ -9254,12 +9251,14 @@
       "site_key": "arunachal-pradesh",
       "ministry": "Government of Arunachal Pradesh",
       "name": "Arunachal Pradesh - Advertisements & Notices",
-      "url": "https://www.arunachalpradesh.gov.in/advertiesment-notice.php",
-      "base_url": "https://www.arunachalpradesh.gov.in",
+      "url": "https://arunachalpradesh.gov.in/advertiesment-notice.php",
+      "base_url": "https://arunachalpradesh.gov.in",
       "parser_type": "table",
       "parser_backend": "bs4",
       "render_js": false,
       "active": true,
+      "custom_crawler": "arunachal-pradesh",
+      "min_date": "2026-01-01",
       "default_category": "notification",
       "category_mapping": {
         "notification": [
@@ -9292,8 +9291,8 @@
         ]
       },
       "selectors": {
-        "item_selector": "table.table-hover tbody tr",
-        "title_selector": "td:nth-child(2) div",
+        "row_selector": ".table-container table tbody tr",
+        "title_selector": "td:nth-child(2)",
         "link_selector": "td:nth-child(4) a",
         "date_selector": "td:nth-child(3)"
       }
@@ -9706,6 +9705,158 @@
       "parser": "custom",
       "active": true,
       "custom_crawler": "darpg"
+    },
+    {
+      "site_key": "jercuts",
+      "ministry": "Ministry of Power",
+      "name": "Joint Electricity Regulatory Commission for UT of Andaman & Nicobar Islands and Lakshadweep (JERC)",
+      "url": "https://jercuts.gov.in/whats-new/",
+      "base_url": "https://jercuts.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "jercuts",
+      "render_js": false,
+      "active": true,
+      "default_category": "regulation"
+    },
+    {
+      "site_key": "tea-board",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Tea Board of India",
+      "url": "https://www.teaboard.gov.in/LATEST-NEWS",
+      "base_url": "https://www.teaboard.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "tea-board",
+      "render_js": false,
+      "active": true,
+      "default_category": "news"
+    },
+    {
+      "site_key": "dot-eservices",
+      "ministry": "Ministry of Communications",
+      "name": "DOT eServices - Circular Notifications (Others)",
+      "url": "https://eservices.dot.gov.in/circular-notifications-others",
+      "base_url": "https://eservices.dot.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "dot-eservices",
+      "render_js": false,
+      "active": true,
+      "default_category": "circular"
+    },
+    {
+      "site_key": "sfac",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "name": "Small Farmers Agribusiness Consortium (SFAC)",
+      "url": "https://sfacindia.com/View_What's_New.aspx",
+      "base_url": "https://sfacindia.com",
+      "parser_type": "custom",
+      "custom_crawler": "sfac",
+      "render_js": false,
+      "active": true,
+      "default_category": "news"
+    },
+    {
+      "site_key": "jalshakti-dowr",
+      "ministry": "Ministry of Jal Shakti",
+      "name": "Jal Shakti - Department of Water Resources, River Development & Ganga Rejuvenation (DoWR)",
+      "url": "https://www.jalshakti-dowr.gov.in",
+      "base_url": "https://www.jalshakti-dowr.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "jalshakti-dowr",
+      "render_js": false,
+      "active": true,
+      "default_category": "news"
+    },
+    {
+      "site_key": "enam",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "name": "Electronic National Agriculture Market (eNAM)",
+      "url": "https://enam.gov.in/web/all_news_desc",
+      "base_url": "https://enam.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "enam",
+      "render_js": false,
+      "active": true,
+      "default_category": "news"
+    },
+    {
+      "site_key": "npci",
+      "ministry": "Reserve Bank of India / Payments",
+      "name": "National Payments Corporation of India (NPCI)",
+      "url": "https://www.npci.org.in/what-we-do/npci-media/press-release",
+      "base_url": "https://www.npci.org.in",
+      "parser_type": "custom",
+      "custom_crawler": "npci",
+      "render_js": false,
+      "active": true,
+      "default_category": "press_release"
+    },
+    {
+      "site_key": "mea",
+      "ministry": "Ministry of External Affairs",
+      "name": "Ministry of External Affairs",
+      "url": "https://www.mea.gov.in/news.htm",
+      "base_url": "https://www.mea.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "mea",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "default_category": "news",
+      "selectors": {}
+    },
+    {
+      "site_key": "chhattisgarh",
+      "ministry": "Chhattisgarh State Government",
+      "name": "Chhattisgarh Government Portal",
+      "url": "https://cgstate.gov.in/en/all-notification",
+      "base_url": "https://cgstate.gov.in",
+      "parser_type": "custom",
+      "custom_crawler": "chhattisgarh",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "default_category": "news",
+      "selectors": {}
+    },
+    {
+      "site_key": "jerc-mizoram",
+      "ministry": "Ministry of Power",
+      "name": "Joint Electricity Regulatory Commission - Mizoram (JERC)",
+      "url": "https://jerc.mizoram.gov.in/posts",
+      "base_url": "https://jerc.mizoram.gov.in",
+      "parser_type": "custom",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "jerc-mizoram",
+      "default_category": "circular",
+      "category_mapping": {
+        "circular": [
+          "order",
+          "circular",
+          "tariff",
+          "regulation",
+          "notified",
+          "corrigendum",
+          "determination"
+        ],
+        "notification": [
+          "notification",
+          "notice",
+          "public hearing",
+          "press release",
+          "covid"
+        ],
+        "tender": [
+          "tender",
+          "auction"
+        ],
+        "news": [
+          "news",
+          "event",
+          "annual report"
+        ]
+      },
+      "selectors": {}
     }
   ]
 }

@@ -264,6 +264,7 @@ _GLOBAL_MIN_DATE_EXEMPT = {
     "cochin-sez",
     "department-of-agriculture-and-farmers-welfare-whatsnew",
     "department-of-fisheries",
+    "jerc-mizoram",
 }
 
 

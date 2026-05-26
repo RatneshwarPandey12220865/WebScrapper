@@ -221,7 +221,7 @@
     },
     {
       "site_key": "income-tax",
-      "name": "Income Tax — Latest News",
+      "name": "Income Tax Â— Latest News",
       "registry_url": "https://www.incometax.gov.in/iec/foportal/latest-news",
       "alternate_url": null,
       "preferred_url": "https://www.incometax.gov.in/iec/foportal/latest-news",
@@ -538,16 +538,6 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "ministry_of_urban_development"
-    },
-    {
-      "site_key": "national-payments-corporation-of-india",
-      "name": "National Payments Corporation of India",
-      "registry_url": "https://www.npci.org.in/",
-      "alternate_url": null,
-      "preferred_url": "https://www.npci.org.in/",
-      "status": "working",
-      "status_raw": "working",
-      "report_id": "national_payments_corporation_of_india"
     },
     {
       "site_key": "national-housing-bank",
@@ -970,7 +960,7 @@
     },
     {
       "site_key": "gst",
-      "name": "GST Portal â€” News and Updates",
+      "name": "GST Portal Ã¢Â€Â” News and Updates",
       "registry_url": "https://www.gst.gov.in/",
       "alternate_url": null,
       "preferred_url": "https://www.gst.gov.in/",
@@ -980,7 +970,7 @@
     },
     {
       "site_key": "cbic-only-gst",
-      "name": "CBIC GST Portal â€” What's New",
+      "name": "CBIC GST Portal Ã¢Â€Â” What's New",
       "registry_url": "https://www.cbic.gov.in/",
       "alternate_url": null,
       "preferred_url": "https://www.cbic.gov.in/",
@@ -1059,16 +1049,6 @@
       "report_id": "ministry_of_environment_forest"
     },
     {
-      "site_key": "ministry-of-jal-sakthi-water-resources",
-      "name": "Ministry of Jal Sakthi (Water Resources)",
-      "registry_url": "http://jalshakti-dowr.gov.in/",
-      "alternate_url": null,
-      "preferred_url": "http://jalshakti-dowr.gov.in/",
-      "status": "working",
-      "status_raw": "working",
-      "report_id": "ministry_of_jal_sakthi_water_resources"
-    },
-    {
       "site_key": "meity",
       "name": "Ministry of Electronics and Information Technology",
       "registry_url": "https://www.meity.gov.in/divisions",
@@ -1097,16 +1077,6 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "manipur"
-    },
-    {
-      "site_key": "https-jerc-mizoram-gov-in",
-      "name": "https://jerc.mizoram.gov.in/",
-      "registry_url": "working",
-      "alternate_url": null,
-      "preferred_url": "working",
-      "status": "unknown",
-      "status_raw": null,
-      "report_id": "jerc_mizoram"
     },
     {
       "site_key": "https-finance-mn-gov-in-index-aspx",
@@ -1150,10 +1120,10 @@
     },
     {
       "site_key": "arunachal-pradesh",
-      "name": "Arunachal Pradesh",
-      "registry_url": "http://www.arunachalpradesh.gov.in/gazette/",
+      "name": "Arunachal Pradesh - Advertisements & Notices",
+      "registry_url": "https://arunachalpradesh.gov.in/advertiesment-notice.php",
       "alternate_url": null,
-      "preferred_url": "http://www.arunachalpradesh.gov.in/gazette/",
+      "preferred_url": "https://arunachalpradesh.gov.in/advertiesment-notice.php",
       "status": "working",
       "status_raw": "working",
       "report_id": "arunachal_pradesh"
@@ -1163,9 +1133,9 @@
       "name": "Bihar",
       "registry_url": "http://egazette.bih.nic.in/Notification.aspx",
       "alternate_url": "https://egazette.bihar.gov.in/",
-      "preferred_url": "https://egazette.bihar.gov.in/",
+      "preferred_url": "https://state.bihar.gov.in/main/SectionInformation.html?editForm&rowId=8929",
       "status": "not_working",
-      "status_raw": "not working",
+      "status_raw": "server-side DataTables with CSRF Ã¢Â€Â” requires custom AJAX handling not yet supported",
       "report_id": "bihar"
     },
     {
@@ -1369,16 +1339,6 @@
       "report_id": "ministry_of_overseas_indian_affairs_gazette"
     },
     {
-      "site_key": "ministry-of-external-affairs-gazette",
-      "name": "Ministry of External Affairs (Gazette)",
-      "registry_url": "N/A",
-      "alternate_url": "https://www.mea.gov.in/",
-      "preferred_url": "N/A",
-      "status": "unknown",
-      "status_raw": null,
-      "report_id": "ministry_of_external_affairs_gazette"
-    },
-    {
       "site_key": "insolvency-and-bankruptcy-board-of-india",
       "name": "Insolvency and Bankruptcy Board of India (IBBI)",
       "registry_url": "N/A",
@@ -1387,16 +1347,6 @@
       "status": "unknown",
       "status_raw": null,
       "report_id": "insolvency_and_bankruptcy_board_of_india_gazette"
-    },
-    {
-      "site_key": "the-competition-commission-of-india-gazette",
-      "name": "The Competition Commission of India (Gazette)",
-      "registry_url": "N/A",
-      "alternate_url": "https://cci.gov.in/",
-      "preferred_url": "N/A",
-      "status": "unknown",
-      "status_raw": null,
-      "report_id": "the_competition_commission_of_india_gazette"
     },
     {
       "site_key": "sikkim",
@@ -1558,7 +1508,7 @@
     },
     {
       "site_key": "pharmexcil",
-      "name": "Pharmexcil – News & Government Notifications",
+      "name": "Pharmexcil Â– News & Government Notifications",
       "registry_url": "https://pharmexcil.com/",
       "alternate_url": null,
       "preferred_url": "https://pharmexcil.com/",
@@ -1709,6 +1659,16 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "darpg"
+    },
+    {
+      "site_key": "jerc-mizoram",
+      "name": "Joint Electricity Regulatory Commission - Mizoram (JERC)",
+      "registry_url": "https://jerc.mizoram.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://jerc.mizoram.gov.in/posts",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "jerc-mizoram"
     }
   ]
 }

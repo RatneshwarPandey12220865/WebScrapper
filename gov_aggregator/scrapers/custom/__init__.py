@@ -6,6 +6,8 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 from .agriculture import crawl_agriculture
 from .andhra_pradesh import crawl_andhra_pradesh
+from .arunachal_pradesh import crawl_arunachal_pradesh
+from .chhattisgarh import crawl_chhattisgarh
 from .civil_aviation import crawl_civil_aviation
 from .dasd_kerala import crawl_dasd_kerala
 from .darpg import crawl_darpg
@@ -33,9 +35,19 @@ from .fisheries import crawl_fisheries
 from .fssai import crawl_fssai_recent
 from .gst import crawl_gst
 from .icmr import crawl_icmr
+from .ip_india import crawl_ip_india
 from .income_tax import scrape_income_tax
 from .irdai import crawl_irdai
 from .labour import crawl_labour
+from .dot_eservices import crawl_dot_eservices
+from .enam import crawl_enam
+from .jalshakti import crawl_jalshakti
+from .jerc_mizoram import crawl_jerc_mizoram
+from .jercuts import crawl_jercuts
+from .mea import crawl_mea
+from .tea_board import crawl_tea_board
+from .sfac import crawl_sfac
+from .npci import crawl_npci
 from .meity import crawl_meity
 from .morth import crawl_morth
 from .nccd import crawl_nccd
@@ -53,6 +65,8 @@ CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
 CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "andhra-pradesh-official-portal": crawl_andhra_pradesh,
+    "arunachal-pradesh": crawl_arunachal_pradesh,
+    "chhattisgarh": crawl_chhattisgarh,
     "civil-aviation": crawl_civil_aviation,
     "dasd-kerala": crawl_dasd_kerala,
     "darpg": crawl_darpg,
@@ -74,12 +88,21 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "department-of-health-research": crawl_dhr,
     "directorate-general-of-foreign-trade": crawl_dgft,
     "dot": crawl_dot,
+    "dot-eservices": crawl_dot_eservices,
     "fssai": crawl_fssai_recent,
     "gst": crawl_gst,
     "income-tax": scrape_income_tax,
     "irdai": crawl_irdai,
     "ministry-of-labour": crawl_labour,
     "ministry-of-road-transport-and-highways": crawl_morth,
+    "enam": crawl_enam,
+    "jalshakti-dowr": crawl_jalshakti,
+    "jerc-mizoram": crawl_jerc_mizoram,
+    "jercuts": crawl_jercuts,
+    "mea": crawl_mea,
+    "npci": crawl_npci,
+    "sfac": crawl_sfac,
+    "tea-board": crawl_tea_board,
     "meity": crawl_meity,
     "ministry-of-ayush": crawl_ayush,
     "national-centre-for-cold-chain-development": crawl_nccd,
@@ -96,6 +119,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "department-of-fertilizers": crawl_fertilizers,
     "department-of-fisheries": crawl_fisheries,
     "icmr": crawl_icmr,
+    "industry-and-internal-trade-ip": crawl_ip_india,
     "sebi": crawl_sebi,
 }
 
@@ -104,6 +128,7 @@ __all__ = [
     "CustomCrawler",
     "crawl_agriculture",
     "crawl_andhra_pradesh",
+    "crawl_arunachal_pradesh",
     "crawl_civil_aviation",
     "crawl_dasd_kerala",
     "crawl_darpg",
@@ -141,6 +166,7 @@ __all__ = [
     "crawl_dahd",
     "crawl_fertilizers",
     "crawl_fisheries",
+    "crawl_jerc_mizoram",
     "crawl_sebi",
     "scrape_income_tax",
 ]

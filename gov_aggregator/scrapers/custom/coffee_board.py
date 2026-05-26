@@ -102,52 +102,56 @@ def _parse_datalist_raw(soup: BeautifulSoup, list_id: str, section_label: str) -
 
 async def _resolve_url(
     client: httpx.AsyncClient,
-    semaphore: asyncio.Semaphore,
     event_target: str,
     form_values: dict[str, str],
 ) -> str:
     """
-    POST the ASP.NET form with the given event_target to get the real document URL.
-
-    ASP.NET LinkButton postbacks typically respond with a 302 redirect to the
-    actual document (PDF or detail page).  We capture that Location header.
-    If the server returns 200 instead (e.g. renders inline), fall back to the
-    news page URL so the item still has a usable link.
+    POST the ASP.NET form with the given event_target using the already-fetched
+    form_values. The server streams the PDF inline (content-type: pdf) with
+    Content-Disposition: attachment; filename=... — extract the filename.
     """
     if not event_target:
         return _NEWS_URL
 
-    post_data: dict[str, str] = {
-        **form_values,
-        "__EVENTTARGET": event_target,
-        "__EVENTARGUMENT": "",
-    }
-
-    async with semaphore:
-        try:
-            resp = await client.post(
-                _NEWS_URL,
-                data=post_data,
-                follow_redirects=False,
-                timeout=20,
-            )
-            if resp.status_code in (301, 302, 303, 307, 308):
-                location = resp.headers.get("location", "").strip()
-                if location:
-                    resolved = urljoin(_BASE_URL, location)
-                    logger.debug("[coffee_board] %s → %s", event_target, resolved)
-                    return resolved
-        except Exception as exc:
-            logger.debug("[coffee_board] postback resolution failed for %s: %s", event_target, exc)
+    try:
+        post_data: dict[str, str] = {
+            **form_values,
+            "__EVENTTARGET": event_target,
+            "__EVENTARGUMENT": "",
+        }
+        resp = await client.post(
+            _NEWS_URL,
+            data=post_data,
+            follow_redirects=False,
+            timeout=30,
+        )
+        cd = resp.headers.get("content-disposition", "")
+        if cd and "filename=" in cd:
+            import urllib.parse
+            raw_name = cd.split("filename=", 1)[-1].strip().strip('"').strip("'")
+            filename = urllib.parse.unquote(raw_name).strip()
+            if filename:
+                safe = urllib.parse.quote(filename, safe="")
+                resolved = f"{_BASE_URL}/News/{safe}"
+                logger.debug("[coffee_board] %s → %s", event_target, resolved)
+                return resolved
+        if resp.status_code in (301, 302, 303, 307, 308):
+            location = resp.headers.get("location", "").strip()
+            if location:
+                return urljoin(_BASE_URL, location)
+    except Exception as exc:
+        logger.debug("[coffee_board] postback resolution failed for %s: %s", event_target, exc)
 
     return _NEWS_URL
 
 
 async def crawl_coffee_board(_config: SiteConfig) -> list[ScrapedItem]:
+    # No custom headers — httpx defaults (Accept: */*, accept-encoding: gzip, deflate)
+    # work correctly. Browser-style Accept or HTTP/2 causes ASP.NET to return 500.
     async with httpx.AsyncClient(
         follow_redirects=True,
-        headers=DEFAULT_HEADERS,
         timeout=60,
+        http2=False,
     ) as client:
         resp = await client.get(_NEWS_URL)
         resp.raise_for_status()
@@ -164,12 +168,11 @@ async def crawl_coffee_board(_config: SiteConfig) -> list[ScrapedItem]:
         if not raw_items:
             return []
 
-        # Resolve real document URLs concurrently via ASP.NET postback
-        semaphore = asyncio.Semaphore(_CONCURRENCY)
-        urls = await asyncio.gather(*[
-            _resolve_url(client, semaphore, item["event_target"], form_values)
-            for item in raw_items
-        ])
+        # Resolve real document URLs sequentially using the same form_values/session
+        urls = []
+        for item in raw_items:
+            url = await _resolve_url(client, item["event_target"], form_values)
+            urls.append(url)
 
         # Build ScrapedItems, dedup by (title, date) since DataList1/2 overlap
         seen: set[tuple[str, str]] = set()
@@ -179,11 +182,12 @@ async def crawl_coffee_board(_config: SiteConfig) -> list[ScrapedItem]:
             if key in seen:
                 continue
             seen.add(key)
+            is_pdf = url.lower().endswith(".pdf") or (url != _NEWS_URL and "/News/" in url)
             items.append(ScrapedItem(
                 title=raw["title"],
                 link=url,
                 published_at=raw["published_at"],
-                is_pdf=url.lower().endswith(".pdf"),
+                is_pdf=is_pdf,
                 section_label=raw["section_label"],
             ))
 

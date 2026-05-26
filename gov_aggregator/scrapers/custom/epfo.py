@@ -12,6 +12,7 @@ import re
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
+import httpx
 from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
@@ -19,6 +20,8 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 logger = logging.getLogger("gov_aggregator.custom.epfo")
 
 _BASE = "https://www.epfo.gov.in"
+_EPFINDIA_URL = "https://www.epfindia.gov.in/site_en/index.php"
+_EPFINDIA_BASE = "https://www.epfindia.gov.in/site_en/"
 _GOTO_TIMEOUT = 30_000
 _WAIT_TIMEOUT = 12_000
 
@@ -185,6 +188,64 @@ def _sync_crawl(_config: SiteConfig) -> list[ScrapedItem]:
     return unique
 
 
+async def _crawl_epfindia() -> list[ScrapedItem]:
+    """Scrape What's New items from epfindia.gov.in (plain HTML, no JS needed)."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, headers=headers, timeout=30) as client:
+            resp = await client.get(_EPFINDIA_URL)
+            resp.raise_for_status()
+    except Exception as exc:
+        logger.warning("[epfo] epfindia fetch failed: %s", exc)
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    container = soup.select_one("div#news_custom")
+    if not container:
+        logger.warning("[epfo] div#news_custom not found on epfindia")
+        return []
+
+    items: list[ScrapedItem] = []
+    for li in container.select("li"):
+        a = li.select_one("a")
+        if not a:
+            continue
+        href = (a.get("href") or "").strip()
+        if not href:
+            continue
+        link = href if href.startswith("http") else urljoin(_EPFINDIA_BASE, href)
+
+        # Title = full text minus the trailing ".... Read" / "Read"
+        raw_text = " ".join(li.get_text().split())
+        title = re.sub(r"\.{2,}\s*Read\s*$|Read\s*$", "", raw_text, flags=re.IGNORECASE).strip()
+        if not title:
+            continue
+
+        items.append(ScrapedItem(
+            title=title,
+            link=link,
+            published_at=None,
+            is_pdf=link.lower().endswith(".pdf"),
+            section_label="What's New",
+        ))
+
+    logger.info("[epfo] epfindia: %d items", len(items))
+    return items
+
+
 async def crawl_epfo(_config: SiteConfig) -> list[ScrapedItem]:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _sync_crawl, _config)
+    playwright_items, epfindia_items = await asyncio.gather(
+        asyncio.get_event_loop().run_in_executor(None, _sync_crawl, _config),
+        _crawl_epfindia(),
+    )
+    seen: set[str] = set()
+    all_items: list[ScrapedItem] = []
+    for item in list(playwright_items) + list(epfindia_items):
+        if item.link not in seen:
+            seen.add(item.link)
+            all_items.append(item)
+    logger.info("[epfo] total combined: %d items", len(all_items))
+    return all_items
