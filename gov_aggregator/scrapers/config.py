@@ -104,7 +104,8 @@ def _site_section(section: dict) -> SiteSection:
     )
 
 
-def _site_config(site: dict) -> SiteConfig:
+def _site_config(site: dict, metadata_defaults: dict | None = None) -> SiteConfig:
+    metadata_defaults = metadata_defaults or {}
     ministry = site.get("ministry") or site.get("name") or "Unknown Ministry"
     name = site.get("name") or ministry
     site_key = site.get("site_key") or _slugify(name)
@@ -139,6 +140,7 @@ def _site_config(site: dict) -> SiteConfig:
         sections=sections,
         min_date=site.get("min_date"),
         custom_crawler=site.get("custom_crawler"),
+        extract_pdf_dates=bool(site.get("extract_pdf_dates", metadata_defaults.get("extract_pdf_dates_global", False))),
     )
 
 
@@ -146,7 +148,8 @@ def load_site_configs(config_path: str | Path | None = None) -> list[SiteConfig]
     source_path = _config_path(config_path)
     payload = _read_json(source_path)
     sites = _sites_from_payload(payload)
-    configs = [_site_config(site) for site in sites if site.get("active", True)]
+    metadata = _metadata_from_payload(payload)
+    configs = [_site_config(site, metadata) for site in sites if site.get("active", True)]
 
     counts: dict[str, int] = {}
     for config in configs:

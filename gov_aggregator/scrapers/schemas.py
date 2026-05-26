@@ -45,6 +45,7 @@ class SiteConfig:
     sections: list[SiteSection] = field(default_factory=list)
     min_date: str | None = None
     custom_crawler: str | None = None
+    extract_pdf_dates: bool = False
 
 
 @dataclass(slots=True)

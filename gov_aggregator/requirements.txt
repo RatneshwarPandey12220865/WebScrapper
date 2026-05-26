@@ -6,3 +6,13 @@ python-dateutil==2.9.0.post0
 playwright==1.55.0
 scrapy==2.13.3
 requests==2.32.3
+
+# Phase 2 — PDF date extraction
+# Tier 1: digital PDF metadata + text (required)
+pypdf>=4.0.0
+# Tier 2: scanned PDF OCR (optional — install for OCR support)
+pdf2image>=1.17.0
+pytesseract>=0.3.13
+Pillow>=10.0.0
+# Tier 3: noisy scan preprocessing (optional — install with cv2)
+opencv-python>=4.9.0

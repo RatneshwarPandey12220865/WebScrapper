@@ -378,6 +378,51 @@ def _clean_title(title: str | None) -> str:
     return title
 
 
+async def _maybe_extract_pdf_dates(
+    config: SiteConfig,
+    shaped_items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Post-shaping step: fill in publish_date for PDF items missing a date.
+
+    Only runs when config.extract_pdf_dates is True. Uses the 3-tier pipeline
+    in pdf_date_extractor. Items are updated in-place and returned.
+    """
+    if not config.extract_pdf_dates:
+        return shaped_items
+
+    from gov_aggregator.scrapers.pdf_date_extractor import (
+        extract_pdf_dates_batch,
+        flush_cache,
+    )
+
+    # Collect URLs that need extraction
+    urls_needed = [
+        item["link"]
+        for item in shaped_items
+        if item.get("is_pdf") and not item.get("publish_date") and item.get("link")
+    ]
+
+    if not urls_needed:
+        return shaped_items
+
+    logger.info(
+        "PDF date extraction: %d/%d items missing dates for %s",
+        len(urls_needed), len(shaped_items), config.site_key,
+    )
+
+    date_map = await extract_pdf_dates_batch(urls_needed)
+    flush_cache()
+
+    for item in shaped_items:
+        if item.get("is_pdf") and not item.get("publish_date") and item.get("link"):
+            extracted = date_map.get(item["link"])
+            if extracted:
+                item["publish_date"] = extracted.isoformat() + "T00:00:00+00:00"
+                item["date_source"] = "pdf_extracted"
+
+    return shaped_items
+
+
 async def crawl_site_keys(
     site_keys: list[str],
     *,
@@ -442,6 +487,7 @@ async def crawl_site_keys(
                     _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                     for item in custom_items
                 ]
+                shaped_items = await _maybe_extract_pdf_dates(config, shaped_items)
                 _store_cache(config.site_key, shaped_items)
                 items.extend(shaped_items)
                 statuses.append(
@@ -488,6 +534,7 @@ async def crawl_site_keys(
                 _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                 for item in result.items
             ]
+            shaped_items = await _maybe_extract_pdf_dates(config, shaped_items)
             _store_cache(config.site_key, shaped_items)
             items.extend(shaped_items)
             statuses.append(
