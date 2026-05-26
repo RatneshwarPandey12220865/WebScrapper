@@ -529,6 +529,11 @@ function loadRangeFromStorage() {
       if (parsed && typeof parsed === "object") activeRange = parsed;
     }
   } catch (_) {}
+  // Recalculate dates for time-relative presets so they stay current on next-day loads
+  if (activeRange.preset && activeRange.preset !== "custom" && activeRange.preset !== null) {
+    const recalc = _presetDates(activeRange.preset);
+    activeRange = { ...activeRange, from: recalc.from, to: recalc.to };
+  }
   // Keep sidebar inputs in sync
   dateFromFilter.value = activeRange.from || "";
   dateToFilter.value   = activeRange.to   || "";
@@ -631,9 +636,11 @@ function renderExportPanel() {
   rangeLabel.textContent = `Date range: ${fromLabel} → ${toLabel}`;
 
   // Build per-site rows: only sites with items
+  // filteredCountsBySite() returns { site_key: {items, new_items} } — extract .items
   const countMap = filteredCountsBySite();
   const siteEntries = Object.entries(countMap)
-    .filter(([, count]) => count > 0)
+    .map(([sk, obj]) => [sk, obj.items])
+    .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1]);
 
   if (!siteEntries.length) {
