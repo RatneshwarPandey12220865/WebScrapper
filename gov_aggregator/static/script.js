@@ -481,6 +481,230 @@ function renderDateFilterBanner() {
   banner.style.display = "flex";
 }
 
+// ── Phase 5: Date Range Widget ─────────────────────────────────────────────
+
+const LS_KEY = "kspyder_date_range";
+
+// Active range: { from: "YYYY-MM-DD"|null, to: "YYYY-MM-DD"|null, preset: string|null }
+let activeRange = { from: null, to: null, preset: null };
+
+function _todayIST() {
+  // Return today's date as YYYY-MM-DD in IST (UTC+5:30)
+  const now = new Date(Date.now() + (5.5 * 60 * 60 * 1000));
+  return now.toISOString().slice(0, 10);
+}
+
+function _offsetDay(isoDate, days) {
+  const d = new Date(isoDate + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function _firstOfMonth(isoDate) {
+  return isoDate.slice(0, 7) + "-01";
+}
+
+function _fmtDateLabel(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso + "T00:00:00Z");
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+function _presetDates(preset) {
+  const today = _todayIST();
+  switch (preset) {
+    case "today":     return { from: today, to: today };
+    case "yesterday": return { from: _offsetDay(today, -1), to: _offsetDay(today, -1) };
+    case "last7":     return { from: _offsetDay(today, -6), to: today };
+    case "thismonth": return { from: _firstOfMonth(today), to: today };
+    default:          return { from: null, to: null };
+  }
+}
+
+function loadRangeFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") activeRange = parsed;
+    }
+  } catch (_) {}
+  // Keep sidebar inputs in sync
+  dateFromFilter.value = activeRange.from || "";
+  dateToFilter.value   = activeRange.to   || "";
+}
+
+function saveRangeToStorage() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(activeRange)); } catch (_) {}
+}
+
+function applyRange(from, to, preset) {
+  activeRange = { from: from || null, to: to || null, preset: preset || null };
+  // Sync sidebar date inputs so existing filter logic keeps working unchanged
+  dateFromFilter.value = activeRange.from || "";
+  dateToFilter.value   = activeRange.to   || "";
+  saveRangeToStorage();
+  renderDRW();
+  renderResults();
+  renderDateFilterBanner();
+}
+
+function renderDRW() {
+  const presetBtns = document.querySelectorAll(".drw__preset");
+  presetBtns.forEach(btn => {
+    btn.classList.toggle("drw__preset--active", btn.dataset.preset === activeRange.preset);
+  });
+
+  const customRow = document.getElementById("drwCustomRow");
+  if (activeRange.preset === "custom") {
+    customRow.style.display = "flex";
+    const drwFrom = document.getElementById("drwFrom");
+    const drwTo   = document.getElementById("drwTo");
+    if (drwFrom && !drwFrom.value) drwFrom.value = activeRange.from || "";
+    if (drwTo   && !drwTo.value)   drwTo.value   = activeRange.to   || "";
+  } else {
+    customRow.style.display = "none";
+  }
+
+  const activeLabel = document.getElementById("drwActive");
+  if (activeRange.from || activeRange.to) {
+    activeLabel.textContent = `${_fmtDateLabel(activeRange.from)} → ${_fmtDateLabel(activeRange.to)}`;
+  } else {
+    activeLabel.textContent = "All time (from Jan 2026)";
+  }
+}
+
+function initDRW() {
+  loadRangeFromStorage();
+
+  document.querySelectorAll(".drw__preset").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const preset = btn.dataset.preset;
+      if (preset === "custom") {
+        // Just show the custom row, don't apply yet
+        activeRange = { ...activeRange, preset: "custom" };
+        renderDRW();
+        return;
+      }
+      if (preset === "clear") {
+        applyRange(null, null, null);
+        return;
+      }
+      const { from, to } = _presetDates(preset);
+      applyRange(from, to, preset);
+    });
+  });
+
+  document.getElementById("drwApply").addEventListener("click", () => {
+    const from = document.getElementById("drwFrom").value || null;
+    const to   = document.getElementById("drwTo").value   || null;
+    if (from && to && from > to) {
+      showToast("'From' date must be on or before 'To' date.", "error");
+      return;
+    }
+    applyRange(from, to, "custom");
+  });
+
+  renderDRW();
+}
+
+// ── Phase 5: Export Panel ──────────────────────────────────────────────────
+
+let exportPanelOpen = false;
+
+function renderExportPanel() {
+  const panel = document.getElementById("exportPanel");
+  const sitesDiv = document.getElementById("exportPanelSites");
+  const rangeLabel = document.getElementById("exportPanelRange");
+
+  // Only show if we have a completed bulk job with results
+  if (!activeBulkJobId || !crawlResults.length) {
+    panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "block";
+
+  // Update range label
+  const fromLabel = activeRange.from ? _fmtDateLabel(activeRange.from) : "Jan 2026";
+  const toLabel   = activeRange.to   ? _fmtDateLabel(activeRange.to)   : "today";
+  rangeLabel.textContent = `Date range: ${fromLabel} → ${toLabel}`;
+
+  // Build per-site rows: only sites with items
+  const countMap = filteredCountsBySite();
+  const siteEntries = Object.entries(countMap)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (!siteEntries.length) {
+    sitesDiv.innerHTML = "<p style='color:var(--neutral-400);font-size:0.83rem'>No sites have items in the current date range.</p>";
+    return;
+  }
+
+  sitesDiv.innerHTML = siteEntries.map(([sk, count]) => {
+    const st = siteStatuses.find(s => s.site_key === sk);
+    const name = st?.site_name || sk;
+    return `<div class="ep-site-row">
+      <span class="ep-site-row__name">${name}</span>
+      <span class="ep-site-row__count">${count} item${count !== 1 ? "s" : ""}</span>
+      <button class="ep-site-row__btn" data-site="${sk}" type="button">⬇ Excel</button>
+    </div>`;
+  }).join("");
+
+  // Wire up per-site download buttons
+  sitesDiv.querySelectorAll(".ep-site-row__btn").forEach(btn => {
+    btn.addEventListener("click", () => downloadSiteExcel(btn.dataset.site, btn));
+  });
+}
+
+async function downloadSiteExcel(siteKey, btn) {
+  if (!activeBulkJobId) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "…";
+  try {
+    let url = `/api/export/site/${encodeURIComponent(siteKey)}?job_id=${encodeURIComponent(activeBulkJobId)}`;
+    if (activeRange.from) url += `&date_from=${encodeURIComponent(activeRange.from)}`;
+    if (activeRange.to)   url += `&date_to=${encodeURIComponent(activeRange.to)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const blob = await resp.blob();
+    const disposition = resp.headers.get("content-disposition") || "";
+    const fnMatch = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
+    const filename = fnMatch ? fnMatch[1].replace(/['"]/g, "").trim() : `${siteKey}.xlsx`;
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl; a.download = filename; a.click();
+    URL.revokeObjectURL(objUrl);
+    showToast(`Downloaded: ${filename}`, "success");
+  } catch (err) {
+    showToast(`Download failed: ${err.message}`, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function initExportPanel() {
+  const toggle = document.getElementById("exportPanelToggle");
+  const body   = document.getElementById("exportPanelBody");
+  const chev   = document.getElementById("exportPanelChevron");
+
+  toggle.addEventListener("click", () => {
+    exportPanelOpen = !exportPanelOpen;
+    body.style.display = exportPanelOpen ? "block" : "none";
+    chev.classList.toggle("export-panel__chevron--up", exportPanelOpen);
+    if (exportPanelOpen) renderExportPanel();
+  });
+
+  // Wire top-level summary/zip buttons inside export panel
+  document.getElementById("epSummaryBtn").addEventListener("click", exportSummaryExcel);
+  document.getElementById("epZipBtn").addEventListener("click", exportAllZip);
+}
+
 async function loadCatalog() {
   statusNode.textContent = "Loading site catalog…";
   try {
@@ -704,6 +928,7 @@ async function loadBulkResults() {
     }
     rerender();
     renderDateFilterBanner();
+    renderExportPanel();
     closeBulkModal();
   } catch (err) {
     showToast(`Failed to load results: ${err.message}`, "error");
@@ -844,10 +1069,7 @@ clearFiltersBtn.addEventListener("click", () => {
   keywordSearch.value = "";
   websiteFilter.value = "";
   categoryFilter.value = "";
-  dateFromFilter.value = "";
-  dateToFilter.value = "";
-  renderResults();
-  renderDateFilterBanner();
+  applyRange(null, null, null);   // resets DRW + sidebar inputs + re-renders
 });
 
 crawlButton.addEventListener("click", crawlSelectedSites);
@@ -873,10 +1095,9 @@ exportExcelButton.addEventListener("click", exportExcel);
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 document.getElementById("dateFilterBannerClear").addEventListener("click", () => {
-  dateFromFilter.value = "";
-  dateToFilter.value = "";
-  renderResults();
-  renderDateFilterBanner();
+  applyRange(null, null, null);
 });
 
+initDRW();
+initExportPanel();
 loadCatalog();

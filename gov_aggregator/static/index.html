@@ -146,6 +146,32 @@
     <!-- Main content -->
     <main class="main-content">
 
+      <!-- Date Range Widget -->
+      <div class="date-range-widget" id="dateRangeWidget">
+        <div class="drw__presets">
+          <span class="drw__label">Date Range</span>
+          <button class="drw__preset" data-preset="today" type="button">Today</button>
+          <button class="drw__preset" data-preset="yesterday" type="button">Yesterday</button>
+          <button class="drw__preset" data-preset="last7" type="button">Last 7 Days</button>
+          <button class="drw__preset" data-preset="thismonth" type="button">This Month</button>
+          <button class="drw__preset" data-preset="custom" type="button">Custom</button>
+          <button class="drw__preset drw__preset--clear" data-preset="clear" type="button" id="drwClearBtn">All Time</button>
+        </div>
+        <div class="drw__custom" id="drwCustomRow" style="display:none">
+          <label class="drw__field">
+            <span>From</span>
+            <input id="drwFrom" type="date" class="drw__input">
+          </label>
+          <span class="drw__sep">→</span>
+          <label class="drw__field">
+            <span>To</span>
+            <input id="drwTo" type="date" class="drw__input">
+          </label>
+          <button id="drwApply" class="btn btn--primary btn--sm" type="button">Apply</button>
+        </div>
+        <div class="drw__active" id="drwActive"></div>
+      </div>
+
       <!-- Metrics row -->
       <div id="metrics" class="metrics-row"></div>
 
@@ -199,6 +225,26 @@
             </svg>
             <p>Run a crawl to populate results.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Export Panel (Phase 5) -->
+      <div class="export-panel" id="exportPanel" style="display:none">
+        <div class="export-panel__header" id="exportPanelToggle">
+          <span>Export Options</span>
+          <svg class="export-panel__chevron" id="exportPanelChevron" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </div>
+        <div class="export-panel__body" id="exportPanelBody">
+          <div class="export-panel__row export-panel__row--top">
+            <span class="export-panel__range" id="exportPanelRange">Date range: —</span>
+            <div class="btn-row">
+              <button id="epSummaryBtn" class="btn btn--export" type="button">⬇ Summary Excel</button>
+              <button id="epZipBtn" class="btn btn--export-zip" type="button">⬇ All Sites (ZIP)</button>
+            </div>
+          </div>
+          <div class="export-panel__sites" id="exportPanelSites"></div>
         </div>
       </div>
 

@@ -1063,3 +1063,140 @@ button, input, select, textarea { font: inherit; }
 }
 .btn--export-zip:hover:not(:disabled) { opacity: 0.88; }
 .btn--export-zip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Date Range Widget (Phase 5) ─────────────────────────────────────────── */
+.date-range-widget {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.drw__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--neutral-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 0.25rem;
+}
+.drw__presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.drw__preset {
+  background: var(--neutral-100);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.drw__preset:hover { background: var(--neutral-200); }
+.drw__preset--active {
+  background: var(--primary-600, #2563eb);
+  border-color: var(--primary-600, #2563eb);
+  color: #fff;
+}
+.drw__preset--active:hover { opacity: 0.9; background: var(--primary-600, #2563eb); }
+.drw__preset--clear {
+  background: transparent;
+  color: var(--neutral-500);
+  border-color: transparent;
+}
+.drw__preset--clear:hover { background: var(--neutral-100); color: var(--ink); }
+.drw__custom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+.drw__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--neutral-500);
+  font-weight: 600;
+}
+.drw__input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+.drw__sep { color: var(--neutral-400); font-size: 1rem; margin: 0 0.1rem; padding-top: 1rem; }
+.drw__active {
+  font-size: 0.8rem;
+  color: var(--primary-600, #2563eb);
+  font-weight: 600;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Export Panel (Phase 5) ──────────────────────────────────────────────── */
+.export-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-top: 1rem;
+  overflow: hidden;
+}
+.export-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: var(--neutral-50, #f9fafb);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.export-panel__header:hover { background: var(--neutral-100); }
+.export-panel__chevron { transition: transform 0.2s; }
+.export-panel__chevron--up { transform: rotate(180deg); }
+.export-panel__body { padding: 1rem 1.25rem; }
+.export-panel__row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.export-panel__row--top { margin-bottom: 0.75rem; }
+.export-panel__range { font-size: 0.83rem; color: var(--neutral-500); font-weight: 500; }
+.export-panel__sites { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+.ep-site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-md);
+  background: var(--neutral-50, #f9fafb);
+  border: 1px solid var(--border);
+  font-size: 0.83rem;
+}
+.ep-site-row__name { font-weight: 600; flex: 1; }
+.ep-site-row__count { color: var(--neutral-500); margin: 0 1rem; }
+.ep-site-row__btn {
+  background: var(--neutral-100);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.ep-site-row__btn:hover { background: var(--neutral-200); }
