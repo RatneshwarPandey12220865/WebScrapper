@@ -7,6 +7,9 @@ playwright==1.55.0
 scrapy==2.13.3
 requests==2.32.3
 
+# Phase 3 — Excel export
+openpyxl>=3.1.0
+
 # Phase 2 — PDF date extraction
 # Tier 1: digital PDF metadata + text (required)
 pypdf>=4.0.0

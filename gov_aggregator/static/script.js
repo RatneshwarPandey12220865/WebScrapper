@@ -23,6 +23,7 @@ const statElapsed      = document.getElementById("statElapsed");
 const statStatus       = document.getElementById("statStatus");
 const cancelCrawlBtn   = document.getElementById("cancelCrawlBtn");
 const loadResultsBtn   = document.getElementById("loadResultsBtn");
+const exportSummaryBtn = document.getElementById("exportSummaryBtn");
 
 const keywordSearch = document.getElementById("keywordSearch");
 const websiteFilter = document.getElementById("websiteFilter");
@@ -616,6 +617,7 @@ function openBulkModal() {
   modalSubtitle.textContent = "Preparing bulk crawl…";
   modalSpinner.style.display = "block";
   loadResultsBtn.style.display = "none";
+  exportSummaryBtn.style.display = "none";
   cancelCrawlBtn.disabled = false;
   cancelCrawlBtn.textContent = "Cancel";
   bulkCrawlModal.style.display = "flex";
@@ -624,6 +626,7 @@ function openBulkModal() {
 function closeBulkModal() {
   bulkCrawlModal.style.display = "none";
   activeBulkJobStatus = null;
+  exportSummaryBtn.style.display = "none";
   stopPoll();
 }
 
@@ -653,6 +656,7 @@ function updateModalProgress(job) {
     modalSubtitle.textContent = `Done — ${items} items, ${errors} errors`;
     modalSpinner.style.display = "none";
     loadResultsBtn.style.display = "inline-flex";
+    exportSummaryBtn.style.display = "inline-flex";
     cancelCrawlBtn.textContent = "Close";
   } else if (job.status === "cancelled") {
     modalSubtitle.textContent = "Crawl was cancelled.";
@@ -701,6 +705,41 @@ async function loadBulkResults() {
     showToast(`Failed to load results: ${err.message}`, "error");
     loadResultsBtn.disabled = false;
     loadResultsBtn.textContent = "Load Results";
+  }
+}
+
+async function exportSummaryExcel() {
+  if (!activeBulkJobId) return;
+  exportSummaryBtn.disabled = true;
+  exportSummaryBtn.textContent = "Generating…";
+  try {
+    const dateFrom = dateFromFilter.value || null;
+    const dateTo   = dateToFilter.value   || null;
+    const resp = await fetch("/api/export/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: activeBulkJobId, date_from: dateFrom, date_to: dateTo }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const blob = await resp.blob();
+    const disposition = resp.headers.get("content-disposition") || "";
+    const fnMatch = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
+    const filename = fnMatch ? fnMatch[1].replace(/['"]/g, "").trim() : "KSyder_Summary.xlsx";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Excel exported: ${filename}`, "success");
+  } catch (err) {
+    showToast(`Export failed: ${err.message}`, "error");
+  } finally {
+    exportSummaryBtn.disabled = false;
+    exportSummaryBtn.textContent = "⬇ Export Summary Excel";
   }
 }
 
@@ -777,6 +816,7 @@ crawlButton.addEventListener("click", crawlSelectedSites);
 crawlAllButton.addEventListener("click", crawlAllSites);
 cancelCrawlBtn.addEventListener("click", cancelBulkCrawl);
 loadResultsBtn.addEventListener("click", loadBulkResults);
+exportSummaryBtn.addEventListener("click", exportSummaryExcel);
 
 [keywordSearch, websiteFilter, categoryFilter].forEach((node) => {
   node.addEventListener("input", renderResults);

@@ -332,22 +332,26 @@ def _status_payload(
     *,
     site_key: str,
     site_name: str,
+    ministry: str = "",
     state: str,
     message: str,
     item_count: int = 0,
     new_count: int = 0,
     from_cache: bool = False,
     data_since: str | None = None,
+    crawl_time: str | None = None,
 ) -> dict[str, Any]:
     return {
         "site_key": site_key,
         "site_name": site_name,
+        "ministry": ministry,
         "state": state,
         "message": message,
         "item_count": item_count,
         "new_count": new_count,
         "from_cache": from_cache,
         "data_since": data_since,
+        "crawl_time": crawl_time,
     }
 
 
@@ -464,16 +468,19 @@ async def crawl_site_keys(
         if use_cache and _is_cache_fresh(resolved_site_key):
             cached = _cached_items(resolved_site_key)
             items.extend(cached)
+            _cfg = configs.get(resolved_site_key)
             statuses.append(
                 _status_payload(
                     site_key=site_key,
                     site_name=site["name"],
+                    ministry=(_cfg.ministry if _cfg else ""),
                     state="cached",
                     message="Returned cached crawl results from this session.",
                     item_count=len(cached),
                     new_count=sum(1 for item in cached if item.get("is_new")),
                     from_cache=True,
-                    data_since=_effective_data_since(configs.get(resolved_site_key), resolved_site_key),
+                    data_since=_effective_data_since(_cfg, resolved_site_key),
+                    crawl_time=crawl_time,
                 )
             )
             continue
@@ -494,11 +501,13 @@ async def crawl_site_keys(
                     _status_payload(
                         site_key=site_key,
                         site_name=site["name"],
+                        ministry=config.ministry,
                         state="completed",
                         message="Crawl completed successfully.",
                         item_count=len(shaped_items),
                         new_count=sum(1 for item in shaped_items if item["is_new"]),
                         data_since=_effective_data_since(config),
+                        crawl_time=crawl_time,
                     )
                 )
             except Exception as exc:  # noqa: BLE001
@@ -541,11 +550,13 @@ async def crawl_site_keys(
                 _status_payload(
                     site_key=requested_site_key,
                     site_name=site["name"],
+                    ministry=config.ministry,
                     state="completed",
                     message="Crawl completed successfully.",
                     item_count=len(shaped_items),
                     new_count=sum(1 for item in shaped_items if item["is_new"]),
                     data_since=_effective_data_since(config),
+                    crawl_time=crawl_time,
                 )
             )
 

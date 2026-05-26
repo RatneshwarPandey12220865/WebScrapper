@@ -9,7 +9,7 @@ from pathlib import Path
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -22,9 +22,10 @@ from gov_aggregator.services import (
     site_catalog_payload,
 )
 
-
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+EXPORTS_DIR = BASE_DIR.parent / "exports"
+EXPORTS_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="Government Website Crawler")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -44,6 +45,12 @@ class CrawlRequest(BaseModel):
 
 class CrawlAllRequest(BaseModel):
     use_cache: bool = False
+    date_from: str | None = None
+    date_to: str | None = None
+
+
+class ExportSummaryRequest(BaseModel):
+    job_id: str
     date_from: str | None = None
     date_to: str | None = None
 
@@ -171,3 +178,45 @@ async def crawl_result(job_id: str) -> dict:
     if job["status"] != "done":
         return {"error": f"Job is not done yet (status: {job['status']})", "job_id": job_id}
     return job["result"]
+
+
+# ── Phase 3: Excel export ──────────────────────────────────────────────────
+
+@app.post("/api/export/summary")
+async def export_summary(request: ExportSummaryRequest) -> FileResponse:
+    """Generate summary Excel from a completed bulk-crawl job and stream it."""
+    from gov_aggregator.exporters.excel_summary import generate_summary_excel
+
+    with JOBS_LOCK:
+        job = ACTIVE_JOBS.get(request.job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{request.job_id}' not found.")
+    if job["status"] != "done":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job is not finished yet (status: {job['status']}). Wait for it to complete.",
+        )
+
+    crawl_result = job["result"]
+    date_from = request.date_from or job.get("date_from")
+    date_to   = request.date_to   or job.get("date_to")
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    df_label = (date_from or "open").replace("-", "")
+    dt_label = (date_to   or "open").replace("-", "")
+    filename = f"KSyder_Summary_{df_label}_to_{dt_label}_{ts}.xlsx"
+    output_path = EXPORTS_DIR / filename
+
+    await generate_summary_excel(
+        crawl_result=crawl_result,
+        date_from=date_from,
+        date_to=date_to,
+        output_path=str(output_path),
+    )
+
+    return FileResponse(
+        path=str(output_path),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+    )

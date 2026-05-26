@@ -1037,3 +1037,16 @@ button, input, select, textarea { font: inherit; }
   transition: background var(--transition);
 }
 .btn--ghost-dark:hover:not(:disabled) { background: var(--neutral-200); color: var(--ink); }
+
+.btn--export {
+  background: linear-gradient(135deg, #217346 0%, #1a5c39 100%);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.btn--export:hover:not(:disabled) { opacity: 0.88; }
+.btn--export:disabled { opacity: 0.5; cursor: not-allowed; }

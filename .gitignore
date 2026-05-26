@@ -6,3 +6,6 @@ venv/
 *.egg-info/
 dist/
 build/
+
+# Phase 3 — generated Excel exports (keep folder, ignore contents)
+exports/*.xlsx
