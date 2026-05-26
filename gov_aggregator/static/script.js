@@ -204,7 +204,19 @@ function renderMetrics() {
 }
 
 // ── Statuses ───────────────────────────────────────────────────────────────
+function allCountsBySite() {
+  // Counts from crawlResults — post server-side date filter, pre UI filter
+  const counts = {};
+  for (const item of crawlResults) {
+    if (!counts[item.site_key]) counts[item.site_key] = { items: 0, new_items: 0 };
+    counts[item.site_key].items++;
+    if (item.is_new) counts[item.site_key].new_items++;
+  }
+  return counts;
+}
+
 function filteredCountsBySite() {
+  // Counts from filteredResults — post UI filter (keyword, date, category, website)
   const counts = {};
   for (const item of filteredResults()) {
     if (!counts[item.site_key]) counts[item.site_key] = { items: 0, new_items: 0 };
@@ -227,32 +239,46 @@ function renderStatuses() {
     return;
   }
 
-  const bySite = filteredCountsBySite();
-  const isFiltered = filteredResults().length !== crawlResults.length;
+  const allBySite      = allCountsBySite();
+  const filteredBySite = filteredCountsBySite();
+  const isFiltered     = filteredResults().length !== crawlResults.length;
 
   statusListNode.innerHTML = siteStatuses
     .map((s) => {
-      const fc = bySite[s.site_key];
+      // Use crawlResults-derived counts as the "actual" totals — these are
+      // post server-side date filter and always match the metrics cards.
+      const ac = allBySite[s.site_key];
+      const fc = filteredBySite[s.site_key];
+      const totalItems = ac ? ac.items : 0;
+      const totalNew   = ac ? ac.new_items : 0;
       const shownItems = fc ? fc.items : 0;
       const shownNew   = fc ? fc.new_items : 0;
-      const totalItems = s.item_count || 0;
-      const totalNew   = s.new_count || 0;
 
-      const itemLabel = isFiltered && (s.state === "completed" || s.state === "cached")
+      const isActive = s.state === "completed" || s.state === "cached";
+
+      const itemLabel = isFiltered && isActive
         ? `<span class="status-count ${shownItems === 0 ? "status-count--zero" : ""}">
              <span class="status-count__shown">${shownItems}</span>
              <span class="status-count__sep">/</span>
              <span class="status-count__total">${totalItems}</span>
              <span class="status-count__unit">items</span>
            </span>`
-        : `<span class="status-count"><span class="status-count__shown">${totalItems}</span> <span class="status-count__unit">items</span></span>`;
+        : `<span class="status-count">
+             <span class="status-count__shown">${totalItems}</span>
+             <span class="status-count__unit">items</span>
+           </span>`;
 
-      const newLabel = isFiltered && (s.state === "completed" || s.state === "cached")
+      const newLabel = isFiltered && isActive
         ? `<span class="status-count ${shownNew === 0 ? "status-count--zero" : ""}">
-             <span class="status-count__shown">${shownNew}</span>/<span class="status-count__total">${totalNew}</span>
+             <span class="status-count__shown">${shownNew}</span>
+             <span class="status-count__sep">/</span>
+             <span class="status-count__total">${totalNew}</span>
              <span class="status-count__unit">new</span>
            </span>`
-        : `<span class="status-count"><span class="status-count__shown">${totalNew}</span> <span class="status-count__unit">new</span></span>`;
+        : `<span class="status-count">
+             <span class="status-count__shown">${totalNew}</span>
+             <span class="status-count__unit">new</span>
+           </span>`;
 
       const dateSinceLabel = s.data_since
         ? `<span class="status-date-since">From ${formatDataSince(s.data_since)}</span>`
