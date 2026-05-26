@@ -891,6 +891,19 @@ button, input, select, textarea { font: inherit; }
   border-color: var(--neutral-200);
 }
 
+/* ── Status item count labels (filtered vs total) ────────────────────────── */
+.status-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 0.8rem;
+}
+.status-count__shown  { font-weight: 700; color: var(--ink); }
+.status-count__sep    { color: var(--neutral-400); font-weight: 400; }
+.status-count__total  { color: var(--neutral-400); font-weight: 400; font-size: 0.75rem; }
+.status-count__unit   { color: var(--muted); font-size: 0.75rem; }
+.status-count--zero .status-count__shown { color: var(--neutral-400); }
+
 .date-range {
   display: inline-flex;
   flex-direction: column;

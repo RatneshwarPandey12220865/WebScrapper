@@ -204,6 +204,16 @@ function renderMetrics() {
 }
 
 // ── Statuses ───────────────────────────────────────────────────────────────
+function filteredCountsBySite() {
+  const counts = {};
+  for (const item of filteredResults()) {
+    if (!counts[item.site_key]) counts[item.site_key] = { items: 0, new_items: 0 };
+    counts[item.site_key].items++;
+    if (item.is_new) counts[item.site_key].new_items++;
+  }
+  return counts;
+}
+
 function renderStatuses() {
   if (!siteStatuses.length) {
     statusListNode.innerHTML = `
@@ -217,15 +227,40 @@ function renderStatuses() {
     return;
   }
 
+  const bySite = filteredCountsBySite();
+  const isFiltered = filteredResults().length !== crawlResults.length;
+
   statusListNode.innerHTML = siteStatuses
-    .map(
-      (s) => {
-        const dateSinceLabel = s.data_since
-          ? `<span class="status-date-since">From ${formatDataSince(s.data_since)}</span>`
-          : (s.state === "completed" || s.state === "cached")
-            ? `<span class="status-date-since status-date-since--none">No date filter</span>`
-            : "";
-        return `
+    .map((s) => {
+      const fc = bySite[s.site_key];
+      const shownItems = fc ? fc.items : 0;
+      const shownNew   = fc ? fc.new_items : 0;
+      const totalItems = s.item_count || 0;
+      const totalNew   = s.new_count || 0;
+
+      const itemLabel = isFiltered && (s.state === "completed" || s.state === "cached")
+        ? `<span class="status-count ${shownItems === 0 ? "status-count--zero" : ""}">
+             <span class="status-count__shown">${shownItems}</span>
+             <span class="status-count__sep">/</span>
+             <span class="status-count__total">${totalItems}</span>
+             <span class="status-count__unit">items</span>
+           </span>`
+        : `<span class="status-count"><span class="status-count__shown">${totalItems}</span> <span class="status-count__unit">items</span></span>`;
+
+      const newLabel = isFiltered && (s.state === "completed" || s.state === "cached")
+        ? `<span class="status-count ${shownNew === 0 ? "status-count--zero" : ""}">
+             <span class="status-count__shown">${shownNew}</span>/<span class="status-count__total">${totalNew}</span>
+             <span class="status-count__unit">new</span>
+           </span>`
+        : `<span class="status-count"><span class="status-count__shown">${totalNew}</span> <span class="status-count__unit">new</span></span>`;
+
+      const dateSinceLabel = s.data_since
+        ? `<span class="status-date-since">From ${formatDataSince(s.data_since)}</span>`
+        : (s.state === "completed" || s.state === "cached")
+          ? `<span class="status-date-since status-date-since--none">No date filter</span>`
+          : "";
+
+      return `
         <div class="status-item" data-state="${s.state}">
           <span class="status-dot"></span>
           <div class="status-item__left">
@@ -235,12 +270,11 @@ function renderStatuses() {
           <div class="status-item__right">
             ${dateSinceLabel}
             <span class="status-state-label">${s.state}</span>
-            <span>${s.item_count || 0} items</span>
-            <span>${s.new_count || 0} new</span>
+            ${itemLabel}
+            ${newLabel}
           </div>
-        </div>
-      `;}
-    )
+        </div>`;
+    })
     .join("");
 }
 
@@ -310,6 +344,7 @@ function renderResults() {
   const results = filteredResults();
   renderActiveFilterChips();
   renderMetrics();
+  renderStatuses();
   resultSummaryNode.textContent = `${results.length} item${results.length !== 1 ? "s" : ""} shown${results.length !== crawlResults.length ? ` (${crawlResults.length} total)` : ""}`;
 
   if (!results.length) {
@@ -473,7 +508,9 @@ async function crawlSelectedSites() {
     crawlResults = payload.items;
     siteStatuses = payload.site_statuses;
     const returned = payload.meta?.returned_items ?? crawlResults.length;
-    statusNode.textContent = `Crawl finished at ${formatDate(payload.crawl_time)}. ${returned} items returned.`;
+    const shown = filteredResults().length;
+    const filterNote = shown !== returned ? ` · ${shown} shown with active filter` : "";
+    statusNode.textContent = `Crawl finished at ${formatDate(payload.crawl_time)}. ${returned} items returned${filterNote}.`;
 
     const errors = siteStatuses.filter((s) => s.state === "error").length;
     if (errors) {
