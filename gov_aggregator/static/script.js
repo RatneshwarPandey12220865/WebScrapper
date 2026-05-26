@@ -2,6 +2,7 @@ const siteListNode = document.getElementById("siteList");
 const selectedSummaryNode = document.getElementById("selectedSummary");
 const catalogSummaryNode = document.getElementById("catalogSummary");
 const crawlButton = document.getElementById("crawlButton");
+const crawlAllButton = document.getElementById("crawlAllButton");
 const crawlSpinner = document.getElementById("crawlSpinner");
 const useCacheToggle = document.getElementById("useCacheToggle");
 const siteSearchInput = document.getElementById("siteSearchInput");
@@ -9,6 +10,19 @@ const selectSupportedButton = document.getElementById("selectSupportedButton");
 const clearSelectionButton = document.getElementById("clearSelectionButton");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const toastContainer = document.getElementById("toastContainer");
+
+// Bulk crawl modal nodes
+const bulkCrawlModal   = document.getElementById("bulkCrawlModal");
+const modalSubtitle    = document.getElementById("modalSubtitle");
+const modalSpinner     = document.getElementById("modalSpinner");
+const progressBarFill  = document.getElementById("progressBarFill");
+const progressLabel    = document.getElementById("progressLabel");
+const statDone         = document.getElementById("statDone");
+const statTotal        = document.getElementById("statTotal");
+const statElapsed      = document.getElementById("statElapsed");
+const statStatus       = document.getElementById("statStatus");
+const cancelCrawlBtn   = document.getElementById("cancelCrawlBtn");
+const loadResultsBtn   = document.getElementById("loadResultsBtn");
 
 const keywordSearch = document.getElementById("keywordSearch");
 const websiteFilter = document.getElementById("websiteFilter");
@@ -33,6 +47,10 @@ let crawlResults = [];
 let siteStatuses = [];
 let globalMinDate = null;
 const selectedSites = new Set();
+
+// Bulk crawl state
+let activeBulkJobId = null;
+let pollInterval = null;
 
 // ── Toast notifications ────────────────────────────────────────────────────
 function showToast(message, type = "info") {
@@ -464,6 +482,7 @@ async function crawlSelectedSites() {
     showToast(`Crawl failed: ${err.message}`, "error");
   } finally {
     crawlButton.disabled = false;
+    crawlAllButton.disabled = false;
     crawlSpinner.style.display = "none";
   }
 }
@@ -515,6 +534,147 @@ function exportExcel() {
   downloadBlob("crawl-results.xls", html, "application/vnd.ms-excel");
 }
 
+// ── Bulk crawl (Crawl All) ─────────────────────────────────────────────────
+function openBulkModal() {
+  progressBarFill.style.width = "0%";
+  progressLabel.textContent = "0%";
+  statDone.textContent = "0";
+  statTotal.textContent = "—";
+  statElapsed.textContent = "0s";
+  statStatus.textContent = "starting";
+  modalSubtitle.textContent = "Preparing bulk crawl…";
+  modalSpinner.style.display = "block";
+  loadResultsBtn.style.display = "none";
+  cancelCrawlBtn.disabled = false;
+  cancelCrawlBtn.textContent = "Cancel";
+  bulkCrawlModal.style.display = "flex";
+}
+
+function closeBulkModal() {
+  bulkCrawlModal.style.display = "none";
+  stopPoll();
+}
+
+function stopPoll() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+}
+
+function updateModalProgress(job) {
+  const pct = job.percent_complete ?? 0;
+  progressBarFill.style.width = `${pct}%`;
+  progressLabel.textContent = `${pct}%`;
+  statDone.textContent = job.sites_done ?? 0;
+  statTotal.textContent = job.sites_total ?? "—";
+  statElapsed.textContent = `${job.elapsed_seconds ?? 0}s`;
+  statStatus.textContent = job.status;
+
+  if (job.status === "running") {
+    modalSubtitle.textContent = `Crawling ${job.sites_done} of ${job.sites_total} sites…`;
+  } else if (job.status === "done") {
+    const meta = job.result_meta;
+    const items = meta ? meta.returned_items : "?";
+    const errors = meta ? meta.errors : "?";
+    modalSubtitle.textContent = `Done — ${items} items, ${errors} errors`;
+    modalSpinner.style.display = "none";
+    loadResultsBtn.style.display = "inline-flex";
+    cancelCrawlBtn.textContent = "Close";
+  } else if (job.status === "cancelled") {
+    modalSubtitle.textContent = "Crawl was cancelled.";
+    modalSpinner.style.display = "none";
+    cancelCrawlBtn.textContent = "Close";
+  } else if (job.status === "failed") {
+    modalSubtitle.textContent = "Crawl encountered a fatal error.";
+    modalSpinner.style.display = "none";
+    cancelCrawlBtn.textContent = "Close";
+  }
+}
+
+async function pollJobStatus() {
+  if (!activeBulkJobId) return;
+  try {
+    const job = await fetchJson(`/api/crawl/status/${activeBulkJobId}`);
+    updateModalProgress(job);
+    if (["done", "cancelled", "failed"].includes(job.status)) {
+      stopPoll();
+    }
+  } catch (err) {
+    showToast(`Poll error: ${err.message}`, "error");
+  }
+}
+
+async function loadBulkResults() {
+  if (!activeBulkJobId) return;
+  loadResultsBtn.disabled = true;
+  loadResultsBtn.textContent = "Loading…";
+  try {
+    const payload = await fetchJson(`/api/crawl/result/${activeBulkJobId}`);
+    crawlResults = payload.items || [];
+    siteStatuses = payload.site_statuses || [];
+    const returned = payload.meta?.returned_items ?? crawlResults.length;
+    statusNode.textContent = `Bulk crawl finished at ${formatDate(payload.crawl_time)}. ${returned} items returned.`;
+    const errors = siteStatuses.filter((s) => s.state === "error").length;
+    if (errors) {
+      showToast(`Bulk crawl complete — ${errors} site(s) failed.`, "error");
+    } else {
+      showToast(`Bulk crawl complete — ${returned} items returned.`, "success");
+    }
+    rerender();
+    renderDateFilterBanner();
+    closeBulkModal();
+  } catch (err) {
+    showToast(`Failed to load results: ${err.message}`, "error");
+    loadResultsBtn.disabled = false;
+    loadResultsBtn.textContent = "Load Results";
+  }
+}
+
+async function crawlAllSites() {
+  crawlAllButton.disabled = true;
+  openBulkModal();
+
+  try {
+    const body = { use_cache: useCacheToggle.checked };
+    if (dateFromFilter.value) body.date_from = dateFromFilter.value;
+    if (dateToFilter.value) body.date_to = dateToFilter.value;
+
+    const response = await fetchJson("/api/crawl/all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    activeBulkJobId = response.job_id;
+    showToast(`Bulk crawl started (job ${activeBulkJobId})`, "info");
+
+    // Poll every 3 seconds
+    pollInterval = setInterval(pollJobStatus, 3000);
+    pollJobStatus(); // immediate first tick
+  } catch (err) {
+    closeBulkModal();
+    showToast(`Failed to start bulk crawl: ${err.message}`, "error");
+    crawlAllButton.disabled = false;
+  }
+}
+
+async function cancelBulkCrawl() {
+  const isDone = ["done", "cancelled", "failed"].includes(statStatus.textContent);
+  if (isDone) { closeBulkModal(); crawlAllButton.disabled = false; return; }
+  if (!activeBulkJobId) { closeBulkModal(); return; }
+  try {
+    await fetchJson(`/api/crawl/cancel/${activeBulkJobId}`, { method: "POST" });
+    stopPoll();
+    showToast("Crawl cancelled.", "info");
+  } catch (err) {
+    showToast(`Cancel error: ${err.message}`, "error");
+  } finally {
+    closeBulkModal();
+    crawlAllButton.disabled = false;
+  }
+}
+
 // ── Event listeners ────────────────────────────────────────────────────────
 siteSearchInput.addEventListener("input", renderSiteList);
 
@@ -540,6 +700,9 @@ clearFiltersBtn.addEventListener("click", () => {
 });
 
 crawlButton.addEventListener("click", crawlSelectedSites);
+crawlAllButton.addEventListener("click", crawlAllSites);
+cancelCrawlBtn.addEventListener("click", cancelBulkCrawl);
+loadResultsBtn.addEventListener("click", loadBulkResults);
 
 [keywordSearch, websiteFilter, categoryFilter, dateFromFilter, dateToFilter].forEach((node) => {
   node.addEventListener("input", renderResults);

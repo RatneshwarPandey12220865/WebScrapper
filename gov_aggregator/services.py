@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock
@@ -48,6 +49,12 @@ SITE_KEY_ALIASES: dict[str, str] = {
 
 SESSION_CACHE: dict[str, dict[str, Any]] = {}
 SESSION_LOCK = Lock()
+
+# ── Bulk job tracking ──────────────────────────────────────────────────────
+ACTIVE_JOBS: dict[str, dict[str, Any]] = {}
+JOBS_LOCK = Lock()
+
+BATCH_SIZE = 10  # sites per batch in bulk crawl
 
 
 def _now() -> datetime:
@@ -269,12 +276,7 @@ _GLOBAL_MIN_DATE_EXEMPT = {
 
 
 def _passes_global_min_date(item: dict[str, Any]) -> bool:
-    """Return True if item's publish_date is on or after GLOBAL_MIN_DATE.
-
-    Items with no publish_date pass through — their date could not be
-    determined and filtering them would silently drop valid content.
-    Sites in _GLOBAL_MIN_DATE_EXEMPT bypass the cutoff entirely.
-    """
+    """Return True if item's publish_date is on or after GLOBAL_MIN_DATE."""
     if item.get("site_key") in _GLOBAL_MIN_DATE_EXEMPT:
         return True
     publish_date = item.get("publish_date")
@@ -285,6 +287,43 @@ def _passes_global_min_date(item: dict[str, Any]) -> bool:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt >= GLOBAL_MIN_DATE
+    except (ValueError, TypeError):
+        return True
+
+
+def _passes_date_filter(
+    item: dict[str, Any],
+    date_from: str | None,
+    date_to: str | None,
+) -> bool:
+    """Apply explicit date range if provided, otherwise fall back to global min date.
+
+    Items with no publish_date always pass through — we never silently drop
+    content that simply has no parseable date.
+    """
+    if not date_from and not date_to:
+        return _passes_global_min_date(item)
+
+    if item.get("site_key") in _GLOBAL_MIN_DATE_EXEMPT:
+        return True
+
+    publish_date = item.get("publish_date")
+    if not publish_date:
+        return True
+
+    try:
+        dt = datetime.fromisoformat(publish_date)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if date_from:
+            df = datetime.fromisoformat(date_from + "T00:00:00+00:00")
+            if dt < df:
+                return False
+        if date_to:
+            dt_end = datetime.fromisoformat(date_to + "T23:59:59+00:00")
+            if dt > dt_end:
+                return False
+        return True
     except (ValueError, TypeError):
         return True
 
@@ -339,7 +378,14 @@ def _clean_title(title: str | None) -> str:
     return title
 
 
-async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> dict[str, Any]:
+async def crawl_site_keys(
+    site_keys: list[str],
+    *,
+    use_cache: bool = True,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    _job_id: str | None = None,
+) -> dict[str, Any]:
     from gov_aggregator.scrapers.custom import CUSTOM_CRAWLERS
     from gov_aggregator.scrapers.engine import ScraperEngine
 
@@ -457,13 +503,11 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
             )
 
     total_before_filter = len(items)
-    items = [item for item in items if _passes_global_min_date(item)]
+    items = [item for item in items if _passes_date_filter(item, date_from, date_to)]
     filtered_count = total_before_filter - len(items)
     if filtered_count > 0:
-        logger.info(
-            "GLOBAL_MIN_DATE filter removed %d items (before %s)",
-            filtered_count, GLOBAL_MIN_DATE.strftime("%Y-%m-%d"),
-        )
+        filter_desc = f"{date_from} to {date_to}" if (date_from or date_to) else f"before {GLOBAL_MIN_DATE.strftime('%Y-%m-%d')}"
+        logger.info("Date filter removed %d items (%s)", filtered_count, filter_desc)
     items.sort(key=_result_sort_key, reverse=True)
     return {
         "crawl_time": crawl_time,
@@ -480,3 +524,66 @@ async def crawl_site_keys(site_keys: list[str], *, use_cache: bool = True) -> di
 
 async def crawl_all_supported_sites(*, use_cache: bool = True) -> dict[str, Any]:
     return await crawl_site_keys(list(_supported_config_map()), use_cache=use_cache)
+
+
+async def run_bulk_crawl(
+    job_id: str,
+    *,
+    use_cache: bool,
+    date_from: str | None,
+    date_to: str | None,
+) -> None:
+    """Background task: crawl all active sites in batches, tracking progress in ACTIVE_JOBS."""
+    all_site_keys = list(_supported_config_map())
+    total = len(all_site_keys)
+
+    with JOBS_LOCK:
+        ACTIVE_JOBS[job_id]["sites_total"] = total
+        ACTIVE_JOBS[job_id]["status"] = "running"
+
+    all_items: list[dict[str, Any]] = []
+    all_statuses: list[dict[str, Any]] = []
+
+    for i in range(0, total, BATCH_SIZE):
+        with JOBS_LOCK:
+            if ACTIVE_JOBS[job_id].get("status") == "cancelled":
+                return
+
+        batch = all_site_keys[i : i + BATCH_SIZE]
+        try:
+            result = await crawl_site_keys(
+                batch,
+                use_cache=use_cache,
+                date_from=date_from,
+                date_to=date_to,
+                _job_id=job_id,
+            )
+            all_items.extend(result["items"])
+            all_statuses.extend(result["site_statuses"])
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Bulk crawl batch %d error: %s", i // BATCH_SIZE, exc)
+
+        with JOBS_LOCK:
+            ACTIVE_JOBS[job_id]["sites_done"] = min(i + BATCH_SIZE, total)
+
+    all_items.sort(key=_result_sort_key, reverse=True)
+
+    with JOBS_LOCK:
+        ACTIVE_JOBS[job_id].update(
+            {
+                "status": "done",
+                "finished_at": _now_iso(),
+                "sites_done": total,
+                "result": {
+                    "crawl_time": _now_iso(),
+                    "items": all_items,
+                    "site_statuses": all_statuses,
+                    "meta": {
+                        "requested_sites": total,
+                        "returned_items": len(all_items),
+                        "errors": sum(1 for s in all_statuses if s["state"] in {"error", "missing"}),
+                        "cached_sites": sum(1 for s in all_statuses if s["from_cache"]),
+                    },
+                },
+            }
+        )
