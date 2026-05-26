@@ -380,33 +380,34 @@ function formatDataSince(dateSince) {
 function renderDateFilterBanner() {
   const banner = document.getElementById("dateFilterBanner");
   const text = document.getElementById("dateFilterBannerText");
+  const clearBtn = document.getElementById("dateFilterBannerClear");
 
-  if (!siteStatuses.length) {
-    // Before any crawl — show the global default
+  const fromVal = dateFromFilter.value;
+  const toVal = dateToFilter.value;
+  const hasCustom = fromVal || toVal;
+
+  if (hasCustom) {
+    // Custom date range is active — show it prominently
+    const fromStr = fromVal
+      ? new Date(fromVal + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+      : "beginning";
+    const toStr = toVal
+      ? new Date(toVal + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+      : "today";
+    text.textContent = `Custom filter: ${fromStr} → ${toStr}`;
+    banner.setAttribute("data-custom", "true");
+    if (clearBtn) clearBtn.style.display = "inline-flex";
+  } else {
+    // No custom filter — show the global default
+    banner.removeAttribute("data-custom");
+    if (clearBtn) clearBtn.style.display = "none";
+
     if (!globalMinDate) { banner.style.display = "none"; return; }
     const d = new Date(globalMinDate + "T00:00:00Z");
     const formatted = d.toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-    text.textContent = `Default filter: items from ${formatted} onwards`;
-    banner.style.display = "flex";
-    return;
+    text.textContent = `Default: items from ${formatted} onwards`;
   }
 
-  // After a crawl — show the range across crawled sites
-  const activeSinces = siteStatuses
-    .filter(s => s.state === "completed" || s.state === "cached")
-    .map(s => s.data_since);
-  const noFilter = activeSinces.some(d => !d);
-  const unique = [...new Set(activeSinces.filter(Boolean))].sort();
-
-  if (!unique.length && noFilter) {
-    text.textContent = "No date filter applied";
-  } else if (unique.length === 1 && !noFilter) {
-    text.textContent = `Showing items from ${formatDataSince(unique[0])} onwards`;
-  } else {
-    const parts = unique.map(formatDataSince);
-    if (noFilter) parts.push("some with no filter");
-    text.textContent = `Date filters: ${parts.join(" · ")}`;
-  }
   banner.style.display = "flex";
 }
 
@@ -421,7 +422,7 @@ async function loadCatalog() {
     renderSiteList();
     renderMetrics();
     renderStatuses();
-    renderDateFilterBanner();
+    renderDateFilterBanner();   // show default Jan 2026 banner immediately
     statusNode.textContent = "Select supported websites and start crawling.";
   } catch (err) {
     statusNode.textContent = `Failed to load catalog: ${err.message}`;
@@ -697,6 +698,7 @@ clearFiltersBtn.addEventListener("click", () => {
   dateFromFilter.value = "";
   dateToFilter.value = "";
   renderResults();
+  renderDateFilterBanner();
 });
 
 crawlButton.addEventListener("click", crawlSelectedSites);
@@ -704,9 +706,14 @@ crawlAllButton.addEventListener("click", crawlAllSites);
 cancelCrawlBtn.addEventListener("click", cancelBulkCrawl);
 loadResultsBtn.addEventListener("click", loadBulkResults);
 
-[keywordSearch, websiteFilter, categoryFilter, dateFromFilter, dateToFilter].forEach((node) => {
+[keywordSearch, websiteFilter, categoryFilter].forEach((node) => {
   node.addEventListener("input", renderResults);
   node.addEventListener("change", renderResults);
+});
+
+[dateFromFilter, dateToFilter].forEach((node) => {
+  node.addEventListener("input", () => { renderResults(); renderDateFilterBanner(); });
+  node.addEventListener("change", () => { renderResults(); renderDateFilterBanner(); });
 });
 
 exportJsonButton.addEventListener("click", exportJson);
@@ -714,4 +721,11 @@ exportCsvButton.addEventListener("click", exportCsv);
 exportExcelButton.addEventListener("click", exportExcel);
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+document.getElementById("dateFilterBannerClear").addEventListener("click", () => {
+  dateFromFilter.value = "";
+  dateToFilter.value = "";
+  renderResults();
+  renderDateFilterBanner();
+});
+
 loadCatalog();

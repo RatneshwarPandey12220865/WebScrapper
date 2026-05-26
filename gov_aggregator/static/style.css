@@ -810,6 +810,29 @@ button, input, select, textarea { font: inherit; }
   opacity: 0.8;
 }
 
+/* Custom filter active — orange accent */
+.date-filter-banner[data-custom="true"] {
+  background: var(--amber-100);
+  border-color: #fcd34d;
+  color: var(--amber-600);
+}
+
+.date-banner-clear {
+  margin-left: 4px;
+  padding: 0 5px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity var(--transition), background var(--transition);
+}
+.date-banner-clear:hover { opacity: 1; background: rgba(0,0,0,.08); }
+
 /* ── Multi-PDF row grouping ───────────────────────────────────────────────── */
 .row--group-first td { border-bottom: none !important; }
 .row--group-mid   td { border-top: none !important; border-bottom: none !important; padding-top: 2px; padding-bottom: 2px; }
