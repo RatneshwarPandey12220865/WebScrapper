@@ -307,8 +307,7 @@ def _preprocess_image(pil_image: Any) -> Any:
         # Denoise
         denoised = _cv2.fastNlMeansDenoising(binary, h=10)
 
-        from PIL import Image
-        return Image.fromarray(denoised)
+        return _PILImage.fromarray(denoised)
     except Exception:
         return pil_image
 
@@ -479,11 +478,17 @@ async def extract_pdf_dates_batch(urls: list[str]) -> dict[str, date | None]:
         async with semaphore:
             return url, await extract_pdf_date(url)
 
-    results = await asyncio.gather(*[_bounded(u) for u in urls], return_exceptions=False)
-    return dict(results)
+    raw = await asyncio.gather(*[_bounded(u) for u in urls], return_exceptions=True)
+    out: dict[str, date | None] = {}
+    for item in raw:
+        if isinstance(item, Exception):
+            logger.warning("PDF date batch extraction error: %s", item)
+        else:
+            url, result = item
+            out[url] = result
+    return out
 
 
 def flush_cache() -> None:
     """Force-write the cache to disk immediately."""
-    if _cache_dirty or True:
-        _save_cache()
+    _save_cache()

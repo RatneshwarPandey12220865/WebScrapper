@@ -50,6 +50,7 @@ const selectedSites = new Set();
 
 // Bulk crawl state
 let activeBulkJobId = null;
+let activeBulkJobStatus = null;   // tracks actual job status string
 let pollInterval = null;
 
 // ── Toast notifications ────────────────────────────────────────────────────
@@ -622,6 +623,7 @@ function openBulkModal() {
 
 function closeBulkModal() {
   bulkCrawlModal.style.display = "none";
+  activeBulkJobStatus = null;
   stopPoll();
 }
 
@@ -640,6 +642,7 @@ function updateModalProgress(job) {
   statTotal.textContent = job.sites_total ?? "—";
   statElapsed.textContent = `${job.elapsed_seconds ?? 0}s`;
   statStatus.textContent = job.status;
+  activeBulkJobStatus = job.status;   // keep reliable copy outside DOM
 
   if (job.status === "running") {
     modalSubtitle.textContent = `Crawling ${job.sites_done} of ${job.sites_total} sites…`;
@@ -730,7 +733,7 @@ async function crawlAllSites() {
 }
 
 async function cancelBulkCrawl() {
-  const isDone = ["done", "cancelled", "failed"].includes(statStatus.textContent);
+  const isDone = ["done", "cancelled", "failed"].includes(activeBulkJobStatus);
   if (isDone) { closeBulkModal(); crawlAllButton.disabled = false; return; }
   if (!activeBulkJobId) { closeBulkModal(); return; }
   try {
