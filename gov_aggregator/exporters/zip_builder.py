@@ -6,7 +6,6 @@ bundles them together with the summary Excel into one ZIP archive.
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
 import zipfile
 from datetime import datetime, timezone

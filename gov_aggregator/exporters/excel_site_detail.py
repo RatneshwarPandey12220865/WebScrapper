@@ -126,7 +126,6 @@ def _write_site_sheet(
     border = _thin_border()
     navy_fill = _fill(_NAVY)
     navy_font = Font(bold=True, color="FFFFFF", size=11)
-    val_font  = Font(size=11)
 
     # ── Header block rows 1-5 ────────────────────────────────────────────────
     last_col = len(_COL_HEADERS)

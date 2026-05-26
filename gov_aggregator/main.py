@@ -296,17 +296,15 @@ async def export_all(
     date_from = date_from or job.get("date_from")
     date_to   = date_to   or job.get("date_to")
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    df_label = (date_from or "open").replace("-", "")
-    dt_label = (date_to   or "open").replace("-", "")
-    zip_filename = f"KSyder_Export_{df_label}_to_{dt_label}_{ts}.zip"
-
     zip_path = await generate_all_site_files(
         crawl_result=job["result"],
         date_from=date_from,
         date_to=date_to,
         output_dir=str(EXPORTS_DIR),
     )
+
+    # Derive filename from the actual path so timestamp always matches
+    zip_filename = Path(zip_path).name
 
     return FileResponse(
         path=zip_path,
