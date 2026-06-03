@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KSyder — Government Intelligence Platform</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
 
@@ -29,6 +29,20 @@
         <span class="topnav__sub">Government Intelligence Platform</span>
       </div>
     </div>
+    <!-- Topnav centre: export shortcuts -->
+    <div class="topnav__center">
+      <div class="tnav-export">
+        <button id="tnavSummaryBtn" class="btn btn--tnav-export" type="button" title="Download Summary Excel" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+          Summary
+        </button>
+        <button id="tnavZipBtn" class="btn btn--tnav-zip" type="button" title="Download All Sites ZIP" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+          All Sites
+        </button>
+      </div>
+    </div>
+
     <div class="topnav__actions">
       <span id="catalogSummary" class="topnav__stat">Loading catalog…</span>
       <button id="crawlButton" class="btn btn--primary" type="button">
@@ -148,31 +162,121 @@
 
       <!-- Date Range Widget -->
       <div class="date-range-widget" id="dateRangeWidget">
-        <div class="drw__left">
-          <svg class="drw__icon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
-          </svg>
-          <span class="drw__label">Date Range</span>
-        </div>
+        <svg class="drw__icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+        </svg>
+        <span class="drw__label">Date Range</span>
+        <div class="drw__divider"></div>
         <div class="drw__controls">
-          <div class="drw__select-wrap">
-            <select id="drwPresetSelect" class="drw__select">
-              <option value="alltime">All Time (from Jan 2026)</option>
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="last7">Last 7 Days</option>
-              <option value="thismonth">This Month</option>
-              <option value="custom">Custom Range…</option>
-            </select>
-            <svg class="drw__select-chevron" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
-            </svg>
-          </div>
-          <div class="drw__custom" id="drwCustomRow" style="display:none">
-            <input id="drwFrom" type="date" class="drw__input" title="From date">
-            <span class="drw__sep">→</span>
-            <input id="drwTo" type="date" class="drw__input" title="To date">
-            <button id="drwApply" class="btn btn--primary btn--sm" type="button">Apply</button>
+
+          <!-- Custom dropdown -->
+          <div class="drw__dropdown" id="drwDropdown">
+            <button class="drw__trigger" id="drwTrigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+              <span id="drwTriggerLabel">All Time (from Jan 2026)</span>
+              <svg class="drw__chevron" width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </button>
+
+            <!-- View 1 : Preset list -->
+            <ul class="drw__menu" id="drwMenu" role="listbox" aria-label="Date range preset">
+              <li class="drw__option drw__option--active" data-value="alltime" role="option">
+                <span class="drw__option-icon">∞</span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">All Time</span>
+                  <span class="drw__option-sub">From Jan 2026 onwards</span>
+                </div>
+              </li>
+              <li class="drw__option" data-value="today" role="option">
+                <span class="drw__option-icon">⬤</span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">Today</span>
+                  <span class="drw__option-sub" id="drwSubToday"></span>
+                </div>
+              </li>
+              <li class="drw__option" data-value="yesterday" role="option">
+                <span class="drw__option-icon">◑</span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">Yesterday</span>
+                  <span class="drw__option-sub" id="drwSubYesterday"></span>
+                </div>
+              </li>
+              <li class="drw__option" data-value="last7" role="option">
+                <span class="drw__option-icon">◷</span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">Last 7 Days</span>
+                  <span class="drw__option-sub" id="drwSubLast7"></span>
+                </div>
+              </li>
+              <li class="drw__option" data-value="thismonth" role="option">
+                <span class="drw__option-icon">▦</span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">This Month</span>
+                  <span class="drw__option-sub" id="drwSubMonth"></span>
+                </div>
+              </li>
+              <li class="drw__option drw__option--custom" data-value="custom" role="option">
+                <span class="drw__option-icon">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                </span>
+                <div class="drw__option-body">
+                  <span class="drw__option-label">Custom Range</span>
+                  <span class="drw__option-sub">Pick dates on a calendar</span>
+                </div>
+                <svg class="drw__option-arrow" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+              </li>
+            </ul>
+
+            <!-- View 2 : Inline calendar (shown when Custom Range selected) -->
+            <div class="drw__cal-panel" id="drwCalPanel" style="display:none" role="dialog" aria-label="Custom date range">
+
+              <!-- Calendar header bar -->
+              <div class="drw__cal-topbar">
+                <button class="drw__cal-back" id="drwCalBack" type="button" title="Back to presets">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+                </button>
+                <span class="drw__cal-title">Custom Date Range</span>
+              </div>
+
+              <!-- Typed / quick-entry inputs -->
+              <div class="drw__cal-inputs">
+                <div class="drw__cal-input-wrap">
+                  <label class="drw__cal-input-label">From</label>
+                  <input id="drwFrom" type="date" class="drw__cal-input" title="Start date">
+                </div>
+                <span class="drw__cal-input-sep">→</span>
+                <div class="drw__cal-input-wrap">
+                  <label class="drw__cal-input-label">To</label>
+                  <input id="drwTo" type="date" class="drw__cal-input" title="End date">
+                </div>
+              </div>
+
+              <!-- Month navigation -->
+              <div class="drw__cal-nav">
+                <button class="drw__cal-nav-btn" id="calPrev" type="button">&#8249;</button>
+                <span class="drw__cal-month" id="calMonthLabel"></span>
+                <button class="drw__cal-nav-btn" id="calNext" type="button">&#8250;</button>
+              </div>
+
+              <!-- Day-of-week header -->
+              <div class="drw__cal-dow">
+                <span>Su</span><span>Mo</span><span>Tu</span>
+                <span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+              </div>
+
+              <!-- Day cells (populated by JS) -->
+              <div class="drw__cal-grid" id="calGrid"></div>
+
+              <!-- Footer -->
+              <div class="drw__cal-footer">
+                <span class="drw__cal-hint" id="calHint">Click a start date</span>
+                <div class="drw__cal-actions">
+                  <button class="btn btn--ghost btn--sm" id="calClear" type="button">Clear</button>
+                  <button class="btn btn--primary btn--sm" id="drwApply" type="button">Apply</button>
+                </div>
+              </div>
+
+            </div><!-- /drw__cal-panel -->
           </div>
         </div>
         <div class="drw__badge" id="drwActive"></div>
@@ -305,6 +409,6 @@
     </div>
   </div>
 
-  <script src="/static/script.js" defer></script>
+  <script src="/static/script.js?v=10" defer></script>
 </body>
 </html>

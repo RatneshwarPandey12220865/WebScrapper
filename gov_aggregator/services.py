@@ -340,6 +340,7 @@ def _status_payload(
     from_cache: bool = False,
     data_since: str | None = None,
     crawl_time: str | None = None,
+    ssl_bypassed: bool = False,
 ) -> dict[str, Any]:
     return {
         "site_key": site_key,
@@ -352,6 +353,7 @@ def _status_payload(
         "from_cache": from_cache,
         "data_since": data_since,
         "crawl_time": crawl_time,
+        "ssl_bypassed": ssl_bypassed,
     }
 
 
@@ -394,13 +396,14 @@ def _clean_title(title: str | None) -> str:
 async def _maybe_extract_pdf_dates(
     config: SiteConfig,
     shaped_items: list[dict[str, Any]],
+    *,
+    force: bool = False,
 ) -> list[dict[str, Any]]:
     """Post-shaping step: fill in publish_date for PDF items missing a date.
 
-    Only runs when config.extract_pdf_dates is True. Uses the 3-tier pipeline
-    in pdf_date_extractor. Items are updated in-place and returned.
+    Runs when config.extract_pdf_dates is True or force=True (per-request override).
     """
-    if not config.extract_pdf_dates:
+    if not config.extract_pdf_dates and not force:
         return shaped_items
 
     from gov_aggregator.scrapers.pdf_date_extractor import (
@@ -442,6 +445,7 @@ async def crawl_site_keys(
     use_cache: bool = True,
     date_from: str | None = None,
     date_to: str | None = None,
+    pdf_date_sites: set[str] = frozenset(),
     _job_id: str | None = None,
 ) -> dict[str, Any]:
     from gov_aggregator.scrapers.custom import CUSTOM_CRAWLERS
@@ -503,7 +507,10 @@ async def crawl_site_keys(
                     _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                     for item in custom_items
                 ]
-                shaped_items = await _maybe_extract_pdf_dates(config, shaped_items)
+                shaped_items = await _maybe_extract_pdf_dates(
+                    config, shaped_items,
+                    force=config.site_key in pdf_date_sites,
+                )
                 _store_cache(config.site_key, shaped_items)
                 items.extend(shaped_items)
                 statuses.append(
@@ -552,20 +559,25 @@ async def crawl_site_keys(
                 _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
                 for item in result.items
             ]
-            shaped_items = await _maybe_extract_pdf_dates(config, shaped_items)
+            shaped_items = await _maybe_extract_pdf_dates(
+                config, shaped_items,
+                force=config.site_key in pdf_date_sites,
+            )
             _store_cache(config.site_key, shaped_items)
             items.extend(shaped_items)
+            ssl_bypassed = getattr(result, "ssl_bypassed", False)
             statuses.append(
                 _status_payload(
                     site_key=requested_site_key,
                     site_name=site["name"],
                     ministry=config.ministry,
                     state="completed",
-                    message="Crawl completed successfully.",
+                    message="Crawl completed successfully." if not ssl_bypassed else "Crawl completed (SSL verification bypassed).",
                     item_count=len(shaped_items),
                     new_count=sum(1 for item in shaped_items if item["is_new"]),
                     data_since=_effective_data_since(config),
                     crawl_time=crawl_time,
+                    ssl_bypassed=ssl_bypassed,
                 )
             )
 

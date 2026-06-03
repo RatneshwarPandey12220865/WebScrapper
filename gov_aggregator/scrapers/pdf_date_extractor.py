@@ -1,13 +1,45 @@
-"""PDF date extraction — 3-tier pipeline.
+"""Document date extraction — universal pipeline.
 
-Tier 1  : PDF metadata + pypdf text extraction (digital PDFs)
-Tier 2  : Tesseract OCR on page-1 header crop (scanned PDFs, clean)
-Tier 3  : OpenCV preprocessing + Tesseract OCR (noisy/skewed scans)
-Free    : Filename regex + URL path regex (zero network cost, run first)
+Supports: PDF, DOCX, TXT, HTML, and raw text strings.
+Format is auto-detected from magic bytes; filename hint improves accuracy.
 
-All tiers are optional-dependency-guarded — the module works with only
-pypdf installed; OCR tiers activate when pdf2image / pytesseract / cv2
-are also present.
+Extraction pipeline (PDFs):
+
+  Stage 0 — FREE (no download):
+    • Filename regex
+    • URL path regex
+
+  Stage 1 — PDF text via PyMuPDF (fitz) [preferred] or pypdf [fallback]:
+    • Metadata: CreationDate / ModDate
+    • Full first-page text extraction (much better than pypdf for govt docs)
+
+  Stage 2 — OCR for scanned PDFs:
+    • Tesseract on top-30% header crop
+    • OpenCV preprocessing + Tesseract (noisy/skewed scans)
+
+Date scoring strategy:
+  Every candidate date gets a score:
+    +10  — found near a publication keyword ("dated", "issued on", etc.)
+    +8   — found in the top header region (first ~300 chars of page text)
+    +5   — appears more than once in the document
+    +3   — from PDF metadata
+    +2   — from filename / URL path
+    -10  — future date (> today)
+    -5   — very old date (< 2020)
+
+  The highest-scoring candidate is returned.
+
+Date extraction:
+  Primary  — datefinder (NLP-based, handles almost any natural-language format)
+  Fallback — custom regex patterns (handles compact / ambiguous Indian formats
+             like "12052026" that datefinder misses)
+
+Public API (unchanged):
+  extract_date_from_text(text)          → date | None
+  extract_date_from_bytes(content, ...)  → date | None
+  extract_pdf_date(url)                 → date | None  (async, cached)
+  extract_pdf_dates_batch(urls)         → dict         (async, concurrent)
+  flush_cache()                         → None
 """
 from __future__ import annotations
 
@@ -15,6 +47,7 @@ import asyncio
 import json
 import logging
 import re
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,8 +58,23 @@ import httpx
 logger = logging.getLogger("gov_aggregator.pdf_date_extractor")
 
 # ── Optional heavy dependencies ────────────────────────────────────────────
+
 try:
-    from pypdf import PdfReader
+    import fitz as _fitz          # PyMuPDF
+    _FITZ_OK = True
+except ImportError:
+    _FITZ_OK = False
+    logger.debug("PyMuPDF (fitz) not installed — falling back to pypdf")
+
+try:
+    import datefinder as _datefinder
+    _DATEFINDER_OK = True
+except ImportError:
+    _DATEFINDER_OK = False
+    logger.debug("datefinder not installed — using regex-only date extraction")
+
+try:
+    from pypdf import PdfReader as _PdfReader
     import io as _io
     _PYPDF_OK = True
 except ImportError:
@@ -56,10 +104,26 @@ except ImportError:
     _CV2_OK = False
     logger.debug("opencv-python not installed — preprocessing tier disabled")
 
+
+# Surface missing *primary* extractors loudly — these are listed in
+# requirements.txt but are easy to forget when re-creating a venv. Without them
+# the pipeline silently degrades to the weaker pypdf + regex path.
+if not _FITZ_OK:
+    logger.warning(
+        "PyMuPDF (pymupdf/fitz) is NOT installed — PDF text extraction is "
+        "degraded. Install with: pip install pymupdf"
+    )
+if not _DATEFINDER_OK:
+    logger.warning(
+        "datefinder is NOT installed — natural-language date parsing is "
+        "degraded (regex-only). Install with: pip install datefinder"
+    )
+
 # ── Cache ──────────────────────────────────────────────────────────────────
 _CACHE_PATH = Path(__file__).resolve().parent.parent / "data" / "pdf_date_cache.json"
 _cache: dict[str, Any] = {}
-_cache_dirty = 0  # count of unsaved writes
+_cache_dirty = 0
+
 
 def _load_cache() -> None:
     global _cache
@@ -69,12 +133,14 @@ def _load_cache() -> None:
         except Exception:
             _cache = {}
 
+
 def _save_cache() -> None:
     try:
         _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         _CACHE_PATH.write_text(json.dumps(_cache, indent=2), encoding="utf-8")
     except Exception as exc:
         logger.warning("Could not save pdf_date_cache.json: %s", exc)
+
 
 def _cache_put(url: str, result_date: str | None, strategy: str) -> None:
     global _cache_dirty
@@ -88,31 +154,89 @@ def _cache_put(url: str, result_date: str | None, strategy: str) -> None:
         _save_cache()
         _cache_dirty = 0
 
+
 _load_cache()
 
-# ── Date regex patterns ────────────────────────────────────────────────────
+# ── Scoring ────────────────────────────────────────────────────────────────
+
+@dataclass
+class _Candidate:
+    """A date candidate with an accumulated relevance score."""
+    d: date
+    score: int = 0
+    sources: list[str] = field(default_factory=list)
+
+    def add(self, points: int, label: str) -> "_Candidate":
+        self.score += points
+        self.sources.append(f"{label}({points:+d})")
+        return self
+
+
+# Publication-keyword scoring: lines that contain these words are very likely
+# to carry the publication date.
+_PUB_KEYWORDS = [
+    "dated", "date:", "date -", "date–", "dt.", "dtd.",
+    "published on", "publish date", "publication date",
+    "issued on", "issue date",
+    "notification date", "gazette date",
+    "release date", "released on",
+    "effective date", "circular date",
+    "signed on", "order date",
+]
+
+
+def _keyword_score(line: str) -> int:
+    """Return +10 if the line contains any publication keyword, else 0."""
+    lo = line.lower()
+    return 10 if any(k in lo for k in _PUB_KEYWORDS) else 0
+
+
+def _is_future(d: date) -> bool:
+    return d > date.today()
+
+
+def _is_very_old(d: date) -> bool:
+    return d.year < 2020
+
+
+# ── Regex patterns (fallback when datefinder unavailable / misses compact) ─
+
 _MONTHS = (
-    r"(?:January|February|March|April|May|June|July|August|September|"
+    r"(January|February|March|April|May|June|July|August|September|"
     r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 )
 
-_DATE_PATTERNS: list[tuple[str, str]] = [
-    # DD Month YYYY  — "15 May 2026", "15th May, 2026", "15 May, 2026"
+_DATE_LABEL = (
+    r"(?:"
+    r"(?:issue[d]?|publication|circular|order|notification|gazette|"
+    r"office\s+order|letter|publish(?:ed)?|release[d]?|"
+    r"sign(?:ed)?|effective|ref(?:erence)?|circular)\s+"
+    r")?"
+    r"(?:dat(?:ed?|\.)|dtd?\.?)"
+    r"(?:\s+this)?"
+    r"\s*[-:/–—.]*\s*"
+)
+
+_PLACE_LABEL = r"(?:[A-Z][a-zA-Z\s]{2,25},\s*(?:the\s+)?)"
+
+_LABELLED_DATE_PATTERNS: list[tuple[str, str]] = [
+    (_DATE_LABEL + r"(\d{1,2})(?:st|nd|rd|th)?(?:\s+day\s+of)?\s+" + _MONTHS + r",?\s+(20\d{2})\b", "lbl_dmy_text"),
+    (_DATE_LABEL + _MONTHS + r"\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})\b",                        "lbl_mdy_text"),
+    (_DATE_LABEL + r"(\d{1,2})[/\-.](\d{1,2})[/\-.](20\d{2})\b",                                     "lbl_numeric"),
+    (_DATE_LABEL + r"(20\d{2})[/\-.](\d{2})[/\-.](\d{2})\b",                                         "lbl_iso"),
+    (_PLACE_LABEL + r"(\d{1,2})(?:st|nd|rd|th)?\s+" + _MONTHS + r",?\s+(20\d{2})\b",                 "lbl_dmy_text"),
+    (_PLACE_LABEL + _MONTHS + r"\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})\b",                       "lbl_mdy_text"),
+]
+
+_BARE_DATE_PATTERNS: list[tuple[str, str]] = [
     (r"\b(\d{1,2})(?:st|nd|rd|th)?\s+" + _MONTHS + r",?\s+(20\d{2})\b", "dmy_text"),
-    # Month DD, YYYY — "May 15, 2026"
     (r"\b" + _MONTHS + r"\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})\b", "mdy_text"),
-    # DD/MM/YYYY
-    (r"\b(\d{1,2})/(\d{1,2})/(20\d{2})\b", "dmy_slash"),
-    # DD-MM-YYYY
-    (r"\b(\d{1,2})-(\d{1,2})-(20\d{2})\b", "dmy_dash"),
-    # DD.MM.YYYY
-    (r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b", "dmy_dot"),
-    # YYYY-MM-DD
-    (r"\b(20\d{2})-(\d{2})-(\d{2})\b", "iso"),
-    # YYYY/MM/DD
-    (r"\b(20\d{2})/(\d{2})/(\d{2})\b", "iso_slash"),
-    # DDMMYYYY (compact — common in filenames)
-    (r"\b(\d{2})(\d{2})(20\d{2})\b", "compact"),
+    (r"\b(\d{1,2})/(\d{1,2})/(20\d{2})\b",                               "dmy_slash"),
+    (r"(?<!\d)(\d{1,2})-(\d{1,2})-(20\d{2})\b",                          "dmy_dash"),
+    (r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b",                             "dmy_dot"),
+    (r"\b(20\d{2})-(\d{2})-(\d{2})\b",                                   "iso"),
+    (r"\b(20\d{2})/(\d{2})/(\d{2})\b",                                   "iso_slash"),
+    (r"(?<!\d)(\d{2})(\d{2})(20\d{2})(?!\d)",                            "compact"),
 ]
 
 _MONTH_MAP = {
@@ -127,7 +251,6 @@ _MONTH_MAP = {
 def _try_date(year: int, month: int, day: int) -> date | None:
     try:
         d = date(year, month, day)
-        # Reject obviously wrong dates (future > 1 year, or before 2000)
         today = date.today()
         if d.year < 2000 or d > date(today.year + 1, today.month, today.day):
             return None
@@ -136,90 +259,261 @@ def _try_date(year: int, month: int, day: int) -> date | None:
         return None
 
 
-def _parse_dates_from_text(text: str) -> list[date]:
-    """Extract all plausible dates from a text string."""
-    found: list[date] = []
-    text_lower = text.lower()
+def _parse_one_match(m: re.Match, kind: str) -> date | None:
+    try:
+        g = m.groups()
+        if kind in ("dmy_text", "lbl_dmy_text"):
+            return _try_date(int(g[-1]), _MONTH_MAP.get(str(g[-2]).lower()[:3], 0), int(g[-3]))
+        if kind in ("mdy_text", "lbl_mdy_text"):
+            return _try_date(int(g[-1]), _MONTH_MAP.get(str(g[-3]).lower()[:3], 0), int(g[-2]))
+        if kind in ("dmy_slash", "dmy_dash", "dmy_dot"):
+            return _try_date(int(g[-1]), int(g[-2]), int(g[-3]))
+        if kind == "lbl_numeric":
+            a, b, c = int(g[-3]), int(g[-2]), int(g[-1])
+            return _try_date(a, b, c) if a >= 2000 else _try_date(c, b, a)
+        if kind in ("iso", "iso_slash", "lbl_iso"):
+            return _try_date(int(g[-3]), int(g[-2]), int(g[-1]))
+        if kind == "compact":
+            dd, mm, yyyy = int(g[0]), int(g[1]), int(g[2])
+            if 1 <= dd <= 31 and 1 <= mm <= 12:
+                return _try_date(yyyy, mm, dd)
+    except (IndexError, ValueError, AttributeError, TypeError):
+        pass
+    return None
 
-    for pattern, kind in _DATE_PATTERNS:
-        for m in re.finditer(pattern, text, re.IGNORECASE):
-            d = None
-            try:
-                if kind == "dmy_text":
-                    day, month_str, year = int(m.group(1)), m.group(2).lower()[:3], int(m.group(3))
-                    d = _try_date(year, _MONTH_MAP.get(month_str, 0), day)
-                elif kind == "mdy_text":
-                    month_str, day, year = m.group(1).lower()[:3], int(m.group(2)), int(m.group(3))
-                    d = _try_date(year, _MONTH_MAP.get(month_str, 0), day)
-                elif kind in ("dmy_slash", "dmy_dash", "dmy_dot"):
-                    day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
-                    d = _try_date(year, month, day)
-                elif kind in ("iso", "iso_slash"):
-                    year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
-                    d = _try_date(year, month, day)
-                elif kind == "compact":
-                    # DDMMYYYY — only accept if DD<=31 and MM<=12
-                    dd, mm, yyyy = int(m.group(1)), int(m.group(2)), int(m.group(3))
-                    if 1 <= dd <= 31 and 1 <= mm <= 12:
-                        d = _try_date(yyyy, mm, dd)
-            except (IndexError, ValueError):
-                pass
+
+def _regex_dates_from_text(text: str) -> list[date]:
+    """Extract dates using regex patterns — labelled patterns tried first."""
+    labelled: list[date] = []
+    for pattern, kind in _LABELLED_DATE_PATTERNS:
+        for m in re.finditer(pattern, text, re.IGNORECASE | re.UNICODE):
+            d = _parse_one_match(m, kind)
+            if d:
+                labelled.append(d)
+    if labelled:
+        return labelled
+
+    found: list[date] = []
+    for pattern, kind in _BARE_DATE_PATTERNS:
+        for m in re.finditer(pattern, text, re.IGNORECASE | re.UNICODE):
+            d = _parse_one_match(m, kind)
             if d:
                 found.append(d)
-
     return found
 
 
-def _earliest_valid(dates: list[date]) -> date | None:
-    return min(dates) if dates else None
+def _datefinder_dates_from_text(text: str) -> list[date]:
+    """
+    Use datefinder (NLP-based) to extract dates from text.
+    Returns a deduplicated list; filters invalid / far-future dates.
+    """
+    if not _DATEFINDER_OK:
+        return []
+    try:
+        today = date.today()
+        cutoff_future = date(today.year + 1, today.month, today.day)
+        seen: set[date] = set()
+        results: list[date] = []
+        for dt in _datefinder.find_dates(text, source=False, index=False):
+            d = dt.date() if hasattr(dt, "date") else dt
+            if d.year < 2000 or d > cutoff_future:
+                continue
+            if d not in seen:
+                seen.add(d)
+                results.append(d)
+        return results
+    except Exception as exc:
+        logger.debug("datefinder error: %s", exc)
+        return []
+
+
+def _clean_text(text: str) -> str:
+    """Normalise whitespace for better date parsing."""
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+# ── Core scoring engine ────────────────────────────────────────────────────
+
+def _score_candidates_from_text(
+    text: str,
+    base_score: int = 0,
+    source_label: str = "text",
+) -> list[_Candidate]:
+    """
+    Extract all date candidates from text and assign scores.
+
+    Scoring per candidate:
+      base_score    — caller-supplied (e.g. +3 for metadata, +2 for filename)
+      +10           — line containing the date has a publication keyword
+      +8            — date found in the header region (first 300 chars)
+      +5 per extra  — date appears more than once
+      -10           — future date
+      -5            — pre-2020 date
+    """
+    if not text:
+        return []
+
+    text = _clean_text(text)
+    header_text = text[:300]
+
+    # Gather raw dates from datefinder first, then regex for compact formats
+    df_dates = _datefinder_dates_from_text(text)
+    rx_dates = _regex_dates_from_text(text)
+
+    # Merge — datefinder is primary; regex fills gaps (compact / ambiguous)
+    all_dates: list[date] = []
+    seen: set[date] = set()
+    for d in df_dates + rx_dates:
+        if d not in seen:
+            seen.add(d)
+            all_dates.append(d)
+
+    if not all_dates:
+        return []
+
+    # Count occurrences of each date in the full text
+    occurrence: dict[date, int] = {}
+    for d in all_dates:
+        # Check how many times the date's ISO form or natural forms appear
+        count = len(re.findall(
+            re.escape(d.strftime("%d/%m/%Y")) + "|" +
+            re.escape(d.strftime("%d-%m-%Y")) + "|" +
+            re.escape(d.strftime("%Y-%m-%d")),
+            text
+        ))
+        occurrence[d] = max(count, 1)
+
+    # Build candidates with scores
+    candidates: list[_Candidate] = []
+    lines = text.splitlines()
+
+    for d in all_dates:
+        c = _Candidate(d=d, score=base_score, sources=[source_label])
+
+        # Future / old penalty
+        if _is_future(d):
+            c.add(-10, "future")
+        elif _is_very_old(d):
+            c.add(-5, "pre2020")
+
+        # Header bonus -- only if this specific date appears in the header region
+        header_variants = [
+            d.strftime("%d/%m/%Y"), d.strftime("%d-%m-%Y"), d.strftime("%Y-%m-%d"),
+            d.strftime("%d.%m.%Y"), f"{d.day} ", f" {d.year}",
+        ]
+        if any(v and v in header_text for v in header_variants):
+            c.add(+8, "header_region")
+
+        # Keyword bonus — scan lines for the date + keyword
+        d_str_variants = [
+            d.strftime("%d/%m/%Y"), d.strftime("%d-%m-%Y"),
+            d.strftime("%Y-%m-%d"), d.strftime("%-d %B %Y") if hasattr(d, "strftime") else "",
+            str(d.day), str(d.year),
+        ]
+        for line in lines:
+            line_lo = line.lower()
+            date_in_line = any(v and v in line for v in d_str_variants)
+            if date_in_line:
+                kw_pts = _keyword_score(line)
+                if kw_pts:
+                    c.add(kw_pts, "keyword")
+                    break
+
+        # Repetition bonus
+        if occurrence.get(d, 1) > 1:
+            c.add(+5, f"repeated×{occurrence[d]}")
+
+        candidates.append(c)
+
+    return candidates
+
+
+def _best_date(candidates: list[_Candidate]) -> date | None:
+    """Return the highest-scoring candidate's date, or None."""
+    if not candidates:
+        return None
+    best = max(candidates, key=lambda c: c.score)
+    logger.debug(
+        "Best date candidate: %s  score=%d  sources=%s",
+        best.d, best.score, best.sources,
+    )
+    return best.d
 
 
 # ── Free strategies (no download) ─────────────────────────────────────────
 
 def _date_from_filename(url: str) -> date | None:
-    """Extract date from the PDF filename segment of the URL."""
     try:
         filename = urlparse(url).path.split("/")[-1]
         filename = re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE)
-        dates = _parse_dates_from_text(filename)
-        return _earliest_valid(dates)
+        candidates = _score_candidates_from_text(
+            filename.replace("_", " ").replace("-", " "),
+            base_score=2,
+            source_label="filename",
+        )
+        return _best_date(candidates)
     except Exception:
         return None
 
 
 def _date_from_url_path(url: str) -> date | None:
-    """Extract date from directory segments of the URL path."""
     try:
         path = urlparse(url).path
-        # Match /YYYY/MM/DD/ or /YYYY/MM/ patterns
         m = re.search(r"/(20\d{2})/(\d{1,2})(?:/(\d{1,2}))?", path)
         if m:
-            year = int(m.group(1))
-            month = int(m.group(2))
+            year, month = int(m.group(1)), int(m.group(2))
             day = int(m.group(3)) if m.group(3) else 1
             return _try_date(year, month, day)
-        # Also run general date patterns against the full path
-        dates = _parse_dates_from_text(path.replace("/", " ").replace("_", " ").replace("-", " "))
-        return _earliest_valid(dates)
+        readable = path.replace("/", " ").replace("_", " ").replace("-", " ")
+        candidates = _score_candidates_from_text(readable, base_score=2, source_label="url_path")
+        return _best_date(candidates)
     except Exception:
         return None
 
 
-# ── Tier 1: PDF metadata + text (pypdf) ───────────────────────────────────
+# ── PDF text extraction — PyMuPDF (fitz) primary, pypdf fallback ───────────
 
-def _date_from_pdf_metadata(content: bytes) -> date | None:
-    """Read /CreationDate or /ModDate from PDF XMP metadata."""
-    if not _PYPDF_OK:
+def _fitz_extract_text_and_flag(content: bytes) -> tuple[str, bool]:
+    """
+    Extract text from page 1 using PyMuPDF.
+
+    PyMuPDF is significantly better than pypdf for:
+    - Multi-column government documents
+    - Hindi + English mixed text
+    - Tables and structured layouts
+    - Headers / footers
+
+    Returns (text, has_text).
+    """
+    if not _FITZ_OK:
+        return "", False
+    try:
+        doc = _fitz.open(stream=content, filetype="pdf")
+        if doc.page_count == 0:
+            return "", False
+        page = doc[0]
+        text = page.get_text("text")          # plain text, layout-aware
+        doc.close()
+        return text[:3000], len(text.strip()) > 20
+    except Exception as exc:
+        logger.debug("PyMuPDF text extraction failed: %s", exc)
+        return "", False
+
+
+def _fitz_metadata_date(content: bytes) -> date | None:
+    """Read creation/modification date from PDF metadata via PyMuPDF."""
+    if not _FITZ_OK:
         return None
     try:
-        reader = PdfReader(_io.BytesIO(content))
-        meta = reader.metadata or {}
-        for field in ("/CreationDate", "/ModDate", "CreationDate", "ModDate"):
-            raw = meta.get(field)
+        doc = _fitz.open(stream=content, filetype="pdf")
+        meta = doc.metadata or {}
+        doc.close()
+        for field in ("creationDate", "modDate"):
+            raw = meta.get(field, "")
             if not raw:
                 continue
-            raw = str(raw)
-            # PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
             m = re.match(r"D?:?(\d{4})(\d{2})(\d{2})", raw)
             if m:
                 d = _try_date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
@@ -230,12 +524,12 @@ def _date_from_pdf_metadata(content: bytes) -> date | None:
     return None
 
 
-def _extract_pdf_text_and_flag(content: bytes) -> tuple[str, bool]:
-    """Return (text_from_page1, has_text). has_text=False means scanned PDF."""
+def _pypdf_extract_text_and_flag(content: bytes) -> tuple[str, bool]:
+    """Fallback text extraction using pypdf."""
     if not _PYPDF_OK:
         return "", False
     try:
-        reader = PdfReader(_io.BytesIO(content))
+        reader = _PdfReader(_io.BytesIO(content))
         if not reader.pages:
             return "", False
         text = reader.pages[0].extract_text() or ""
@@ -244,10 +538,44 @@ def _extract_pdf_text_and_flag(content: bytes) -> tuple[str, bool]:
         return "", False
 
 
-# ── Tier 2: OCR — direct Tesseract on header crop ────────────────────────
+def _pypdf_metadata_date(content: bytes) -> date | None:
+    """Fallback: read PDF metadata via pypdf."""
+    if not _PYPDF_OK:
+        return None
+    try:
+        reader = _PdfReader(_io.BytesIO(content))
+        meta = reader.metadata or {}
+        for field in ("/CreationDate", "/ModDate", "CreationDate", "ModDate"):
+            raw = meta.get(field)
+            if not raw:
+                continue
+            m = re.match(r"D?:?(\d{4})(\d{2})(\d{2})", str(raw))
+            if m:
+                d = _try_date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                if d:
+                    return d
+    except Exception:
+        pass
+    return None
+
+
+def _extract_text_and_flag(content: bytes) -> tuple[str, bool]:
+    """Try PyMuPDF first, fall back to pypdf."""
+    if _FITZ_OK:
+        return _fitz_extract_text_and_flag(content)
+    return _pypdf_extract_text_and_flag(content)
+
+
+def _extract_metadata_date(content: bytes) -> date | None:
+    """Try PyMuPDF first, fall back to pypdf."""
+    if _FITZ_OK:
+        return _fitz_metadata_date(content)
+    return _pypdf_metadata_date(content)
+
+
+# ── OCR pipeline ───────────────────────────────────────────────────────────
 
 def _ocr_image(pil_image: Any) -> str:
-    """Run Tesseract on a PIL image and return extracted text."""
     if not _TESSERACT_OK:
         return ""
     try:
@@ -257,101 +585,95 @@ def _ocr_image(pil_image: Any) -> str:
 
 
 def _crop_header(pil_image: Any) -> Any:
-    """Crop the top 30% of an image (where dates usually live in govt docs)."""
+    """Crop top 30% — publication dates live in the header of govt documents."""
     w, h = pil_image.size
     return pil_image.crop((0, 0, w, int(h * 0.30)))
 
 
-def _date_from_ocr_direct(page_image: Any) -> date | None:
-    """Tier 2: OCR on cropped header, no preprocessing."""
-    header = _crop_header(page_image)
-    text = _ocr_image(header)
-    if not text:
-        return None
-    dates = _parse_dates_from_text(text)
-    return _earliest_valid(dates)
-
-
-# ── Tier 3: OpenCV preprocessing + OCR ───────────────────────────────────
-
 def _preprocess_image(pil_image: Any) -> Any:
-    """Deskew, binarize, and denoise a PIL image using OpenCV."""
+    """Deskew + binarize + denoise for noisy scanned documents."""
     if not _CV2_OK:
         return pil_image
     try:
         img = _np.array(pil_image.convert("RGB"))
         gray = _cv2.cvtColor(img, _cv2.COLOR_RGB2GRAY)
-
-        # Adaptive threshold — handles uneven lighting from scanner
         binary = _cv2.adaptiveThreshold(
             gray, 255,
             _cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             _cv2.THRESH_BINARY, 31, 10,
         )
-
-        # Deskew via minimum bounding rect of dark pixels
         coords = _np.column_stack(_np.where(binary < 128))
         if len(coords) > 100:
             rect = _cv2.minAreaRect(coords)
             angle = rect[-1]
             if angle < -45:
                 angle += 90
-            (h, w) = binary.shape
-            M = _cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+            h2, w2 = binary.shape
+            M = _cv2.getRotationMatrix2D((w2 / 2, h2 / 2), angle, 1.0)
             binary = _cv2.warpAffine(
-                binary, M, (w, h),
+                binary, M, (w2, h2),
                 flags=_cv2.INTER_CUBIC,
                 borderMode=_cv2.BORDER_REPLICATE,
             )
-
-        # Denoise
         denoised = _cv2.fastNlMeansDenoising(binary, h=10)
-
         return _PILImage.fromarray(denoised)
     except Exception:
         return pil_image
 
 
-def _date_from_ocr_preprocessed(page_image: Any) -> date | None:
-    """Tier 3: OpenCV preprocess header, then OCR."""
+def _date_from_ocr(page_image: Any, preprocess: bool = False) -> date | None:
+    """Run OCR on the header crop and extract the best-scored date."""
     header = _crop_header(page_image)
-    cleaned = _preprocess_image(header)
-    text = _ocr_image(cleaned)
+    if preprocess and _CV2_OK:
+        header = _preprocess_image(header)
+    text = _ocr_image(header)
     if not text:
         return None
-    dates = _parse_dates_from_text(text)
-    return _earliest_valid(dates)
+    candidates = _score_candidates_from_text(text, base_score=0, source_label="ocr")
+    return _best_date(candidates)
 
 
 # ── PDF download helpers ───────────────────────────────────────────────────
 
-async def _download_bytes(url: str, max_bytes: int = 65_536) -> bytes | None:
-    """Download the first max_bytes of a URL. Returns None on failure."""
+async def _download_bytes(url: str, max_bytes: int = 10_485_760) -> bytes | None:
+    """Download a document for parsing.
+
+    IMPORTANT: we must NOT fetch only a leading byte-range. A PDF's
+    cross-reference table and EOF marker live at the *end* of the file, so a
+    truncated download (e.g. the first 64 KB) cannot be parsed by PyMuPDF or
+    pypdf -- it fails with "EOF marker not found". We therefore stream the whole
+    file, stopping only if it exceeds ``max_bytes`` (default 10 MB), in which
+    case we return None rather than a corrupt partial document.
+    """
     try:
-        headers = {"Range": f"bytes=0-{max_bytes - 1}"}
-        async with httpx.AsyncClient(verify=False, timeout=15.0, follow_redirects=True) as client:
-            r = await client.get(url, headers=headers)
-            if r.status_code in (200, 206):
-                return r.content
+        async with httpx.AsyncClient(verify=False, timeout=30.0, follow_redirects=True) as client:
+            async with client.stream("GET", url) as r:
+                if r.status_code != 200:
+                    return None
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in r.aiter_bytes():
+                    chunks.append(chunk)
+                    total += len(chunk)
+                    if total > max_bytes:
+                        logger.debug("PDF exceeds %d bytes, skipping: %s", max_bytes, url)
+                        return None
+                return b"".join(chunks)
     except Exception as exc:
         logger.debug("PDF download failed (%s): %s", url, exc)
     return None
 
 
-async def _download_full_first_page(url: str) -> bytes | None:
-    """Download enough of the PDF to render page 1 (up to 2 MB)."""
-    try:
-        async with httpx.AsyncClient(verify=False, timeout=30.0, follow_redirects=True) as client:
-            r = await client.get(url)
-            if r.status_code == 200:
-                return r.content[:2_097_152]  # 2 MB cap
-    except Exception as exc:
-        logger.debug("Full PDF download failed (%s): %s", url, exc)
-    return None
+async def _download_full_first_page(url: str, max_bytes: int = 10_485_760) -> bytes | None:
+    """Download the full document for OCR rendering.
+
+    Like ``_download_bytes``, this must return a complete file -- pdf2image /
+    poppler also need a valid trailer to render any page.
+    """
+    return await _download_bytes(url, max_bytes=max_bytes)
 
 
 def _render_page1(content: bytes) -> Any | None:
-    """Convert page 1 of PDF bytes to a PIL image."""
     if not _PDF2IMAGE_OK:
         return None
     try:
@@ -366,14 +688,21 @@ def _render_page1(content: bytes) -> Any | None:
 
 async def extract_pdf_date(url: str) -> date | None:
     """
-    Try to extract a publication date from a government PDF.
-    Returns a date object or None if all strategies fail.
+    Extract a publication date from a government PDF/document URL.
+
+    Priority order (first success wins):
+      1. Filename regex (free)
+      2. URL path regex (free)
+      3. PDF metadata (fitz > pypdf)
+      4. Page-1 text extraction (fitz > pypdf) + scored date selection
+      5. OCR on header crop (scanned PDFs)
+      6. OCR with OpenCV preprocessing (noisy/skewed scans)
+
     Results are cached to data/pdf_date_cache.json.
     """
     if not url:
         return None
 
-    # Check cache first
     cached = _cache.get(url)
     if cached is not None:
         raw = cached.get("date")
@@ -382,12 +711,12 @@ async def extract_pdf_date(url: str) -> date | None:
                 return date.fromisoformat(raw)
             except ValueError:
                 pass
-        return None  # cached as "no date found"
+        return None
 
     result: date | None = None
     strategy = "none"
 
-    # ── Free strategies (no network cost) ─────────────────────────────────
+    # Stage 0 — free strategies
     result = _date_from_filename(url)
     if result:
         strategy = "filename"
@@ -402,41 +731,43 @@ async def extract_pdf_date(url: str) -> date | None:
         logger.debug("PDF date via %s: %s → %s", strategy, url, result)
         return result
 
-    # ── Download PDF header (first 64 KB) ─────────────────────────────────
-    content = await _download_bytes(url, max_bytes=65_536)
+    # Stage 1 — download the full document for parsing.
+    # NOTE: must download the WHOLE file, not a leading slice — a PDF's xref
+    # table and EOF marker live at the end, so a truncated download cannot be
+    # parsed ("EOF marker not found"). Use the default 10 MB cap.
+    content = await _download_bytes(url)
     if not content:
         _cache_put(url, None, "download_failed")
         return None
 
-    # ── Tier 1a: PDF metadata ──────────────────────────────────────────────
-    result = _date_from_pdf_metadata(content)
+    # Stage 1a — PDF metadata
+    result = _extract_metadata_date(content)
     if result:
         strategy = "pdf_metadata"
         _cache_put(url, result.isoformat(), strategy)
         logger.debug("PDF date via %s: %s → %s", strategy, url, result)
         return result
 
-    # ── Tier 1b: pypdf text extraction ────────────────────────────────────
-    text, has_text = _extract_pdf_text_and_flag(content)
+    # Stage 1b — page-1 text with full scoring
+    text, has_text = _extract_text_and_flag(content)
     if has_text:
-        dates = _parse_dates_from_text(text)
-        result = _earliest_valid(dates)
+        candidates = _score_candidates_from_text(text, base_score=0, source_label="pdf_text")
+        result = _best_date(candidates)
         if result:
-            strategy = "pdf_text"
+            strategy = "pdf_text_scored"
             _cache_put(url, result.isoformat(), strategy)
             logger.debug("PDF date via %s: %s → %s", strategy, url, result)
             return result
-        # Digital PDF but no date in header text — skip OCR (won't help)
+        # Digital PDF but no date in header text — OCR will not help
         _cache_put(url, None, "pdf_text_no_date")
         return None
 
-    # ── Scanned PDF — need OCR ─────────────────────────────────────────────
+    # Stage 2 — scanned PDF → OCR
     if not (_PDF2IMAGE_OK and _TESSERACT_OK):
         logger.debug("Scanned PDF but OCR deps not installed, skipping: %s", url)
         _cache_put(url, None, "ocr_unavailable")
         return None
 
-    # Download more content for image rendering
     full_content = await _download_full_first_page(url)
     if not full_content:
         _cache_put(url, None, "ocr_download_failed")
@@ -447,24 +778,23 @@ async def extract_pdf_date(url: str) -> date | None:
         _cache_put(url, None, "ocr_render_failed")
         return None
 
-    # ── Tier 2: Direct OCR on header crop ─────────────────────────────────
-    result = _date_from_ocr_direct(page_image)
+    # Stage 2a — direct OCR on header crop
+    result = _date_from_ocr(page_image, preprocess=False)
     if result:
-        strategy = "ocr_tier2"
+        strategy = "ocr_direct"
         _cache_put(url, result.isoformat(), strategy)
         logger.debug("PDF date via %s: %s → %s", strategy, url, result)
         return result
 
-    # ── Tier 3: OpenCV preprocessing + OCR ───────────────────────────────
+    # Stage 2b — OpenCV preprocessing + OCR
     if _CV2_OK:
-        result = _date_from_ocr_preprocessed(page_image)
+        result = _date_from_ocr(page_image, preprocess=True)
         if result:
-            strategy = "ocr_tier3_cv2"
+            strategy = "ocr_preprocessed"
             _cache_put(url, result.isoformat(), strategy)
             logger.debug("PDF date via %s: %s → %s", strategy, url, result)
             return result
 
-    # ── All strategies exhausted ───────────────────────────────────────────
     logger.debug("PDF date extraction failed (all strategies): %s", url)
     _cache_put(url, None, "exhausted")
     return None
@@ -484,9 +814,131 @@ async def extract_pdf_dates_batch(urls: list[str]) -> dict[str, date | None]:
         if isinstance(item, Exception):
             logger.warning("PDF date batch extraction error: %s", item)
         else:
-            url, result = item
-            out[url] = result
+            url, res = item
+            out[url] = res
     return out
+
+
+# ── Universal bytes extractor (PDF / DOCX / TXT / HTML) ───────────────────
+
+def _sniff_format(content: bytes, filename: str = "") -> str:
+    if content[:4] == b"%PDF":
+        return "pdf"
+    if content[:2] == b"PK":
+        fname_lower = filename.lower()
+        if fname_lower.endswith(".docx"):
+            return "docx"
+        if fname_lower.endswith(".xlsx"):
+            return "xlsx"
+        return "zip"
+    if content[:4] == b"\xd0\xcf\x11\xe0":
+        return "doc"
+    stripped = content[:512].lstrip()
+    if stripped.startswith(b"<?xml") or stripped.startswith(b"<html") or stripped.startswith(b"<!DOCTYPE"):
+        return "html"
+    return "text"
+
+
+def _text_from_docx(content: bytes) -> str:
+    try:
+        import io
+        import zipfile
+        import xml.etree.ElementTree as ET
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            names = zf.namelist()
+            texts: list[str] = []
+            targets = [n for n in names if re.match(r"word/document\d*\.xml", n)]
+            if not targets:
+                targets = ["word/document.xml"] if "word/document.xml" in names else []
+            for target in targets:
+                try:
+                    xml_bytes = zf.read(target)
+                    root = ET.fromstring(xml_bytes)
+                    parts = [
+                        node.text or ""
+                        for node in root.iter(
+                            "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"
+                        )
+                    ]
+                    texts.append(" ".join(parts))
+                except Exception:
+                    pass
+            return "\n".join(texts)
+    except Exception as exc:
+        logger.debug("DOCX text extraction failed: %s", exc)
+        return ""
+
+
+def _text_from_html(content: bytes) -> str:
+    try:
+        from bs4 import BeautifulSoup
+        return BeautifulSoup(content, "html.parser").get_text(separator=" ")
+    except ImportError:
+        text = content.decode("utf-8", errors="replace")
+        return re.sub(r"<[^>]+>", " ", text)
+
+
+def extract_date_from_bytes(content: bytes, filename: str = "") -> date | None:
+    """
+    Extract a publication date from raw file bytes.
+
+    Supports PDF, DOCX, DOC, TXT, HTML — format is auto-detected.
+    Uses the full scoring pipeline for PDFs; regex + datefinder for others.
+    """
+    if not content:
+        return None
+
+    fmt = _sniff_format(content, filename)
+    logger.debug("extract_date_from_bytes: format=%s filename=%r len=%d", fmt, filename, len(content))
+
+    if fmt == "pdf":
+        d = _extract_metadata_date(content)
+        if d:
+            return d
+        text, has_text = _extract_text_and_flag(content)
+        if has_text:
+            candidates = _score_candidates_from_text(text, base_score=0, source_label="bytes_pdf")
+            return _best_date(candidates)
+        return None
+
+    if fmt == "docx":
+        text = _text_from_docx(content)
+        if text:
+            candidates = _score_candidates_from_text(text, base_score=0, source_label="docx")
+            return _best_date(candidates)
+        return None
+
+    if fmt == "html":
+        text = _text_from_html(content)
+        if text:
+            candidates = _score_candidates_from_text(text[:4000], base_score=0, source_label="html")
+            return _best_date(candidates)
+        return None
+
+    for enc in ("utf-8-sig", "utf-8", "latin-1"):
+        try:
+            text = content.decode(enc)
+            break
+        except UnicodeDecodeError:
+            text = ""
+    if text:
+        candidates = _score_candidates_from_text(text[:8000], base_score=0, source_label="plaintext")
+        return _best_date(candidates)
+
+    return None
+
+
+def extract_date_from_text(text: str) -> date | None:
+    """
+    Extract the most likely publication date from an arbitrary string.
+
+    Uses datefinder (NLP-based) + regex patterns + keyword scoring to return
+    the highest-confidence date candidate. Returns None if no date found.
+    """
+    if not text:
+        return None
+    candidates = _score_candidates_from_text(text, base_score=0, source_label="text")
+    return _best_date(candidates)
 
 
 def flush_cache() -> None:

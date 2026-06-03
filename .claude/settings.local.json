@@ -18,7 +18,12 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(gh repo *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\pande\\\\Desktop\\\\a\\\\KPMG\\\\KSyder\\\\kspyder2.0 - Copy \\(6\\) - Copy\" -Recurse -Force)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-List)",
+      "PowerShell(\\(Get-ChildItem \"C:\\\\Users\\\\pande\\\\Desktop\\\\a\\\\KPMG\\\\KSyder\\\\kspyder2.0 - Copy \\(6\\) - Copy\" -Depth 2 -Force | Where-Object {$_.PSIsContainer} | ForEach-Object { \"[$\\($_.Name\\)]\" }\\) -join \"`n\")",
+      "WebFetch(domain:jerc.mizoram.gov.in)"
     ]
   }
 }

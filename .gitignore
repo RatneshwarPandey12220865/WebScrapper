@@ -10,3 +10,11 @@ build/
 # Phase 3/4 — generated Excel/ZIP exports (keep folder, ignore contents)
 exports/*.xlsx
 exports/*.zip
+
+# Test + editor cache junk
+.pytest_cache/
+pytest-cache-files-*/
+*.bak
+
+# Phase 2 — PDF date cache (regenerated at runtime; stores transient failures)
+gov_aggregator/data/pdf_date_cache.json

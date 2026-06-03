@@ -11,7 +11,11 @@ requests==2.32.3
 openpyxl>=3.1.0
 
 # Phase 2 — PDF date extraction
-# Tier 1: digital PDF metadata + text (required)
+# Primary text extraction — much better than pypdf for govt docs
+PyMuPDF>=1.24.0
+# NLP-based date extraction — handles all natural-language date formats
+datefinder>=0.7.3
+# Tier 1 fallback: digital PDF metadata + text
 pypdf>=4.0.0
 # Tier 2: scanned PDF OCR (optional — install for OCR support)
 pdf2image>=1.17.0

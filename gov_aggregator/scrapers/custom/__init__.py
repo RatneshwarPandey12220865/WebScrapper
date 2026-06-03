@@ -14,6 +14,8 @@ from .darpg import crawl_darpg
 from .dopt import crawl_dopt
 from .doppw import crawl_doppw
 from .asi import crawl_asi
+from .bis import crawl_bis
+from .cbic_gst import crawl_cbic_gst
 from .csez import crawl_csez
 from .ayush import crawl_ayush
 from .cbic import crawl_cbic_customs
@@ -60,6 +62,7 @@ from .power_pib import crawl_power_pib
 from .rajasthan import crawl_rajasthan
 from .rbi import crawl_rbi
 from .sebi import crawl_sebi
+from .nfsm import crawl_nfsm
 
 CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
@@ -73,6 +76,8 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "dopt": crawl_dopt,
     "doppw": crawl_doppw,
     "archaeological-survey-of-india": crawl_asi,
+    "bis": crawl_bis,
+    "cbic-gst-portal": crawl_cbic_gst,
     "cochin-sez": crawl_csez,
     "department-of-agriculture-and-farmers-welfare-whatsnew": crawl_agriculture,
     "cbic-customs": crawl_cbic_customs,
@@ -121,6 +126,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "icmr": crawl_icmr,
     "industry-and-internal-trade-ip": crawl_ip_india,
     "sebi": crawl_sebi,
+    "national-food-security-mission-for-oilseeds": crawl_nfsm,
 }
 
 __all__ = [
@@ -135,6 +141,8 @@ __all__ = [
     "crawl_dopt",
     "crawl_doppw",
     "crawl_asi",
+    "crawl_bis",
+    "crawl_cbic_gst",
     "crawl_csez",
     "crawl_ayush",
     "crawl_cbic_customs",
@@ -165,8 +173,4 @@ __all__ = [
     "crawl_coffee_board",
     "crawl_dahd",
     "crawl_fertilizers",
-    "crawl_fisheries",
-    "crawl_jerc_mizoram",
-    "crawl_sebi",
-    "scrape_income_tax",
-]
+  

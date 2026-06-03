@@ -49,6 +49,7 @@ let crawlResults = [];
 let siteStatuses = [];
 let globalMinDate = null;
 const selectedSites = new Set();
+const pdfDateSites = new Set();  // sites for which PDF date extraction is requested
 
 // Bulk crawl state
 let activeBulkJobId = null;
@@ -80,11 +81,14 @@ function formatDate(value) {
 }
 
 function formatDateRange(item) {
-  if (!item.publish_date) return "Not available";
+  const pdfBadge = item.date_source === "pdf_extracted"
+    ? `<span class="badge badge--pdf-date" title="Date extracted from PDF content">PDF</span>`
+    : "";
+  if (!item.publish_date) return `<span class="date-unavailable">Not available</span>${pdfBadge}`;
   const start = new Date(item.publish_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  if (!item.end_date) return start;
+  if (!item.end_date) return `${start}${pdfBadge}`;
   const end = new Date(item.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  return `<span class="date-range">${start}<span class="date-range__arrow">→</span>${end}</span>`;
+  return `<span class="date-range">${start}<span class="date-range__arrow">→</span>${end}</span>${pdfBadge}`;
 }
 
 function normalize(text) {
@@ -146,6 +150,7 @@ function renderSiteList() {
       ? (() => { try { return new URL(rawUrl).origin; } catch { return rawUrl; } })()
       : "No URL available";
 
+    const isPdfActive = pdfDateSites.has(site.site_key);
     card.innerHTML = `
       <input type="checkbox" class="site-card__check" data-site-key="${site.site_key}" ${checked} ${disabled}>
       <div class="site-card__body">
@@ -154,6 +159,15 @@ function renderSiteList() {
           <span class="badge${site.supported ? " badge--supported" : ""}">${statusLabel}</span>
         </div>
         <p>${baseUrl}</p>
+        ${isSelected && site.supported ? `
+        <div class="site-card__pdf-row">
+          <button class="site-card__pdf-btn${isPdfActive ? " site-card__pdf-btn--active" : ""}"
+                  data-site-key="${site.site_key}" type="button"
+                  title="${isPdfActive ? "PDF date extraction ON — click to disable" : "Enable PDF date extraction for this site"}">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM9.5 3A1.5 1.5 0 0 1 11 4.5h2L9.5 1V3z"/></svg>
+            PDF Dates
+          </button>
+        </div>` : ""}
       </div>
     `;
 
@@ -164,10 +178,31 @@ function renderSiteList() {
         card.classList.add("site-card--selected");
       } else {
         selectedSites.delete(key);
+        pdfDateSites.delete(key);
         card.classList.remove("site-card--selected");
       }
       renderSelectionSummary();
+      renderSiteList();
     });
+
+    const pdfBtn = card.querySelector(".site-card__pdf-btn");
+    if (pdfBtn) {
+      pdfBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const key = pdfBtn.dataset.siteKey;
+        if (pdfDateSites.has(key)) {
+          pdfDateSites.delete(key);
+          pdfBtn.classList.remove("site-card__pdf-btn--active");
+          pdfBtn.title = "Enable PDF date extraction for this site";
+          showToast(`PDF date extraction disabled for ${site.name}`, "info");
+        } else {
+          pdfDateSites.add(key);
+          pdfBtn.classList.add("site-card__pdf-btn--active");
+          pdfBtn.title = "PDF date extraction ON — click to disable";
+          showToast(`PDF date extraction enabled for ${site.name}`, "success");
+        }
+      });
+    }
 
     siteListNode.appendChild(card);
   });
@@ -289,6 +324,10 @@ function renderStatuses() {
           ? `<span class="status-date-since status-date-since--none">No date filter</span>`
           : "";
 
+      const sslBadge = s.ssl_bypassed
+        ? `<span class="ssl-bypass-badge" title="SSL verification was bypassed automatically">SSL bypassed</span>`
+        : "";
+
       return `
         <div class="status-item" data-state="${s.state}">
           <span class="status-dot"></span>
@@ -297,6 +336,7 @@ function renderStatuses() {
             <span>${s.message}</span>
           </div>
           <div class="status-item__right">
+            ${sslBadge}
             ${dateSinceLabel}
             <span class="status-state-label">${s.state}</span>
             ${itemLabel}
@@ -555,24 +595,26 @@ function applyRange(from, to, preset) {
 }
 
 function renderDRW() {
-  const sel = document.getElementById("drwPresetSelect");
-  const customRow = document.getElementById("drwCustomRow");
-  const badge = document.getElementById("drwActive");
+  const badge     = document.getElementById("drwActive");
+  const trigLabel = document.getElementById("drwTriggerLabel");
 
-  // Sync dropdown value
-  const selectVal = activeRange.preset || "alltime";
-  if (sel) sel.value = selectVal;
+  const preset = activeRange.preset || "alltime";
 
-  // Show/hide custom row
-  if (activeRange.preset === "custom") {
-    customRow.style.display = "flex";
-    const drwFrom = document.getElementById("drwFrom");
-    const drwTo   = document.getElementById("drwTo");
-    if (drwFrom && !drwFrom.value) drwFrom.value = activeRange.from || "";
-    if (drwTo   && !drwTo.value)   drwTo.value   = activeRange.to   || "";
-  } else {
-    customRow.style.display = "none";
-  }
+  // Mark active option in menu
+  document.querySelectorAll(".drw__option").forEach(opt => {
+    opt.classList.toggle("drw__option--active", opt.dataset.value === preset);
+  });
+
+  // Update trigger label
+  const labelMap = {
+    alltime:   "All Time (from Jan 2026)",
+    today:     "Today",
+    yesterday: "Yesterday",
+    last7:     "Last 7 Days",
+    thismonth: "This Month",
+    custom:    "Custom Range",
+  };
+  if (trigLabel) trigLabel.textContent = labelMap[preset] || "All Time";
 
   // Badge
   if (activeRange.from || activeRange.to) {
@@ -584,33 +626,294 @@ function renderDRW() {
   }
 }
 
-function initDRW() {
-  loadRangeFromStorage();
+function _populateDRWSubLabels() {
+  const today     = _todayIST();
+  const yesterday = _offsetDay(today, -1);
+  const last7from = _offsetDay(today, -6);
+  const monthFrom = _firstOfMonth(today);
+  const fmt = iso => new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const el = id => document.getElementById(id);
+  if (el("drwSubToday"))     el("drwSubToday").textContent     = fmt(today);
+  if (el("drwSubYesterday")) el("drwSubYesterday").textContent = fmt(yesterday);
+  if (el("drwSubLast7"))     el("drwSubLast7").textContent     = `${fmt(last7from)} → ${fmt(today)}`;
+  if (el("drwSubMonth"))     el("drwSubMonth").textContent     = `${fmt(monthFrom)} → ${fmt(today)}`;
+}
 
-  const sel = document.getElementById("drwPresetSelect");
-  sel.addEventListener("change", () => {
-    const preset = sel.value;
-    if (preset === "custom") {
-      activeRange = { ...activeRange, preset: "custom" };
-      renderDRW();
+function _selectPreset(preset) {
+  if (preset === "alltime") { applyRange(null, null, null); return; }
+  const { from, to } = _presetDates(preset);
+  applyRange(from, to, preset);
+}
+
+// ── Inline calendar state ──────────────────────────────────────────────────
+const _cal = {
+  year: 0,
+  month: 0,         // 0-11
+  selFrom: null,    // "YYYY-MM-DD"
+  selTo:   null,    // "YYYY-MM-DD"
+  hoverDate: null,  // "YYYY-MM-DD" for live preview
+  step: 0,          // 0 = awaiting from, 1 = awaiting to
+};
+
+function _calISOFromParts(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function _calRenderGrid() {
+  const grid   = document.getElementById("calGrid");
+  const label  = document.getElementById("calMonthLabel");
+  const hint   = document.getElementById("calHint");
+  if (!grid) return;
+
+  const today = _todayIST();
+  const y = _cal.year, m = _cal.month;
+  const monthNames = ["January","February","March","April","May","June",
+                      "July","August","September","October","November","December"];
+  label.textContent = `${monthNames[m]} ${y}`;
+
+  // Build cells
+  const firstDay = new Date(y, m, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+
+  // Leading empty cells
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  grid.innerHTML = "";
+
+  cells.forEach(d => {
+    const cell = document.createElement("div");
+    if (d === null) {
+      cell.className = "cal-day cal-day--empty";
+      grid.appendChild(cell);
       return;
     }
-    if (preset === "alltime") {
-      applyRange(null, null, null);
-      return;
+    const iso = _calISOFromParts(y, m, d);
+    cell.textContent = d;
+    let cls = "cal-day";
+
+    if (iso === today) cls += " cal-day--today";
+
+    const f = _cal.selFrom, t = _cal.selTo || _cal.hoverDate;
+    const rangeFrom = f && t && f <= t ? f : (f && t ? t : f);
+    const rangeTo   = f && t && f <= t ? t : (f && t ? f : null);
+
+    if (f && iso === f && (!t || f === t)) cls += " cal-day--from cal-day--to";
+    else if (f && t) {
+      const lo = rangeFrom, hi = rangeTo;
+      if (iso === lo) cls += " cal-day--from";
+      else if (hi && iso === hi) cls += " cal-day--to";
+      else if (hi && iso > lo && iso < hi) {
+        cls += _cal.selTo ? " cal-day--in-range" : " cal-day--hover-range";
+      }
     }
-    const { from, to } = _presetDates(preset);
-    applyRange(from, to, preset);
+
+    cell.className = cls;
+
+    cell.addEventListener("mouseenter", () => {
+      if (_cal.step === 1) {
+        _cal.hoverDate = iso;
+        _calRenderGrid();
+      }
+    });
+    cell.addEventListener("mouseleave", () => {
+      if (_cal.step === 1) {
+        _cal.hoverDate = null;
+        _calRenderGrid();
+      }
+    });
+    cell.addEventListener("click", () => {
+      if (_cal.step === 0) {
+        _cal.selFrom = iso;
+        _cal.selTo   = null;
+        _cal.step    = 1;
+        const inp = document.getElementById("drwFrom");
+        if (inp) inp.value = iso;
+        document.getElementById("drwTo").value = "";
+      } else {
+        if (iso < _cal.selFrom) {
+          _cal.selTo   = _cal.selFrom;
+          _cal.selFrom = iso;
+        } else {
+          _cal.selTo = iso;
+        }
+        _cal.step = 0;
+        document.getElementById("drwFrom").value = _cal.selFrom;
+        document.getElementById("drwTo").value   = _cal.selTo;
+      }
+      _calRenderGrid();
+      _calUpdateHint();
+    });
+
+    grid.appendChild(cell);
   });
 
-  document.getElementById("drwApply").addEventListener("click", () => {
-    const from = document.getElementById("drwFrom").value || null;
-    const to   = document.getElementById("drwTo").value   || null;
+  _calUpdateHint();
+}
+
+function _calUpdateHint() {
+  const hint = document.getElementById("calHint");
+  if (!hint) return;
+  if (_cal.step === 1) hint.textContent = "Now click an end date";
+  else if (_cal.selFrom && _cal.selTo) {
+    const fmt = iso => new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+    hint.textContent = `${fmt(_cal.selFrom)} → ${fmt(_cal.selTo)}`;
+  } else if (_cal.selFrom) {
+    hint.textContent = "Click an end date";
+  } else {
+    hint.textContent = "Click a start date";
+  }
+}
+
+function _calInitFromActiveRange() {
+  _cal.selFrom = activeRange.from || null;
+  _cal.selTo   = activeRange.to   || null;
+  _cal.step    = 0;
+  _cal.hoverDate = null;
+  const today = _todayIST();
+  const base  = _cal.selFrom || today;
+  const d = new Date(base + "T00:00:00Z");
+  _cal.year  = d.getUTCFullYear();
+  _cal.month = d.getUTCMonth();
+  const inp1 = document.getElementById("drwFrom");
+  const inp2 = document.getElementById("drwTo");
+  if (inp1) inp1.value = _cal.selFrom || "";
+  if (inp2) inp2.value = _cal.selTo   || "";
+}
+
+function _openCalView() {
+  const menu     = document.getElementById("drwMenu");
+  const calPanel = document.getElementById("drwCalPanel");
+  if (menu)     menu.style.display     = "none";
+  if (calPanel) calPanel.style.display = "block";
+  _calInitFromActiveRange();
+  _calRenderGrid();
+}
+
+function _closeCalView() {
+  const menu     = document.getElementById("drwMenu");
+  const calPanel = document.getElementById("drwCalPanel");
+  if (menu)     menu.style.display     = "";
+  if (calPanel) calPanel.style.display = "none";
+}
+
+function initDRW() {
+  loadRangeFromStorage();
+  _populateDRWSubLabels();
+
+  const dropdown = document.getElementById("drwDropdown");
+  const trigger  = document.getElementById("drwTrigger");
+  const menu     = document.getElementById("drwMenu");
+
+  if (!dropdown || !trigger || !menu) { renderDRW(); return; }
+
+  function openMenu() {
+    _closeCalView();
+    dropdown.classList.add("drw__dropdown--open");
+    trigger.setAttribute("aria-expanded", "true");
+  }
+  function closeAll() {
+    _closeCalView();
+    dropdown.classList.remove("drw__dropdown--open");
+    trigger.setAttribute("aria-expanded", "false");
+  }
+  function toggleMenu() {
+    dropdown.classList.contains("drw__dropdown--open") ? closeAll() : openMenu();
+  }
+
+  trigger.addEventListener("click", (e) => { e.stopPropagation(); toggleMenu(); });
+
+  // Make the icon, label, and divider also open the dropdown
+  const widget = document.getElementById("dateRangeWidget");
+  if (widget) {
+    widget.addEventListener("click", (e) => {
+      if (!e.target.closest("#drwDropdown") && !e.target.closest(".drw__badge")) {
+        e.stopPropagation();
+        toggleMenu();
+      }
+    });
+  }
+
+  menu.querySelectorAll(".drw__option").forEach(opt => {
+    opt.addEventListener("click", () => {
+      if (opt.dataset.value === "custom") {
+        _openCalView();
+        return;
+      }
+      closeAll();
+      _selectPreset(opt.dataset.value);
+    });
+  });
+
+  // Back button → return to preset list
+  const backBtn = document.getElementById("drwCalBack");
+  if (backBtn) backBtn.addEventListener("click", () => _closeCalView());
+
+  // Month navigation
+  document.getElementById("calPrev")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _cal.month--;
+    if (_cal.month < 0) { _cal.month = 11; _cal.year--; }
+    _calRenderGrid();
+  });
+  document.getElementById("calNext")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _cal.month++;
+    if (_cal.month > 11) { _cal.month = 0; _cal.year++; }
+    _calRenderGrid();
+  });
+
+  // Typed date inputs sync → calendar
+  document.getElementById("drwFrom")?.addEventListener("change", (e) => {
+    if (e.target.value) {
+      _cal.selFrom = e.target.value;
+      _cal.step    = _cal.selTo ? 0 : 1;
+      const d = new Date(e.target.value + "T00:00:00Z");
+      _cal.year  = d.getUTCFullYear();
+      _cal.month = d.getUTCMonth();
+      _calRenderGrid();
+    }
+  });
+  document.getElementById("drwTo")?.addEventListener("change", (e) => {
+    if (e.target.value) {
+      _cal.selTo = e.target.value;
+      _cal.step  = 0;
+      _calRenderGrid();
+    }
+  });
+
+  // Clear
+  document.getElementById("calClear")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _cal.selFrom = null; _cal.selTo = null; _cal.step = 0; _cal.hoverDate = null;
+    const inp1 = document.getElementById("drwFrom");
+    const inp2 = document.getElementById("drwTo");
+    if (inp1) inp1.value = "";
+    if (inp2) inp2.value = "";
+    _calRenderGrid();
+  });
+
+  // Apply
+  document.getElementById("drwApply")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const from = document.getElementById("drwFrom")?.value || null;
+    const to   = document.getElementById("drwTo")?.value   || null;
     if (from && to && from > to) {
       showToast("'From' date must be on or before 'To' date.", "error");
       return;
     }
+    closeAll();
     applyRange(from, to, "custom");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) closeAll();
+  });
+
+  trigger.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMenu(); }
+    if (e.key === "Escape") closeAll();
   });
 
   renderDRW();
@@ -626,7 +929,13 @@ function renderExportPanel() {
   const rangeLabel = document.getElementById("exportPanelRange");
 
   // Only show if we have a completed bulk job with results
-  if (!activeBulkJobId || !crawlResults.length) {
+  const hasResults = !!(activeBulkJobId && crawlResults.length);
+  const tnavSummaryBtn = document.getElementById("tnavSummaryBtn");
+  const tnavZipBtn     = document.getElementById("tnavZipBtn");
+  if (tnavSummaryBtn) tnavSummaryBtn.style.display = hasResults ? "flex" : "none";
+  if (tnavZipBtn)     tnavZipBtn.style.display     = hasResults ? "flex" : "none";
+
+  if (!hasResults) {
     panel.style.display = "none";
     return;
   }
@@ -713,6 +1022,12 @@ function initExportPanel() {
   // Wire top-level summary/zip buttons inside export panel
   document.getElementById("epSummaryBtn").addEventListener("click", exportSummaryExcel);
   document.getElementById("epZipBtn").addEventListener("click", exportAllZip);
+
+  // Wire topnav export buttons
+  const tnavSummaryBtn = document.getElementById("tnavSummaryBtn");
+  const tnavZipBtn     = document.getElementById("tnavZipBtn");
+  if (tnavSummaryBtn) tnavSummaryBtn.addEventListener("click", exportSummaryExcel);
+  if (tnavZipBtn)     tnavZipBtn.addEventListener("click", exportAllZip);
 }
 
 async function loadCatalog() {
@@ -765,7 +1080,11 @@ async function crawlSelectedSites() {
     const payload = await fetchJson("/api/crawl", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ site_keys: siteKeys, use_cache: useCacheToggle.checked }),
+      body: JSON.stringify({
+        site_keys: siteKeys,
+        use_cache: useCacheToggle.checked,
+        pdf_date_sites: [...pdfDateSites].filter(k => siteKeys.includes(k)),
+      }),
     });
 
     crawlResults = payload.items;
@@ -1071,6 +1390,7 @@ selectSupportedButton.addEventListener("click", () => {
 
 clearSelectionButton.addEventListener("click", () => {
   selectedSites.clear();
+  pdfDateSites.clear();
   renderSiteList();
   renderSelectionSummary();
 });

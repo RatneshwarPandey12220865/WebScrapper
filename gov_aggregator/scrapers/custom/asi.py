@@ -149,6 +149,96 @@ async def _scrape_section(
     return items
 
 
+def _parse_tenders_table(html: str, section_label: str) -> tuple[list[ScrapedItem], bool]:
+    """
+    Parse one page of a 4-column ASI tenders table
+    (Sr No | Title | Publish Date | Last Date).
+
+    Returns (items, hit_cutoff) — hit_cutoff=True stops pagination.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    section = soup.select_one("section.exp-sec1")
+    if not section:
+        return [], True
+    table = section.select_one("table.tabel")
+    if not table:
+        return [], True
+
+    rows = table.select("tbody tr")
+    if not rows:
+        return [], True
+
+    items: list[ScrapedItem] = []
+    hit_cutoff = False
+
+    for row in rows:
+        tds = row.find_all("td")
+        if len(tds) < 3:
+            continue
+
+        # Title + link from 2nd column
+        link_tag = tds[1].find("a", href=True) if len(tds) > 1 else None
+        if not link_tag:
+            continue
+
+        title = _clean(link_tag.get_text())
+        if not title:
+            continue
+
+        # Publish date from 3rd column
+        publish_date_text = _clean(tds[2].get_text()) if len(tds) > 2 else ""
+
+        # Last date from 4th column
+        last_date_text = _clean(tds[3].get_text()) if len(tds) > 3 else ""
+
+        published_at = _parse_date(publish_date_text)
+        end_date = _parse_date(last_date_text)
+
+        if published_at and published_at < _MIN_DATE:
+            hit_cutoff = True
+            break
+
+        href = link_tag.get("href", "")
+        link = urljoin(_BASE, href)
+        is_pdf = "/download" in href or "/downloadPdf" in href or href.lower().endswith(".pdf")
+
+        items.append(ScrapedItem(
+            title=title,
+            link=link,
+            published_at=published_at,
+            end_date=end_date,
+            is_pdf=is_pdf,
+            section_label=section_label,
+        ))
+
+    return items, hit_cutoff
+
+
+async def _scrape_tenders(
+    client: httpx.AsyncClient,
+    base_url: str,
+    section_label: str,
+    max_pages: int,
+) -> list[ScrapedItem]:
+    items: list[ScrapedItem] = []
+
+    for page in range(max_pages):
+        url = base_url if page == 0 else f"{base_url}?p={page}"
+        try:
+            resp = await client.get(url)
+        except httpx.HTTPError:
+            break
+        if resp.status_code != 200:
+            break
+
+        page_items, hit_cutoff = _parse_tenders_table(resp.text, section_label)
+        items.extend(page_items)
+        if hit_cutoff:
+            break
+
+    return items
+
+
 async def crawl_asi(_config: SiteConfig) -> list[ScrapedItem]:
     async with httpx.AsyncClient(
         follow_redirects=True,
@@ -167,5 +257,11 @@ async def crawl_asi(_config: SiteConfig) -> list[ScrapedItem]:
             "Circulars",
             max_pages=14,
         )
+        tenders = await _scrape_tenders(
+            client,
+            "https://asi.nic.in/HQ/tenders/",
+            "Tenders",
+            max_pages=55,
+        )
 
-    return whats_new + circulars
+    return whats_new + circulars + tenders

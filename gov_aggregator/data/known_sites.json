@@ -970,7 +970,7 @@
     },
     {
       "site_key": "cbic-only-gst",
-      "name": "CBIC GST Portal Ã¢Â€Â” What's New",
+      "name": "CBIC GST Portal — What's New",
       "registry_url": "https://www.cbic.gov.in/",
       "alternate_url": null,
       "preferred_url": "https://www.cbic.gov.in/",
@@ -1669,6 +1669,16 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "jerc-mizoram"
+    },
+    {
+      "site_key": "cbic-gst-portal",
+      "name": "CBIC GST Portal — What's New",
+      "registry_url": "https://cbic-gst.gov.in/",
+      "alternate_url": null,
+      "preferred_url": "https://cbic-gst.gov.in/",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "cbic_gst_portal"
     }
   ]
 }

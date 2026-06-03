@@ -935,6 +935,7 @@
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
+      "extract_pdf_dates": true,
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
@@ -974,14 +975,16 @@
           "quotation"
         ]
       },
+      "selectors": {},
       "sections": [
         {
           "section_label": "What's New",
-          "url": "https://cacp.da.gov.in/Home/WhatsNew",
+          "source_url": "https://cacp.da.gov.in/Home/WhatsNew",
           "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
+          "parser_backend": "scrapy",
+          "render_js": false,
           "default_category": "notification",
+          "min_date": "2020-01-01",
           "selectors": {
             "row_selector": "table#example tbody tr",
             "title_selector": "td:nth-child(2)",
@@ -991,10 +994,10 @@
         },
         {
           "section_label": "Circulars",
-          "url": "https://cacp.da.gov.in/Home/Circulars",
+          "source_url": "https://cacp.da.gov.in/Home/Circulars",
           "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
+          "parser_backend": "scrapy",
+          "render_js": false,
           "default_category": "circular",
           "selectors": {
             "row_selector": "table#example tbody tr",
@@ -1395,8 +1398,10 @@
       "base_url": "https://www.nfsm.gov.in",
       "parser_type": "list",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
+      "custom_crawler": "national-food-security-mission-for-oilseeds",
+      "verify_ssl": false,
       "default_category": "circular",
       "category_mapping": {
         "circular": [
@@ -3146,12 +3151,13 @@
       "site_key": "bis",
       "ministry": "Ministry of Consumer Affairs, Food and Public Distribution",
       "name": "Bureau of Indian Standards (BIS)",
-      "url": "https://www.bis.gov.in/whats-new/?lang=en",
+      "url": "https://www.bis.gov.in/",
       "base_url": "https://www.bis.gov.in",
-      "parser_type": "list",
+      "parser_type": "custom",
       "parser_backend": "bs4",
       "render_js": false,
       "active": true,
+      "custom_crawler": "bis",
       "default_category": "notification",
       "category_mapping": {
         "circular": [
@@ -3200,12 +3206,7 @@
           "eoi"
         ]
       },
-      "selectors": {
-        "item_selector": ".staffcat .staffrightcat1",
-        "title_selector": "h2, h2 a",
-        "link_selector": "h2 a, a[href]",
-        "date_selector": "h3:last-of-type"
-      }
+      "selectors": {}
     },
     {
       "site_key": "department-of-economic-affairs-bilateral-netting-ifsca-etc",
@@ -4750,62 +4751,56 @@
       "selectors": {},
       "sections": [
         {
-          "section_label": "Circulars and Office Orders",
-          "url": "https://cpcb.nic.in/circular/",
-          "parser_type": "table",
-          "parser_backend": "bs4",
+          "section_label": "Public Notices",
+          "source_url": "https://cpcb.nic.in/",
+          "parser_type": "list",
+          "parser_backend": "scrapy",
           "render_js": true,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": ".slideshow-container .mySlides li, .modal-content li",
+            "title_selector": "a",
+            "link_selector": "a",
+            "wait_for_selector": ".slideshow-container"
+          }
+        },
+        {
+          "section_label": "Office Orders and Circulars",
+          "source_url": "https://cpcb.nic.in/",
+          "parser_type": "list",
+          "parser_backend": "scrapy",
+          "render_js": false,
           "default_category": "circular",
           "selectors": {
-            "row_selector": "table#report tbody tr",
-            "title_selector": "td:nth-child(3) a",
-            "link_selector": "td:nth-child(6) a",
-            "date_selector": "td:nth-child(4) a",
-            "wait_for_selector": "table#report tbody tr",
-            "pre_capture_js": "var s=document.querySelector('#report_length select');if(s){s.value='-1';s.dispatchEvent(new Event('change',{bubbles:true}));}"
+            "item_selector": ".tab-lnks-ft a",
+            "title_selector": null,
+            "link_selector": null
           }
         },
         {
-          "section_label": "What's New",
-          "url": "https://cpcb.nic.in/latest-cpcb.php",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": "table#tender tbody tr",
-            "title_selector": "td:nth-child(2) a",
-            "link_selector": "td:nth-child(4) a",
-            "date_selector": "td:nth-child(3) a",
-            "wait_for_selector": "table#tender tbody tr"
-          }
-        },
-        {
-          "section_label": "Directions",
-          "url": "https://cpcb.nic.in/latest-cpcb.php",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": "table#tender tbody tr",
-            "title_selector": "td:nth-child(2) a",
-            "link_selector": "td:nth-child(4) a",
-            "date_selector": "td:nth-child(3) a",
-            "wait_for_selector": "table#tender tbody tr"
-          }
-        },
-        {
-          "section_label": "Media Corner",
-          "url": "https://cpcb.nic.in/media-corner-new/",
+          "section_label": "Sidebar Notifications",
+          "source_url": "https://cpcb.nic.in/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": false,
-          "default_category": "news",
+          "default_category": "notification",
           "selectors": {
-            "item_selector": "div.heading",
-            "title_selector": "a",
-            "link_selector": "a"
+            "item_selector": ".sidebar a",
+            "title_selector": null,
+            "link_selector": null
+          }
+        },
+        {
+          "section_label": "Directions and Reports",
+          "source_url": "https://cpcb.nic.in/",
+          "parser_type": "list",
+          "parser_backend": "scrapy",
+          "render_js": false,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": ".inner-sect .container a",
+            "title_selector": null,
+            "link_selector": null
           }
         }
       ]
@@ -7720,11 +7715,10 @@
       "ministry": "Ministry of Commerce and Industry",
       "name": "Chemicals Export Promotion Council (CHEMEXCIL)",
       "base_url": "https://chemexcil.in",
-      "source_url": "https://chemexcil.in/circulars",
-      "parser_type": "table",
-      "parser_backend": "bs4",
-      "render_js": true,
-      "wait_for_selector": "table.time-table tbody tr",
+      "source_url": "https://chemexcil.in/",
+      "parser_type": "list",
+      "parser_backend": "scrapy",
+      "render_js": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -7754,14 +7748,11 @@
         ]
       },
       "selectors": {
-        "item_selector": "table.time-table tbody tr",
-        "title_selector": "td:nth-child(3)",
-        "link_selector": "td:nth-child(3) a",
-        "date_selector": "td:nth-child(2)",
-        "row_selector": "table.time-table tbody tr"
-      },
-      "pagination_param": "start",
-      "max_pages": 3
+        "item_selector": "#Notifications .list-22 ul li",
+        "title_selector": "a.statisticslink",
+        "link_selector": "a.statisticslink",
+        "date_selector": null
+      }
     },
     {
       "site_key": "sez-india",
@@ -8054,11 +8045,13 @@
       "site_key": "central-electricity-regulatory-commission",
       "ministry": "Ministry of Power",
       "name": "Central Electricity Regulatory Commission (CERC)",
-      "url": "https://cercind.gov.in/viewall.html",
+      "url": "https://cercind.gov.in/",
       "base_url": "https://cercind.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
-      "render_js": true,
+      "parser_backend": "scrapy",
+      "render_js": false,
+      "active": true,
+      "verify_ssl": false,
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
@@ -8093,12 +8086,39 @@
           "bid"
         ]
       },
-      "selectors": {
-        "item_selector": ".list-group li.list-group-item",
-        "title_selector": "a",
-        "link_selector": "a",
-        "date_selector": null
-      }
+      "selectors": {},
+      "sections": [
+        {
+          "section_label": "What's New",
+          "source_url": "https://cercind.gov.in/",
+          "parser_type": "list",
+          "parser_backend": "scrapy",
+          "render_js": false,
+          "verify_ssl": false,
+          "default_category": "notification",
+          "selectors": {
+            "item_selector": ".container.coc-mid .list-group-item",
+            "title_selector": "a",
+            "link_selector": "a",
+            "date_selector": null
+          }
+        },
+        {
+          "section_label": "Orders",
+          "source_url": "https://cercind.gov.in/",
+          "parser_type": "table",
+          "parser_backend": "scrapy",
+          "render_js": false,
+          "verify_ssl": false,
+          "default_category": "notification",
+          "selectors": {
+            "row_selector": ".container.coc-mid table.tbsa tbody tr",
+            "title_selector": "td:nth-child(2)",
+            "link_selector": "td:nth-child(2) a",
+            "date_selector": "td:nth-child(3)"
+          }
+        }
+      ]
     },
     {
       "site_key": "office-of-economic-adviser",
@@ -8837,6 +8857,20 @@
             "date_selector": "td:nth-child(3)"
           },
           "section_label": "Circulars"
+        },
+        {
+          "source_url": "https://asi.nic.in/HQ/tenders/",
+          "parser": "table",
+          "pagination_param": "p",
+          "start_page": 0,
+          "max_pages": 55,
+          "selectors": {
+            "row_selector": "section.exp-sec1 table.tabel tbody tr",
+            "title_selector": "td:nth-child(2) a",
+            "link_selector": "td:nth-child(2) a",
+            "date_selector": "td:nth-child(3)"
+          },
+          "section_label": "Tenders"
         }
       ],
       "custom_crawler": "archaeological-survey-of-india"
@@ -9560,57 +9594,6 @@
       "min_date": "2026-01-01"
     },
     {
-      "site_key": "department-of-revenue",
-      "ministry": "Department of Revenue",
-      "name": "Department of Revenue",
-      "base_url": "https://dor.gov.in",
-      "parser_type": "list",
-      "parser_backend": "bs4",
-      "render_js": true,
-      "active": true,
-      "default_category": "news",
-      "category_mapping": {
-        "notification": [
-          "tender",
-          "notice",
-          "order"
-        ],
-        "news": [
-          "press release",
-          "award",
-          "campaign"
-        ]
-      },
-      "sections": [
-        {
-          "section_label": "What's New",
-          "url": "https://dor.gov.in/whats-new",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "row_selector": "table.responsiveTable.tableData tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-whats-new-document a, td.views-field-title a"
-          }
-        },
-        {
-          "section_label": "Press Releases",
-          "url": "https://dor.gov.in/press-releases",
-          "parser_type": "list",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "item_selector": "div.schemesBox",
-            "title_selector": "a.schemeTitle",
-            "link_selector": "a.schemeTitle"
-          }
-        }
-      ]
-    },
-    {
       "site_key": "epfo",
       "ministry": "Ministry of Labour and Employment",
       "name": "Employees Provident Fund Organisation (EPFO)",
@@ -9857,6 +9840,50 @@
         ]
       },
       "selectors": {}
-    }
-  ]
-}
+    },
+    {
+      "site_key": "cbic-gst-portal",
+      "ministry": "Ministry of Finance",
+      "name": "CBIC GST Portal — What's New",
+      "url": "https://cbic-gst.gov.in/",
+      "base_url": "https://cbic-gst.gov.in",
+      "parser_type": "custom",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "cbic-gst-portal",
+      "default_category": "circular",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "advisory",
+          "notification"
+        ],
+        "news": [
+          "what's new",
+          "update",
+          "press release"
+        ]
+      },
+      "selectors": {},
+      "sections": [
+        {
+          "source_url": "https://cbic-gst.gov.in/",
+          "parser": "list",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "selectors": {
+            "item_selector": "#vmarquee ul li",
+            "title_selector": null,
+            "link_selector": "a"
+          },
+          "section_label": "What's New"
+        },
+        {
+          "source_url": "https://cbic-gst.gov.in/tickers.html",
+          "parser": "table",
+          "parser_backend": "bs4",
+          "render_js": false,
+          "selectors": {
+            "row_selector": ".innerpage-tab-content table tbody tr",
+            "title_selec

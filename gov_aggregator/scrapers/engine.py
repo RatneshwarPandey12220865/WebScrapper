@@ -102,6 +102,7 @@ class ScrapeResult:
     error: str | None = None
     items: list[ScrapedItem] = field(default_factory=list, repr=False)
     site_config: SiteConfig | None = field(default=None, repr=False)
+    ssl_bypassed: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -109,7 +110,25 @@ class ScrapeResult:
             "ministry": self.ministry,
             "found": self.found,
             "error": self.error,
+            "ssl_bypassed": self.ssl_bypassed,
         }
+
+
+def _with_ssl_disabled(site: SiteConfig) -> SiteConfig:
+    """Return a shallow copy of SiteConfig with verify_ssl=False on the site and all sections."""
+    from copy import copy
+    from gov_aggregator.scrapers.schemas import SiteSection
+
+    new_sections = []
+    for sec in site.sections:
+        s = copy(sec)
+        s.verify_ssl = False
+        new_sections.append(s)
+
+    new_site = copy(site)
+    new_site.verify_ssl = False
+    new_site.sections = new_sections
+    return new_site
 
 
 class ScraperEngine:
@@ -231,46 +250,34 @@ class ScraperEngine:
     ) -> ScrapeResult:
         async with semaphore:
             try:
-                # --- Multi-section mode ---
-                if site.sections:
-                    all_items: list[ScrapedItem] = []
-                    for section in site.sections:
-                        section_items = await self._scrape_section(site, section, client, insecure_client, browser)
-                        # Tag each item with its section label
-                        for item in section_items:
-                            item.section_label = section.section_label
-                        all_items.extend(section_items)
-
-                    # After collecting all_items, deduplicate by link
-                    seen_links: set[str] = set()
-                    deduped_items: list[ScrapedItem] = []
-                    for item in all_items:
-                        if item.link and item.link not in seen_links:
-                            seen_links.add(item.link)
-                            deduped_items.append(item)
-                    all_items = deduped_items
-
-                    return ScrapeResult(
-                        site_key=site.site_key,
-                        ministry=site.ministry,
-                        found=len(all_items),
-                        items=all_items,
-                        site_config=site,
-                    )
-
-                # --- Single-section mode (default) ---
-                items = await self._scrape_config_pages(site, client, insecure_client, browser)
-                return ScrapeResult(
-                    site_key=site.site_key,
-                    ministry=site.ministry,
-                    found=len(items),
-                    items=items,
-                    site_config=site,
-                )
+                return await self._scrape_site_attempt(site, client, insecure_client, browser)
             except Exception as exc:  # noqa: BLE001
-                error_msg = str(exc)
                 if is_ssl_error(exc):
-                    error_msg = f"[SSL ERROR] {error_msg}"
+                    logger.warning(
+                        "[%s] SSL error on first attempt — retrying entire site with SSL verification disabled",
+                        site.site_key,
+                    )
+                    ssl_free_site = _with_ssl_disabled(site)
+                    try:
+                        result = await self._scrape_site_attempt(ssl_free_site, client, insecure_client, browser)
+                        # Preserve original site_config reference so callers can still persist verify_ssl=False
+                        result.ssl_bypassed = True
+                        logger.info(
+                            "[%s] SSL bypass succeeded — found %d items",
+                            site.site_key, result.found,
+                        )
+                        return result
+                    except Exception as retry_exc:  # noqa: BLE001
+                        error_msg = f"[SSL ERROR] {retry_exc}"
+                        logger.error("[%s] SSL bypass also failed: %s", site.site_key, retry_exc)
+                        return ScrapeResult(
+                            site_key=site.site_key,
+                            ministry=site.ministry,
+                            found=0,
+                            error=error_msg,
+                            site_config=site,
+                        )
+                error_msg = str(exc)
                 return ScrapeResult(
                     site_key=site.site_key,
                     ministry=site.ministry,
@@ -278,6 +285,48 @@ class ScraperEngine:
                     error=error_msg,
                     site_config=site,
                 )
+
+    async def _scrape_site_attempt(
+        self,
+        site: SiteConfig,
+        client: httpx.AsyncClient,
+        insecure_client: httpx.AsyncClient | None,
+        browser: Browser | None,
+    ) -> "ScrapeResult":
+        """Inner scrape logic — called once normally, then again with SSL disabled on SSL error."""
+        # --- Multi-section mode ---
+        if site.sections:
+            all_items: list[ScrapedItem] = []
+            for section in site.sections:
+                section_items = await self._scrape_section(site, section, client, insecure_client, browser)
+                for item in section_items:
+                    item.section_label = section.section_label
+                all_items.extend(section_items)
+
+            seen_links: set[str] = set()
+            deduped_items: list[ScrapedItem] = []
+            for item in all_items:
+                if item.link and item.link not in seen_links:
+                    seen_links.add(item.link)
+                    deduped_items.append(item)
+
+            return ScrapeResult(
+                site_key=site.site_key,
+                ministry=site.ministry,
+                found=len(deduped_items),
+                items=deduped_items,
+                site_config=site,
+            )
+
+        # --- Single-section mode ---
+        items = await self._scrape_config_pages(site, client, insecure_client, browser)
+        return ScrapeResult(
+            site_key=site.site_key,
+            ministry=site.ministry,
+            found=len(items),
+            items=items,
+            site_config=site,
+        )
 
     async def _scrape_section(
         self,
