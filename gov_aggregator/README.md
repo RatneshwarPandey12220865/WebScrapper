@@ -63,3 +63,21 @@ python -m gov_aggregator.run_scraper
 - `GET /api/news?ministry=...&limit=500`
 - `GET /api/refresh/status`
 - `POST /api/refresh`
+
+
+## OCR for scanned PDFs (optional)
+
+Digital (text-based) PDFs need no extra setup. **Scanned/image-only PDFs** use an
+OCR fallback that requires two *system* tools (not pip packages):
+
+- **Poppler** — used by `pdf2image` to render PDF pages.
+  - Windows: download the Poppler build, unzip, add its `bin/` folder to `PATH`.
+  - macOS: `brew install poppler`  • Debian/Ubuntu: `sudo apt install poppler-utils`
+- **Tesseract OCR** — the OCR engine behind `pytesseract`.
+  - Windows: install the Tesseract binary, add it to `PATH`.
+  - macOS: `brew install tesseract`  • Debian/Ubuntu: `sudo apt install tesseract-ocr`
+
+Then: `pip install pdf2image pytesseract opencv-python`
+
+Without Poppler/Tesseract the extractor logs `ocr_render_failed` for scanned PDFs
+and skips them gracefully — text PDFs are unaffected.
