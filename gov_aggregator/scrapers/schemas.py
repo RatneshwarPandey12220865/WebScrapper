@@ -21,6 +21,7 @@ class SiteSection:
     max_items: int | None = None
     verify_ssl: bool | None = None
     min_date: str | None = None
+    date_format: str | None = None  # strptime format, e.g. "%d %b %Y" or "%d-%m-%Y"
 
 
 @dataclass(slots=True)
@@ -44,6 +45,7 @@ class SiteConfig:
     verify_ssl: bool = True
     sections: list[SiteSection] = field(default_factory=list)
     min_date: str | None = None
+    date_format: str | None = None  # strptime format, e.g. "%d %b %Y" or "%d-%m-%Y"
     custom_crawler: str | None = None
     extract_pdf_dates: bool = False
 

@@ -104,6 +104,37 @@ except ImportError:
     _CV2_OK = False
     logger.debug("opencv-python not installed — preprocessing tier disabled")
 
+try:
+    from ultralytics import YOLO as _YOLO
+    _YOLO_OK = True
+except ImportError:
+    _YOLO_OK = False
+    logger.debug("ultralytics not installed — YOLO date-region detection disabled")
+
+
+# Path to the YOLO model weights used for text-region detection.
+# Defaults to yolov8n.pt (auto-downloaded by ultralytics on first use).
+# Override with a custom document-layout model for better accuracy, e.g.:
+#   YOLO_MODEL_PATH = "/path/to/doc_layout_yolov8.pt"
+YOLO_MODEL_PATH: str = "yolov8n.pt"
+
+# Cached YOLO model instance — loaded once on first use.
+_yolo_model: Any = None
+
+
+def _get_yolo_model() -> Any | None:
+    global _yolo_model
+    if not _YOLO_OK:
+        return None
+    if _yolo_model is None:
+        try:
+            _yolo_model = _YOLO(YOLO_MODEL_PATH)
+            logger.info("YOLO model loaded: %s", YOLO_MODEL_PATH)
+        except Exception as exc:
+            logger.warning("Failed to load YOLO model (%s): %s", YOLO_MODEL_PATH, exc)
+            return None
+    return _yolo_model
+
 
 # Surface missing *primary* extractors loudly — these are listed in
 # requirements.txt but are easy to forget when re-creating a venv. Without them
@@ -117,6 +148,11 @@ if not _DATEFINDER_OK:
     logger.warning(
         "datefinder is NOT installed — natural-language date parsing is "
         "degraded (regex-only). Install with: pip install datefinder"
+    )
+if not _YOLO_OK:
+    logger.debug(
+        "ultralytics not installed — YOLO region detection disabled "
+        "(optional). Install with: pip install ultralytics"
     )
 
 # ── Cache ──────────────────────────────────────────────────────────────────
@@ -182,6 +218,12 @@ _PUB_KEYWORDS = [
     "release date", "released on",
     "effective date", "circular date",
     "signed on", "order date",
+    # Hindi / Devanagari keywords
+    "दिनांक",       # dinaank — date (most common in govt docs)
+    "तारीख",        # taareekh — date
+    "प्रकाशन तिथि", # prakashan tithi — publication date
+    "जारी दिनांक",  # jaari dinaank — issue date
+    "दिनाँक",       # alternate spelling
 ]
 
 
@@ -327,8 +369,32 @@ def _datefinder_dates_from_text(text: str) -> list[date]:
         return []
 
 
+_DEVANAGARI_DIGIT_MAP = str.maketrans("०१२३४५६७८९", "0123456789")
+
+_HINDI_MONTH_MAP = {
+    "जनवरी": "January", "फरवरी": "February", "मार्च": "March",
+    "अप्रैल": "April",  "मई": "May",         "जून": "June",
+    "जुलाई": "July",    "अगस्त": "August",   "सितंबर": "September",
+    "सितम्बर": "September", "अक्टूबर": "October", "नवंबर": "November",
+    "नवम्बर": "November",   "दिसंबर": "December", "दिसम्बर": "December",
+}
+
+
+def _normalise_hindi(text: str) -> str:
+    """
+    Convert Devanagari digits → ASCII and Hindi month names → English.
+    Enables the existing regex + datefinder pipeline to parse Hindi-script dates
+    like "२७ जनवरी २०२६" → "27 January 2026".
+    """
+    text = text.translate(_DEVANAGARI_DIGIT_MAP)
+    for hindi, english in _HINDI_MONTH_MAP.items():
+        text = text.replace(hindi, english)
+    return text
+
+
 def _clean_text(text: str) -> str:
-    """Normalise whitespace for better date parsing."""
+    """Normalise whitespace and transliterate Hindi digits/months."""
+    text = _normalise_hindi(text)
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
@@ -409,7 +475,8 @@ def _score_candidates_from_text(
         # Keyword bonus — scan lines for the date + keyword
         d_str_variants = [
             d.strftime("%d/%m/%Y"), d.strftime("%d-%m-%Y"),
-            d.strftime("%Y-%m-%d"), d.strftime("%-d %B %Y") if hasattr(d, "strftime") else "",
+            d.strftime("%Y-%m-%d"), d.strftime("%d %B %Y"),
+            f"{d.day} {d.strftime('%B %Y')}",  # no leading zero, e.g. "9 June 2026"
             str(d.day), str(d.year),
         ]
         for line in lines:
@@ -633,6 +700,106 @@ def _date_from_ocr(page_image: Any, preprocess: bool = False) -> date | None:
     return _best_date(candidates)
 
 
+# ── YOLO region detection ──────────────────────────────────────────────────
+
+def _yolo_detect_regions(pil_image: Any, conf_threshold: float = 0.25) -> list[tuple[int, int, int, int]]:
+    """
+    Run YOLO on a PIL image and return bounding boxes of detected regions.
+
+    Returns a list of (x1, y1, x2, y2) tuples sorted top-to-bottom.
+    Boxes in the bottom 50% of the page are discarded — publication dates
+    appear in headers / top sections of government documents.
+    """
+    model = _get_yolo_model()
+    if model is None or not _CV2_OK:
+        return []
+
+    try:
+        img_w, img_h = pil_image.size
+        half_h = img_h // 2
+
+        # Convert PIL → numpy for ultralytics
+        img_np = _np.array(pil_image.convert("RGB"))
+        results = model(img_np, conf=conf_threshold, verbose=False)
+
+        boxes: list[tuple[int, int, int, int]] = []
+        for result in results:
+            if result.boxes is None:
+                continue
+            for box in result.boxes.xyxy.tolist():
+                x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+                # Skip regions entirely in the bottom half
+                if y1 > half_h:
+                    continue
+                # Clamp to image bounds
+                x1 = max(0, x1)
+                y1 = max(0, y1)
+                x2 = min(img_w, x2)
+                y2 = min(img_h, y2)
+                if x2 > x1 and y2 > y1:
+                    boxes.append((x1, y1, x2, y2))
+
+        # Sort top-to-bottom so header regions are tried first
+        boxes.sort(key=lambda b: b[1])
+        logger.debug("YOLO detected %d regions in top half of page", len(boxes))
+        return boxes
+
+    except Exception as exc:
+        logger.debug("YOLO detection failed: %s", exc)
+        return []
+
+
+def _date_from_yolo_ocr(pil_image: Any) -> date | None:
+    """
+    Use YOLO to detect text regions, crop each, OCR it, and score for dates.
+
+    This is Stage 2c — runs after direct-OCR and preprocessed-OCR both fail.
+    It is especially effective on:
+      - Multi-column layouts where the date is in a right-side header box
+      - Scanned PDFs where the date stamp is a separate visual element
+      - Documents with a top-right "Dated:" box alongside a large logo
+    """
+    if not (_YOLO_OK and _TESSERACT_OK and _CV2_OK):
+        return None
+
+    regions = _yolo_detect_regions(pil_image)
+    if not regions:
+        # Fall back to full top-30% crop if YOLO found nothing
+        regions = [(0, 0, pil_image.size[0], int(pil_image.size[1] * 0.30))]
+
+    all_candidates: list[_Candidate] = []
+
+    for x1, y1, x2, y2 in regions:
+        try:
+            crop = pil_image.crop((x1, y1, x2, y2))
+            # Upscale small crops — tesseract accuracy drops below ~30px height
+            w, h = crop.size
+            if h < 60:
+                scale = max(2, 60 // h)
+                crop = crop.resize((w * scale, h * scale))
+
+            # Try raw OCR first, then preprocessed
+            for preprocess in (False, True):
+                img = _preprocess_image(crop) if preprocess else crop
+                text = _ocr_image(img)
+                if text:
+                    candidates = _score_candidates_from_text(
+                        text,
+                        base_score=1,
+                        source_label=f"yolo_ocr{'_pp' if preprocess else ''}",
+                    )
+                    all_candidates.extend(candidates)
+                    if candidates:
+                        break  # preprocessed not needed if raw OCR found dates
+        except Exception as exc:
+            logger.debug("YOLO region OCR failed for box %s: %s", (x1, y1, x2, y2), exc)
+
+    result = _best_date(all_candidates)
+    if result:
+        logger.info("YOLO OCR extracted date: %s (%d regions tried)", result, len(regions))
+    return result
+
+
 # ── PDF download helpers ───────────────────────────────────────────────────
 
 async def _download_bytes(url: str, max_bytes: int = 10_485_760) -> bytes | None:
@@ -688,15 +855,20 @@ def _render_page1(content: bytes) -> Any | None:
 
 async def extract_pdf_date(url: str) -> date | None:
     """
-    Extract a publication date from a government PDF/document URL.
+    Extract a publication date from any government document URL.
+
+    Works for PDFs, DOCX, HTML pages, and plain text. Format is auto-detected
+    from magic bytes after download.
 
     Priority order (first success wins):
-      1. Filename regex (free)
-      2. URL path regex (free)
-      3. PDF metadata (fitz > pypdf)
-      4. Page-1 text extraction (fitz > pypdf) + scored date selection
-      5. OCR on header crop (scanned PDFs)
-      6. OCR with OpenCV preprocessing (noisy/skewed scans)
+      1. Filename regex (free, no download)
+      2. URL path regex (free, no download)
+      3. For non-PDF content (HTML, DOCX, TXT): universal text scorer
+      4. PDF metadata (fitz > pypdf)
+      5. Page-1 text extraction (fitz > pypdf) + scored date selection
+      6. OCR on header crop (scanned PDFs)
+      7. OCR with OpenCV preprocessing (noisy/skewed scans)
+      8. YOLO region detection + per-region OCR
 
     Results are cached to data/pdf_date_cache.json.
     """
@@ -716,36 +888,48 @@ async def extract_pdf_date(url: str) -> date | None:
     result: date | None = None
     strategy = "none"
 
-    # Stage 0 — free strategies
+    # Stage 0 — free strategies (work for any URL format)
     result = _date_from_filename(url)
     if result:
         strategy = "filename"
         _cache_put(url, result.isoformat(), strategy)
-        logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+        logger.debug("Doc date via %s: %s → %s", strategy, url, result)
         return result
 
     result = _date_from_url_path(url)
     if result:
         strategy = "url_path"
         _cache_put(url, result.isoformat(), strategy)
-        logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+        logger.debug("Doc date via %s: %s → %s", strategy, url, result)
         return result
 
-    # Stage 1 — download the full document for parsing.
-    # NOTE: must download the WHOLE file, not a leading slice — a PDF's xref
-    # table and EOF marker live at the end, so a truncated download cannot be
-    # parsed ("EOF marker not found"). Use the default 10 MB cap.
+    # Stage 1 — download the document.
+    # For PDFs: must download the WHOLE file — xref table and EOF marker live
+    # at the end, so a truncated download fails with "EOF marker not found".
     content = await _download_bytes(url)
     if not content:
         _cache_put(url, None, "download_failed")
         return None
+
+    # Auto-detect format from magic bytes
+    filename = urlparse(url).path.split("/")[-1]
+    fmt = _sniff_format(content, filename)
+
+    # Stage 1 (non-PDF) — universal text extractor for HTML, DOCX, TXT
+    if fmt != "pdf":
+        result = extract_date_from_bytes(content, filename)
+        strategy = f"{fmt}_text_scored" if result else f"{fmt}_no_date"
+        _cache_put(url, result.isoformat() if result else None, strategy)
+        if result:
+            logger.debug("Doc date via %s: %s → %s", strategy, url, result)
+        return result
 
     # Stage 1a — PDF metadata
     result = _extract_metadata_date(content)
     if result:
         strategy = "pdf_metadata"
         _cache_put(url, result.isoformat(), strategy)
-        logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+        logger.debug("Doc date via %s: %s → %s", strategy, url, result)
         return result
 
     # Stage 1b — page-1 text with full scoring
@@ -756,7 +940,7 @@ async def extract_pdf_date(url: str) -> date | None:
         if result:
             strategy = "pdf_text_scored"
             _cache_put(url, result.isoformat(), strategy)
-            logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+            logger.debug("Doc date via %s: %s → %s", strategy, url, result)
             return result
         # Digital PDF but no date in header text — OCR will not help
         _cache_put(url, None, "pdf_text_no_date")
@@ -783,7 +967,7 @@ async def extract_pdf_date(url: str) -> date | None:
     if result:
         strategy = "ocr_direct"
         _cache_put(url, result.isoformat(), strategy)
-        logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+        logger.debug("Doc date via %s: %s → %s", strategy, url, result)
         return result
 
     # Stage 2b — OpenCV preprocessing + OCR
@@ -792,10 +976,19 @@ async def extract_pdf_date(url: str) -> date | None:
         if result:
             strategy = "ocr_preprocessed"
             _cache_put(url, result.isoformat(), strategy)
-            logger.debug("PDF date via %s: %s → %s", strategy, url, result)
+            logger.debug("Doc date via %s: %s → %s", strategy, url, result)
             return result
 
-    logger.debug("PDF date extraction failed (all strategies): %s", url)
+    # Stage 2c — YOLO region detection + per-region OCR
+    if _YOLO_OK:
+        result = _date_from_yolo_ocr(page_image)
+        if result:
+            strategy = "yolo_ocr"
+            _cache_put(url, result.isoformat(), strategy)
+            logger.debug("Doc date via %s: %s → %s", strategy, url, result)
+            return result
+
+    logger.debug("Doc date extraction failed (all strategies): %s", url)
     _cache_put(url, None, "exhausted")
     return None
 

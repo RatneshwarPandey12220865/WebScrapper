@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
@@ -17,7 +18,6 @@ logger = logging.getLogger("gov_aggregator.custom.coffee_board")
 _NEWS_URL = "https://coffeeboard.gov.in/News.aspx"
 _BASE_URL = "https://coffeeboard.gov.in"
 _MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
-_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
 _POSTBACK_RE = re.compile(r"__doPostBack\('([^']+)'")
 _CONCURRENCY = 5
 
@@ -33,18 +33,6 @@ _ASPNET_FIELDS = (
 
 def _clean(v: str | None) -> str:
     return " ".join((v or "").split())
-
-
-def _parse_date(raw: str | None) -> datetime | None:
-    if not raw:
-        return None
-    m = _DATE_RE.search(raw)
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
 
 
 def _extract_form_values(soup: BeautifulSoup) -> dict[str, str]:

@@ -8,22 +8,12 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 _BASE = "https://agriwelfare.gov.in"
 _MIN_DATE = datetime(2025, 1, 1, tzinfo=timezone.utc)
-_DATE_RE = re.compile(r"\b(\d{1,2})-(\d{1,2})-(\d{4})\b")
 _EXECUTOR = ThreadPoolExecutor(max_workers=1)
-
-
-def _parse_date(raw: str) -> datetime | None:
-    m = _DATE_RE.search(raw.strip())
-    if not m:
-        return None
-    try:
-        return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-    except ValueError:
-        return None
 
 
 def _scrape_news_carousel(soup: BeautifulSoup) -> list[ScrapedItem]:

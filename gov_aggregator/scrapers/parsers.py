@@ -18,6 +18,18 @@ try:
 except ImportError:  # pragma: no cover - optional dependency for scrapy-style parsing
     ScrapySelector = None
 
+# Scrapy-based parsers live in their own module; imported here so the PARSERS
+# registry and the BS4-fallback wrapper can reference both backends together.
+try:
+    from gov_aggregator.scrapers.scrapy_parsers import (
+        parse_list_scrapy as _scrapy_list,
+        parse_table_scrapy as _scrapy_table,
+        parse_pdf_index_scrapy as _scrapy_pdf_index,
+    )
+    _SCRAPY_PARSERS_OK = True
+except ImportError:
+    _SCRAPY_PARSERS_OK = False
+
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 logger = logging.getLogger("gov_aggregator.parsers")
@@ -47,10 +59,57 @@ def _adjust_yearless_date(value: datetime, reference_date: datetime | None = Non
     return value
 
 
-def _parse_date(raw_value: str | None, reference_date: datetime | None = None) -> datetime | None:
+_DATE_RANGE_RE = re.compile(
+    r"^(.+?)\s+(?:to|-{1,2}|–|—|/)\s+(.+)$",
+    re.IGNORECASE,
+)
+
+
+def _parse_date_range(
+    raw_value: str | None,
+    fmt: str | None = None,
+    reference_date: datetime | None = None,
+) -> tuple[datetime | None, datetime | None]:
+    """Parse a date string that may be a range like '01 Jan 2026 - 31 Mar 2026'.
+
+    Returns (start, end). end is None when the value is a single date.
+    Only treats the value as a range when BOTH halves parse as valid dates
+    and start <= end, to avoid splitting dates that happen to contain
+    a dash (e.g. ISO dates like '2026-01-01').
+    """
+    cleaned = _clean_text(raw_value)
+    if not cleaned:
+        return None, None
+
+    m = _DATE_RANGE_RE.match(cleaned)
+    if m:
+        left, right = m.group(1).strip(), m.group(2).strip()
+        # Reject if either half looks like a bare number (avoids splitting ISO dates)
+        if not left.isdigit() and not right.isdigit():
+            start = _parse_date(left, fmt=fmt, reference_date=reference_date)
+            end = _parse_date(right, fmt=fmt, reference_date=reference_date)
+            if start and end and start <= end:
+                return start, end
+
+    return _parse_date(cleaned, fmt=fmt, reference_date=reference_date), None
+
+
+def _parse_date(
+    raw_value: str | None,
+    fmt: str | None = None,
+    reference_date: datetime | None = None,
+) -> datetime | None:
     cleaned = _clean_text(raw_value)
     if not cleaned:
         return None
+
+    # Try the site-configured strptime format first (exact, no ambiguity)
+    if fmt:
+        try:
+            return datetime.strptime(cleaned, fmt)
+        except (ValueError, TypeError):
+            pass  # fall through to fuzzy parser
+
     if date_parser is not None:
         try:
             parsed = date_parser.parse(cleaned, fuzzy=True)
@@ -116,7 +175,7 @@ def _fallback_link_for(config: SiteConfig, title: str) -> str:
     return f"{config.source_url or config.base_url}#{quote(slug)}"
 
 
-def _build_bs4_item(
+def _build_bs4_items(
     *,
     container: Tag,
     config: SiteConfig,
@@ -124,100 +183,51 @@ def _build_bs4_item(
     link_selector: str | None,
     summary_selector: str | None,
     date_selector: str | None,
+    date_format: str | None = None,
+    extra_links_selector: str | None = None,
     force_pdf: bool = False,
-) -> ScrapedItem | None:
+) -> list[ScrapedItem]:
     title = _bs4_text_for(container, title_selector)
-    link = _bs4_link_for(container, link_selector, config.base_url)
+    primary_link = _bs4_link_for(container, link_selector, config.base_url)
     if not title:
-        return None
-    if not link and config.selectors.get("allow_missing_link"):
-        link = _fallback_link_for(config, title)
-    if not link:
-        return None
+        return []
+    if not primary_link and config.selectors.get("allow_missing_link"):
+        primary_link = _fallback_link_for(config, title)
+    if not primary_link:
+        return []
 
     summary = _bs4_text_for(container, summary_selector) if summary_selector else None
-    published_at = _parse_date(_bs4_text_for(container, date_selector)) if date_selector else None
-    is_pdf = force_pdf or link.lower().endswith(".pdf")
-    return ScrapedItem(title=title, link=link, summary=summary, published_at=published_at, is_pdf=is_pdf)
+    published_at, end_date = (
+        _parse_date_range(_bs4_text_for(container, date_selector), fmt=date_format)
+        if date_selector else (None, None)
+    )
+    is_pdf = force_pdf or primary_link.lower().endswith(".pdf")
+    primary_item = ScrapedItem(title=title, link=primary_link, summary=summary, published_at=published_at, end_date=end_date, is_pdf=is_pdf)
+
+    if not extra_links_selector:
+        return [primary_item]
+
+    seen_links: set[str] = {primary_link}
+    extra_items: list[ScrapedItem] = []
+    for a_tag in container.select(extra_links_selector):
+        href = (a_tag.get("href") or "").strip()
+        if not href:
+            continue
+        extra_link = urljoin(config.base_url, href)
+        if extra_link in seen_links:
+            continue
+        seen_links.add(extra_link)
+        extra_items.append(ScrapedItem(
+            title=title,
+            link=extra_link,
+            summary=summary,
+            published_at=published_at,
+            end_date=end_date,
+            is_pdf=(force_pdf or extra_link.lower().endswith(".pdf")),
+        ))
+    return [primary_item] + extra_items
 
 
-def _scrapy_first(node, selector: str | None = None):
-    if selector:
-        selected = node.css(selector)
-        if not selected:
-            return None
-        return selected[0]
-    return node
-
-
-def _scrapy_text_for(node, selector: str | None = None) -> str:
-    if selector is None:
-        # Get all direct text nodes excluding child element text
-        texts = [t.strip() for t in node.css("::text").getall() if t.strip()]
-        # Remove date text if present
-        date_text = node.css("p.regDate ::text").get("")
-        return " ".join(t for t in texts if t not in date_text).strip()
-
-    target = _scrapy_first(node, selector)
-    if target is None:
-        return ""
-    return _clean_text(target.xpath("normalize-space(string())").get())
-
-
-def _scrapy_link_for(node, selector: str | None, base_url: str) -> str:
-    target = _scrapy_first(node, selector)
-    if target is None:
-        # FIX Bug #2: If selector didn't match, try finding first <a> inside container
-        if selector:
-            fallback_links = node.css("a[href]")
-            if fallback_links:
-                href = (fallback_links[0].attrib.get("href") or "").strip()
-                if href:
-                    logger.debug("link_selector '%s' didn't match (scrapy), used fallback <a>", selector)
-                    return urljoin(base_url, href)
-        return ""
-    href = (target.attrib.get("websiteurl") or target.attrib.get("href") or target.attrib.get("data-href") or "").strip()
-    if not href:
-        # FIX Bug #2: Container element has no href, try child <a>
-        fallback_links = target.css("a[href]")
-        if fallback_links:
-            href = (fallback_links[0].attrib.get("href") or "").strip()
-            if href:
-                logger.debug("Scrapy node has no href, used first child <a> tag")
-                return urljoin(base_url, href)
-        return ""
-    return urljoin(base_url, href)
-
-
-def _build_scrapy_item(
-    *,
-    container,
-    config: SiteConfig,
-    title_selector: str | None,
-    link_selector: str | None,
-    summary_selector: str | None,
-    date_selector: str | None,
-    force_pdf: bool = False,
-) -> ScrapedItem | None:
-    title = _scrapy_text_for(container, title_selector)
-    link = _scrapy_link_for(container, link_selector, config.base_url)
-    
-    if not link:
-        release_id = container.attrib.get("id", "")
-        if release_id and release_id.isdigit():
-            link = f"https://pib.gov.in/PressReleasePage.aspx?PRID={release_id}"
-
-    if not title:
-        return None
-    if not link and config.selectors.get("allow_missing_link"):
-        link = _fallback_link_for(config, title)
-    if not link:
-        return None
-
-    summary = _scrapy_text_for(container, summary_selector) if summary_selector else None
-    published_at = _parse_date(_scrapy_text_for(container, date_selector)) if date_selector else None
-    is_pdf = force_pdf or link.lower().endswith(".pdf")
-    return ScrapedItem(title=title, link=link, summary=summary, published_at=published_at, is_pdf=is_pdf)
 
 
 # ---------------------------------------------------------------------------
@@ -392,17 +402,20 @@ def parse_list_bs4(config: SiteConfig, html: str) -> list[ScrapedItem]:
     selectors = config.selectors
     containers = soup.select(selectors.get("item_selector", "li"))
     exclude_pattern = selectors.get("exclude_title_pattern")
+    date_format = getattr(config, "date_format", None)
+    extra_links_selector = selectors.get("extra_links_selector")
     items: list[ScrapedItem] = []
     for container in containers:
-        item = _build_bs4_item(
+        for item in _build_bs4_items(
             container=container,
             config=config,
             title_selector=selectors.get("title_selector"),
             link_selector=selectors.get("link_selector"),
             summary_selector=selectors.get("summary_selector"),
             date_selector=selectors.get("date_selector"),
-        )
-        if item:
+            date_format=date_format,
+            extra_links_selector=extra_links_selector,
+        ):
             if exclude_pattern and re.search(exclude_pattern, item.title, re.IGNORECASE):
                 continue
             items.append(item)
@@ -413,17 +426,20 @@ def parse_table_bs4(config: SiteConfig, html: str) -> list[ScrapedItem]:
     soup = BeautifulSoup(html, "html.parser")
     selectors = config.selectors
     containers = soup.select(selectors.get("row_selector", "table tr"))
+    date_format = getattr(config, "date_format", None)
+    extra_links_selector = selectors.get("extra_links_selector")
     items: list[ScrapedItem] = []
     for container in containers:
-        item = _build_bs4_item(
+        for item in _build_bs4_items(
             container=container,
             config=config,
             title_selector=selectors.get("title_selector"),
             link_selector=selectors.get("link_selector"),
             summary_selector=selectors.get("summary_selector"),
             date_selector=selectors.get("date_selector"),
-        )
-        if item:
+            date_format=date_format,
+            extra_links_selector=extra_links_selector,
+        ):
             items.append(item)
     return items
 
@@ -432,99 +448,98 @@ def parse_pdf_index_bs4(config: SiteConfig, html: str) -> list[ScrapedItem]:
     soup = BeautifulSoup(html, "html.parser")
     selectors = config.selectors
     containers = soup.select(selectors.get("item_selector", "a[href$='.pdf']"))
+    date_format = getattr(config, "date_format", None)
+    extra_links_selector = selectors.get("extra_links_selector")
     items: list[ScrapedItem] = []
     for container in containers:
-        item = _build_bs4_item(
+        for item in _build_bs4_items(
             container=container,
             config=config,
             title_selector=selectors.get("title_selector"),
             link_selector=selectors.get("link_selector"),
             summary_selector=selectors.get("summary_selector"),
             date_selector=selectors.get("date_selector"),
+            date_format=date_format,
+            extra_links_selector=extra_links_selector,
             force_pdf=True,
-        )
-        if item:
+        ):
             items.append(item)
     return items
 
 
-def parse_list_scrapy(config: SiteConfig, html: str) -> list[ScrapedItem]:
-    if ScrapySelector is None:
-        raise ImportError("scrapy is not installed; install it to use parser_backend='scrapy'")
-    root = ScrapySelector(text=html)
-    selectors = config.selectors
-    containers = root.css(selectors.get("item_selector", "li"))
-    exclude_pattern = selectors.get("exclude_title_pattern")
-    items: list[ScrapedItem] = []
-    for container in containers:
-        item = _build_scrapy_item(
-            container=container,
-            config=config,
-            title_selector=selectors.get("title_selector"),
-            link_selector=selectors.get("link_selector"),
-            summary_selector=selectors.get("summary_selector"),
-            date_selector=selectors.get("date_selector"),
-        )
-        if item:
-            if exclude_pattern and re.search(exclude_pattern, item.title, re.IGNORECASE):
-                continue
-            items.append(item)
-    return items
 
 
-def parse_table_scrapy(config: SiteConfig, html: str) -> list[ScrapedItem]:
-    if ScrapySelector is None:
-        raise ImportError("scrapy is not installed; install it to use parser_backend='scrapy'")
-    root = ScrapySelector(text=html)
-    selectors = config.selectors
-    containers = root.css(selectors.get("row_selector", "table tr"))
-    items: list[ScrapedItem] = []
-    for container in containers:
-        item = _build_scrapy_item(
-            container=container,
-            config=config,
-            title_selector=selectors.get("title_selector"),
-            link_selector=selectors.get("link_selector"),
-            summary_selector=selectors.get("summary_selector"),
-            date_selector=selectors.get("date_selector"),
-        )
-        if item:
-            items.append(item)
-    return items
+def _with_bs4_fallback(scrapy_fn, bs4_fn):
+    """Wrap a Scrapy parser so it degrades gracefully to the BS4 equivalent.
+
+    Fallback triggers when:
+      • scrapy_fn raises any exception (import error, selector crash, etc.)
+      • scrapy_fn returns 0 items AND bs4_fn returns at least 1
+
+    In both cases a warning is logged so the issue is visible in the run log.
+    """
+    def wrapped(config: SiteConfig, html: str) -> list[ScrapedItem]:
+        try:
+            items = scrapy_fn(config, html)
+        except Exception as exc:
+            logger.warning(
+                "[%s] Scrapy parser raised %s — falling back to BS4",
+                config.site_key, exc,
+            )
+            try:
+                return bs4_fn(config, html)
+            except Exception as bs4_exc:
+                logger.error("[%s] BS4 fallback also failed: %s", config.site_key, bs4_exc)
+                return []
+
+        if items:
+            return items
+
+        # Scrapy returned empty — check whether BS4 does better before giving up
+        try:
+            bs4_items = bs4_fn(config, html)
+        except Exception:
+            bs4_items = []
+
+        if bs4_items:
+            logger.warning(
+                "[%s] Scrapy returned 0 items but BS4 found %d — using BS4 fallback",
+                config.site_key, len(bs4_items),
+            )
+            return bs4_items
+
+        return []
+
+    return wrapped
 
 
-def parse_pdf_index_scrapy(config: SiteConfig, html: str) -> list[ScrapedItem]:
-    if ScrapySelector is None:
-        raise ImportError("scrapy is not installed; install it to use parser_backend='scrapy'")
-    root = ScrapySelector(text=html)
-    selectors = config.selectors
-    containers = root.css(selectors.get("item_selector", "a[href$='.pdf']"))
-    items: list[ScrapedItem] = []
-    for container in containers:
-        item = _build_scrapy_item(
-            container=container,
-            config=config,
-            title_selector=selectors.get("title_selector"),
-            link_selector=selectors.get("link_selector"),
-            summary_selector=selectors.get("summary_selector"),
-            date_selector=selectors.get("date_selector"),
-            force_pdf=True,
-        )
-        if item:
-            items.append(item)
-    return items
+# ── Pre-built wrapped parsers for each backend / parser-type combo ─────────
+_bs4_list      = _wrap_bs4_parser(parse_list_bs4,      "list")
+_bs4_table     = _wrap_bs4_parser(parse_table_bs4,     "table")
+_bs4_pdf_index = _wrap_bs4_parser(parse_pdf_index_bs4, "pdf_index")
+
+if _SCRAPY_PARSERS_OK:
+    _scrapy_list_wrapped      = _with_bs4_fallback(_wrap_scrapy_parser(_scrapy_list,      "list"),      _bs4_list)
+    _scrapy_table_wrapped     = _with_bs4_fallback(_wrap_scrapy_parser(_scrapy_table,     "table"),     _bs4_table)
+    _scrapy_pdf_index_wrapped = _with_bs4_fallback(_wrap_scrapy_parser(_scrapy_pdf_index, "pdf_index"), _bs4_pdf_index)
+else:
+    # scrapy_parsers module unavailable — silently use BS4 for "scrapy" backend too
+    logger.warning("scrapy_parsers module not available — scrapy backend will use BS4 parsers")
+    _scrapy_list_wrapped      = _bs4_list
+    _scrapy_table_wrapped     = _bs4_table
+    _scrapy_pdf_index_wrapped = _bs4_pdf_index
 
 
 PARSERS = {
     "bs4": {
-        "list": _wrap_bs4_parser(parse_list_bs4, "list"),
-        "table": _wrap_bs4_parser(parse_table_bs4, "table"),
-        "pdf_index": _wrap_bs4_parser(parse_pdf_index_bs4, "pdf_index"),
+        "list":      _bs4_list,
+        "table":     _bs4_table,
+        "pdf_index": _bs4_pdf_index,
     },
     "scrapy": {
-        "list": _wrap_scrapy_parser(parse_list_scrapy, "list"),
-        "table": _wrap_scrapy_parser(parse_table_scrapy, "table"),
-        "pdf_index": _wrap_scrapy_parser(parse_pdf_index_scrapy, "pdf_index"),
+        "list":      _scrapy_list_wrapped,
+        "table":     _scrapy_table_wrapped,
+        "pdf_index": _scrapy_pdf_index_wrapped,
     },
 }
 

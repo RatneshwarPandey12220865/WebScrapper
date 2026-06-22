@@ -20,12 +20,15 @@ from .csez import crawl_csez
 from .ayush import crawl_ayush
 from .cbic import crawl_cbic_customs
 from .cci import crawl_cci
+from .cerc import crawl_cerc
+from .coal import crawl_coal
 from .coffee_board import crawl_coffee_board
 from .dahd import crawl_dahd
 from .chandigarh import crawl_chandigarh
 from .chemexcil import crawl_chemexcil
 from .commerce import crawl_commerce
 from .dgft import crawl_dgft
+from .dor import crawl_dor
 from .dbt import crawl_dbt
 from .dhr import crawl_dhr
 from .dpiit import crawl_dpiit
@@ -36,6 +39,7 @@ from .fertilizers import crawl_fertilizers
 from .fisheries import crawl_fisheries
 from .fssai import crawl_fssai_recent
 from .gst import crawl_gst
+from .icar import crawl_icar
 from .icmr import crawl_icmr
 from .ip_india import crawl_ip_india
 from .income_tax import scrape_income_tax
@@ -47,22 +51,31 @@ from .jalshakti import crawl_jalshakti
 from .jerc_mizoram import crawl_jerc_mizoram
 from .jercuts import crawl_jercuts
 from .mea import crawl_mea
+from .mha import crawl_mha
+from .mohfw_dohfw import crawl_mohfw_dohfw
 from .tea_board import crawl_tea_board
 from .sfac import crawl_sfac
 from .npci import crawl_npci
 from .meity import crawl_meity
 from .morth import crawl_morth
 from .nccd import crawl_nccd
+from .nbb import crawl_nbb
 from .nmc import crawl_nmc
 from .nse import crawl_nse
 from .pci import crawl_pci
 from .pharma_dept import crawl_pharma
+from .pharmexcil import crawl_pharmexcil
+from .project_exports import crawl_project_exports
 from .power import crawl_power
 from .power_pib import crawl_power_pib
 from .rajasthan import crawl_rajasthan
 from .rbi import crawl_rbi
 from .sebi import crawl_sebi
+from .cooperation import crawl_cooperation
+from .dfs import crawl_dfs
+from .midh import crawl_midh
 from .nfsm import crawl_nfsm
+from .ppqs import crawl_ppqs
 
 CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
@@ -83,6 +96,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "cbic-customs": crawl_cbic_customs,
     "cci": crawl_cci,
     "competition-commission-of-india": crawl_cci,
+    "central-electricity-regulatory-commission": crawl_cerc,
     "chemexcil": crawl_chemexcil,
     "chandigarh": crawl_chandigarh,
     "industry-and-internal-trade": crawl_dpiit,
@@ -92,6 +106,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "department-of-bio-technology": crawl_dbt,
     "department-of-health-research": crawl_dhr,
     "directorate-general-of-foreign-trade": crawl_dgft,
+    "department-of-revenue": crawl_dor,
     "dot": crawl_dot,
     "dot-eservices": crawl_dot_eservices,
     "fssai": crawl_fssai_recent,
@@ -105,28 +120,39 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "jerc-mizoram": crawl_jerc_mizoram,
     "jercuts": crawl_jercuts,
     "mea": crawl_mea,
+    "ministry-of-home-affairs": crawl_mha,
+    "mohfw-dohfw": crawl_mohfw_dohfw,
     "npci": crawl_npci,
     "sfac": crawl_sfac,
     "tea-board": crawl_tea_board,
     "meity": crawl_meity,
     "ministry-of-ayush": crawl_ayush,
     "national-centre-for-cold-chain-development": crawl_nccd,
+    "national-bee-board": crawl_nbb,
     "national-medical-commission": crawl_nmc,
     "nse": crawl_nse,
     "pharmacy-council": crawl_pci,
     "department-of-pharmaceuticals": crawl_pharma,
+    "pharmexcil": crawl_pharmexcil,
+    "project-exports-promotion-council": crawl_project_exports,
     "power-ministry": crawl_power,
     "power-ministry-pib": crawl_power_pib,
     "rajasthan": crawl_rajasthan,
     "rbi": crawl_rbi,
+    "ministry-of-coal-for-coal-mines": crawl_coal,
     "coffee-board": crawl_coffee_board,
     "department-of-animal-husbandry-and-dairying": crawl_dahd,
     "department-of-fertilizers": crawl_fertilizers,
     "department-of-fisheries": crawl_fisheries,
+    "department-of-agricultural-research-and-education": crawl_icar,
     "icmr": crawl_icmr,
     "industry-and-internal-trade-ip": crawl_ip_india,
     "sebi": crawl_sebi,
     "national-food-security-mission-for-oilseeds": crawl_nfsm,
+    "ministry-of-cooperation": crawl_cooperation,
+    "department-of-financial-services": crawl_dfs,
+    "directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules": crawl_ppqs,
+    "mission-for-integrated-development-of-horticulture": crawl_midh,
 }
 
 __all__ = [
@@ -147,6 +173,7 @@ __all__ = [
     "crawl_ayush",
     "crawl_cbic_customs",
     "crawl_cci",
+    "crawl_cerc",
     "crawl_chemexcil",
     "crawl_chandigarh",
     "crawl_commerce",
@@ -173,4 +200,13 @@ __all__ = [
     "crawl_coffee_board",
     "crawl_dahd",
     "crawl_fertilizers",
-  
+    "crawl_fisheries",
+    "crawl_jerc_mizoram",
+    "crawl_sebi",
+    "crawl_nfsm",
+    "crawl_cooperation",
+    "crawl_dfs",
+    "crawl_midh",
+    "crawl_ppqs",
+    "scrape_income_tax",
+]

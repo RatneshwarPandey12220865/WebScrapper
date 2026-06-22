@@ -1,99 +1,172 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urljoin
 
 import httpx
-from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 logger = logging.getLogger("gov_aggregator.custom.power")
 
-_BASE = "https://powermin.gov.in"
-_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
-_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://powermin.gov.in/",
-}
+_CMS = "https://www.powermin.gov.in/cms/wp-json"
+_WHATS_NEW_API = f"{_CMS}/post-page/whats_new"
+_PRESS_API = f"{_CMS}/document/documents"
+_POST_API = f"{_CMS}/post-page/post"
+_MAX_PAGES = 10
+_CONCURRENCY = 10  # parallel file-detail fetches
 
-_CIRCULAR_URL = "https://powermin.gov.in/en/circular"
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+}
 
 
 def _parse_date(raw: str | None) -> datetime | None:
-    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y", "%d-%m-%Y", "%d %b %Y", "%B %d, %Y", "%Y-%m-%d"):
+    """Parse DD/MM/YYYY or YYYY-MM-DD HH:MM:SS."""
+    if not raw:
+        return None
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
         try:
-            return datetime.strptime((raw or "").strip(), fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(raw.strip()[:19], fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
     return None
 
 
-def _parse_page(html: str, section_label: str, page_url: str) -> tuple[list[ScrapedItem], str | None]:
-    soup = BeautifulSoup(html, "html.parser")
-    items = []
+async def _fetch_file_detail(
+    client: httpx.AsyncClient,
+    sem: asyncio.Semaphore,
+    file_id: int,
+) -> dict:
+    """Return acf_data dict for a central_documents post, or {} on failure."""
+    async with sem:
+        try:
+            resp = await client.get(_POST_API, params={"id": file_id})
+            resp.raise_for_status()
+            return resp.json().get("posts", {}).get("acf_data", {})
+        except Exception as exc:
+            logger.warning("[power] file detail %d failed: %s", file_id, exc)
+            return {}
 
-    for row in soup.select(".view-id-circular .views-table tbody tr"):
-        subject_td = row.select_one("td.views-field-title-1")
-        title = " ".join(subject_td.get_text().split()) if subject_td else ""
-        if not title:
-            continue
 
-        date_span = row.select_one("td.views-field-field-date span[content]")
-        raw_date = (date_span.get("content") or date_span.get_text()).strip() if date_span else None
-        published_at = _parse_date(raw_date)
-        if published_at and published_at < _MIN_DATE:
-            continue
+def _extract_file_id_whats_new(acf: dict) -> int | None:
+    """acf_data.file = [int]"""
+    f = acf.get("file")
+    if isinstance(f, list) and f and isinstance(f[0], int):
+        return f[0]
+    return None
 
-        division_td = row.select_one("td.views-field-field-division")
-        label = " ".join(division_td.get_text().split()) if division_td else section_label
-        label = label or section_label
 
-        a = row.select("td")[-1].select_one("a") if row.select("td") else None
-        if not a:
-            continue
-        href = (a.get("href") or "").strip()
-        link = href if href.startswith("http") else urljoin(_BASE, href)
-
-        items.append(ScrapedItem(
-            title=title,
-            link=link,
-            published_at=published_at,
-            is_pdf=link.lower().endswith(".pdf"),
-            section_label=label,
-        ))
-
-    next_a = soup.select_one(".pager-next a") or soup.select_one("li.pager__item--next a")
-    next_url = urljoin(page_url, next_a["href"]) if next_a else None
-    return items, next_url
+def _extract_file_id_press(acf: dict) -> int | None:
+    """acf_data.file = [{"file": [int], ...}]"""
+    f = acf.get("file")
+    if isinstance(f, list) and f and isinstance(f[0], dict):
+        inner = f[0].get("file")
+        if isinstance(inner, list) and inner and isinstance(inner[0], int):
+            return inner[0]
+    return None
 
 
 async def crawl_power(_config: SiteConfig) -> list[ScrapedItem]:
     all_items: list[ScrapedItem] = []
+    sem = asyncio.Semaphore(_CONCURRENCY)
 
-    async with httpx.AsyncClient(follow_redirects=True, headers=_HEADERS, timeout=30) as client:
-        # warm up session
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        headers=_HEADERS,
+        timeout=45,
+    ) as client:
+
+        # ── What's New ──────────────────────────────────────────────────────
+        wn_posts: list[dict] = []
         try:
-            await client.get(_BASE)
-        except Exception:
-            pass
+            resp = await client.get(_WHATS_NEW_API)
+            resp.raise_for_status()
+            wn_posts = resp.json().get("posts", [])
+            logger.info("[power] What's New list: %d posts", len(wn_posts))
+        except Exception as exc:
+            logger.warning("[power] What's New list failed: %s", exc)
 
-        url: str | None = _CIRCULAR_URL
-        while url:
-            try:
-                resp = await client.get(url)
+        # ── Press Releases (paginated) ───────────────────────────────────────
+        pr_posts: list[dict] = []
+        try:
+            for page_n in range(1, _MAX_PAGES + 1):
+                resp = await client.get(
+                    _PRESS_API,
+                    params={
+                        "document_category": "press-release",
+                        "limit": 10,
+                        "page": page_n,
+                        "sort": "acf",
+                        "order": "DESC",
+                        "search": "",
+                    },
+                )
                 resp.raise_for_status()
-                items, url = _parse_page(resp.text, "Circulars", url)
-                all_items.extend(items)
-                logger.info("[power] Circulars: %d items, next=%s", len(items), url)
-                if not items:
+                data = resp.json()
+                page_posts = data.get("posts", [])
+                pr_posts.extend(page_posts)
+                logger.info("[power] Press Releases page %d: %d posts", page_n, len(page_posts))
+                if page_n >= data.get("total_pages", 1):
                     break
-            except Exception as exc:
-                logger.warning("[power] fetch failed %s: %s", url, exc)
-                break
+        except Exception as exc:
+            logger.warning("[power] Press Releases fetch failed: %s", exc)
+
+        # ── Collect file IDs and batch-fetch details ─────────────────────────
+        # Build (post, file_id, section_label) triples
+        pending: list[tuple[dict, int, str]] = []
+        for post in wn_posts:
+            fid = _extract_file_id_whats_new(post.get("acf_data") or {})
+            if fid:
+                pending.append((post, fid, "What's New"))
+        for post in pr_posts:
+            fid = _extract_file_id_press(post.get("acf_data") or {})
+            if fid:
+                pending.append((post, fid, "Press Releases"))
+
+        if not pending:
+            logger.warning("[power] no file IDs found — returning 0 items")
+            return []
+
+        # Parallel fetch all file details
+        file_details: list[dict] = await asyncio.gather(
+            *[_fetch_file_detail(client, sem, fid) for _, fid, _ in pending]
+        )
+
+        # ── Build ScrapedItems ───────────────────────────────────────────────
+        seen: set[str] = set()
+        for (post, _fid, section_label), detail in zip(pending, file_details):
+            # Title: prefer the file's own acf title, fall back to post_title
+            title = (detail.get("title") or post.get("post_title") or "").strip()
+            title = " ".join(title.split())
+            if not title:
+                continue
+
+            # Date: prefer file_date (DD/MM/YYYY), fall back to post_date
+            published_at = _parse_date(detail.get("file_date") or detail.get("date")) or \
+                           _parse_date(post.get("post_date"))
+
+            # PDF URL
+            pdf_info = detail.get("pdf") or {}
+            link = (pdf_info.get("url") or "").strip()
+            if not link:
+                continue
+            if link in seen:
+                continue
+            seen.add(link)
+
+            all_items.append(ScrapedItem(
+                title=title,
+                link=link,
+                published_at=published_at,
+                is_pdf=link.lower().endswith(".pdf"),
+                section_label=section_label,
+            ))
 
     logger.info("[power] total: %d items", len(all_items))
     return all_items

@@ -113,7 +113,7 @@
       "url": "https://dfpd.gov.in/Home/WhatsNewViewAllList?languageId=1",
       "base_url": "https://dfpd.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "default_category": "notification",
       "category_mapping": {
@@ -150,7 +150,8 @@
         ]
       },
       "selectors": {
-        "item_selector": "#dataTable tbody tr td a"
+        "item_selector": "#dataTable tbody tr td a",
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -159,7 +160,7 @@
       "name": "Ministry of Heavy Industries",
       "base_url": "https://heavyindustries.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -218,87 +219,95 @@
           "annual day"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "What's New - Page 1",
           "url": "https://heavyindustries.gov.in/en/whats-new?page=0",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title a",
-            "link_selector": "td.views-field-title a"
+            "link_selector": "td.views-field-title a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "What's New - Page 2",
           "url": "https://heavyindustries.gov.in/en/whats-new?page=1",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title a",
-            "link_selector": "td.views-field-title a"
+            "link_selector": "td.views-field-title a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "What's New - Page 3",
           "url": "https://heavyindustries.gov.in/en/whats-new?page=2",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title a",
-            "link_selector": "td.views-field-title a"
+            "link_selector": "td.views-field-title a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Notifications",
           "url": "https://heavyindustries.gov.in/en/notifications",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-field-upload-notifications-docum-1 a",
-            "date_selector": "td.views-field-field-notifications-d"
+            "date_selector": "td.views-field-field-notifications-d",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases",
           "url": "https://heavyindustries.gov.in/en/press-releases",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title a",
             "link_selector": "td.views-field-title a",
-            "date_selector": "td.views-field-field-date"
+            "date_selector": "td.views-field-field-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Events",
           "url": "https://heavyindustries.gov.in/en/events",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "row_selector": "table.cols-4 tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-title a",
-            "date_selector": "td.views-field-field-start-date-events"
+            "date_selector": "td.views-field-field-start-date-events",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -310,7 +319,7 @@
       "url": "https://epces.in/index.php",
       "base_url": "https://epces.in",
       "parser_type": "pdf_index",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "default_category": "notification",
       "category_mapping": {
@@ -350,8 +359,39 @@
       "selectors": {
         "item_selector": ".newsListSlider ul li a",
         "title_selector": "div strong",
-        "link_selector": null
+        "link_selector": null,
+        "wait_for_selector": "table tbody tr"
       }
+    },
+    {
+      "site_key": "project-exports-promotion-council",
+      "ministry": "Ministry of Commerce and Industry",
+      "name": "Project Exports Promotion Council of India (PEPC)",
+      "url": "https://projectexports.com",
+      "base_url": "https://projectexports.com",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "project-exports-promotion-council",
+      "default_category": "news",
+      "category_mapping": {
+        "news": [
+          "news",
+          "infrastructure",
+          "export",
+          "contract",
+          "project"
+        ],
+        "circular": [
+          "circular",
+          "notification",
+          "report",
+          "research"
+        ]
+      },
+      "selectors": {},
+      "sections": []
     },
     {
       "site_key": "industry-and-internal-trade",
@@ -486,7 +526,7 @@
       "url": "https://steel.gov.in/press-release",
       "base_url": "https://steel.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "default_category": "news",
       "category_mapping": {
@@ -523,7 +563,8 @@
         "row_selector": ".whats-new table tbody tr",
         "title_selector": "td.views-field-title",
         "link_selector": "td.views-field-field-download a, td.views-field-field-link a",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": ".views-row, table tbody tr"
       }
     },
     {
@@ -533,7 +574,7 @@
       "url": "https://www.texmin.gov.in/whats-new",
       "base_url": "https://www.texmin.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "default_category": "notification",
       "category_mapping": {
@@ -582,53 +623,10 @@
         "item_selector": ".announcementbox",
         "title_selector": "p.mb-0, div.mb-0.text-break",
         "link_selector": "a.download-btn, a.link-btn",
-        "date_selector": "small.ptype.mb-0"
+        "date_selector": "small.ptype.mb-0",
+        "wait_for_selector": ".announcementbox"
       },
       "wait_for_selector": ".whats-new-announcements .announcementbox"
-    },
-    {
-      "site_key": "project-export-promotion-council",
-      "ministry": "Ministry of Commerce and Industry",
-      "name": "Project Export Promotion Council (PEPC)",
-      "url": "https://projectexports.com",
-      "base_url": "https://projectexports.com",
-      "parser_type": "list",
-      "parser_backend": "bs4",
-      "render_js": true,
-      "default_category": "news",
-      "category_mapping": {
-        "news": [
-          "infrastructure",
-          "export",
-          "project",
-          "energy",
-          "transmission",
-          "collaboration",
-          "platform",
-          "market"
-        ],
-        "notification": [
-          "notice",
-          "notification",
-          "circular"
-        ],
-        "tender": [
-          "tender",
-          "bid",
-          "rfp"
-        ],
-        "recruitment": [
-          "vacancy",
-          "recruitment",
-          "appointment"
-        ]
-      },
-      "selectors": {
-        "item_selector": "#menu6 div.news",
-        "title_selector": "p.short-para",
-        "link_selector": "a.btn",
-        "date_selector": "p.title7"
-      }
     },
     {
       "site_key": "ministry-of-information-and-broadcasting-gazette",
@@ -636,7 +634,7 @@
       "name": "Ministry of Information and Broadcasting",
       "base_url": "https://mib.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -686,13 +684,15 @@
           "media"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New - Page 1",
           "url": "https://mib.gov.in/en/whats-new?page=0",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -707,7 +707,7 @@
           "section_label": "What's New - Page 2",
           "url": "https://mib.gov.in/en/whats-new?page=1",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -722,7 +722,7 @@
           "section_label": "What's New - Page 3",
           "url": "https://mib.gov.in/en/whats-new?page=2",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -737,7 +737,7 @@
           "section_label": "What's New - Page 4",
           "url": "https://mib.gov.in/en/whats-new?page=3",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -754,11 +754,12 @@
       "site_key": "ministry-of-home-affairs",
       "ministry": "Ministry of Home Affairs",
       "name": "Ministry of Home Affairs",
-      "url": "https://www.mha.gov.in/en/media/whats-new",
+      "source_url": "https://www.mha.gov.in/en/media/whats-new",
       "base_url": "https://www.mha.gov.in",
       "parser_type": "table",
       "parser_backend": "bs4",
-      "render_js": true,
+      "custom_crawler": "ministry-of-home-affairs",
+      "render_js": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -814,12 +815,8 @@
           "quotation"
         ]
       },
-      "selectors": {
-        "row_selector": ".scroll-table1 table tbody tr",
-        "title_selector": "td.views-field-title-1",
-        "link_selector": "td.views-field-nid a",
-        "date_selector": "td.views-field-field-date time"
-      }
+      "selectors": {},
+      "sections": []
     },
     {
       "site_key": "ministry-of-tourism-for-hotels-restaurants",
@@ -828,7 +825,7 @@
       "url": "https://tourism.gov.in/index.php/media/whats-new",
       "base_url": "https://tourism.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -866,17 +863,18 @@
         "row_selector": "table.views-table tbody tr",
         "title_selector": "td:nth-child(2)",
         "link_selector": "td.views-field-view-node a",
-        "date_selector": "td.views-field-field-date"
+        "date_selector": "td.views-field-field-date",
+        "wait_for_selector": ".views-row, table tbody tr"
       }
     },
     {
       "site_key": "ministry-of-women-child-development",
       "ministry": "Ministry of Women and Child Development",
       "name": "Ministry of Women and Child Development",
-      "url": "https://wcd.gov.in/press",
+      "url": "https://wcd.gov.in/documents/press-release",
       "base_url": "https://wcd.gov.in",
-      "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_type": "list",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -920,10 +918,11 @@
         ]
       },
       "selectors": {
-        "row_selector": "table.table-striped tbody tr",
-        "title_selector": "td:nth-child(2)",
-        "link_selector": "td:nth-child(3) a",
-        "date_selector": "td.p-date"
+        "item_selector": "div.list_det_bx.tender_list",
+        "title_selector": ".col-md-7 .det_cont p",
+        "link_selector": "a[href*=\"uploaded\"]",
+        "date_selector": ".col-md-2 small",
+        "wait_for_selector": "div.list_det_bx.tender_list"
       }
     },
     {
@@ -932,7 +931,7 @@
       "name": "Commission for Agricultural Costs and Prices (CACP)",
       "base_url": "https://cacp.da.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "extract_pdf_dates": true,
@@ -975,7 +974,9 @@
           "quotation"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
@@ -1012,12 +1013,14 @@
       "site_key": "department-of-agricultural-research-and-education",
       "ministry": "Department of Agricultural Research and Education",
       "name": "ICAR - Indian Council of Agricultural Research",
-      "base_url": "https://icar.gov.in",
-      "parser_type": "table",
-      "parser_backend": "scrapy",
-      "render_js": true,
+      "base_url": "https://www.icar.org.in",
+      "url": "https://www.icar.org.in/en/circulars-data",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
       "verify_ssl": false,
       "active": true,
+      "custom_crawler": "department-of-agricultural-research-and-education",
       "default_category": "circular",
       "category_mapping": {
         "recruitment": [
@@ -1063,78 +1066,7 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "Circulars - Page 1",
-          "url": "https://icar.gov.in/en/circulars-data?page=0",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "circular",
-          "selectors": {
-            "row_selector": "table.views-view-table tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-c a",
-            "date_selector": "td.views-field-field-date-circular"
-          }
-        },
-        {
-          "section_label": "Circulars - Page 2",
-          "url": "https://icar.gov.in/en/circulars-data?page=1",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "circular",
-          "selectors": {
-            "row_selector": "table.views-view-table tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-c a",
-            "date_selector": "td.views-field-field-date-circular"
-          }
-        },
-        {
-          "section_label": "Circulars - Page 3",
-          "url": "https://icar.gov.in/en/circulars-data?page=2",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "circular",
-          "selectors": {
-            "row_selector": "table.views-view-table tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-c a",
-            "date_selector": "td.views-field-field-date-circular"
-          }
-        },
-        {
-          "section_label": "Circulars - Page 4",
-          "url": "https://icar.gov.in/en/circulars-data?page=3",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "circular",
-          "selectors": {
-            "row_selector": "table.views-view-table tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-c a",
-            "date_selector": "td.views-field-field-date-circular"
-          }
-        },
-        {
-          "section_label": "DARE What's New",
-          "url": "https://dare.gov.in/whats_archive",
-          "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "item_selector": "div.newsPanel a",
-            "title_selector": "p",
-            "link_selector": null,
-            "date_selector": null
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "department-of-agriculture-and-farmers-welfare-whatsnew",
@@ -1387,7 +1319,8 @@
         "item_selector": "#MainContent_divWhatsNew ul li a",
         "title_selector": null,
         "link_selector": null,
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": ".views-row, table tbody tr"
       }
     },
     {
@@ -1547,7 +1480,7 @@
       "name": "Marine Products Export Development Authority (MPEDA)",
       "base_url": "https://mpeda.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -1602,13 +1535,15 @@
           "bid"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
           "url": "https://mpeda.gov.in",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -1623,7 +1558,7 @@
           "section_label": "Press Releases",
           "url": "https://mpeda.gov.in/?page_id=1169",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -1638,7 +1573,7 @@
           "section_label": "Circulars",
           "url": "https://mpeda.gov.in/?page_id=1127",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -1658,7 +1593,7 @@
       "url": "https://mines.gov.in/webportal/whatsnew",
       "base_url": "https://mines.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -1813,7 +1748,8 @@
             "item_selector": "#whats-new-content ul li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -1828,7 +1764,8 @@
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td:nth-child(1) span.bt-content",
             "link_selector": "td:nth-child(3) a",
-            "date_selector": "td:nth-child(2) span.bt-content"
+            "date_selector": "td:nth-child(2) span.bt-content",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -1843,7 +1780,8 @@
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td:nth-child(1) span.bt-content",
             "link_selector": "td:nth-child(3) a",
-            "date_selector": "td:nth-child(2) span.bt-content"
+            "date_selector": "td:nth-child(2) span.bt-content",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -1854,7 +1792,7 @@
       "name": "Ministry of Urban Development (MoHUA)",
       "base_url": "https://mohua.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -1946,13 +1884,15 @@
           "notice for extension of date"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
           "url": "https://mohua.gov.in/whatsnew.php",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "min_date": "2025-07-01",
@@ -1960,21 +1900,23 @@
             "row_selector": "table.table tbody tr",
             "title_selector": "td:nth-child(2) a",
             "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(3)"
+            "date_selector": "td:nth-child(3)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases",
           "url": "https://mohua.gov.in/press_release.php",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "row_selector": "table.table tbody tr",
             "title_selector": "td:nth-child(2) a",
             "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -2044,7 +1986,9 @@
           "sonowal"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Highlights Page 1",
@@ -2057,7 +2001,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2071,7 +2016,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2085,7 +2031,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2099,7 +2046,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2113,7 +2061,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2127,7 +2076,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-created"
+            "date_selector": "td.views-field-created",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2311,7 +2261,9 @@
           "achievement"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
@@ -2324,7 +2276,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-nothing a",
-            "date_selector": "td.views-field-field-start-date span.date-display-single"
+            "date_selector": "td.views-field-field-start-date span.date-display-single",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2338,7 +2291,8 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-field-attached a",
-            "date_selector": "td.views-field-field-start-date span.date-display-single"
+            "date_selector": "td.views-field-field-start-date span.date-display-single",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -2349,7 +2303,7 @@
       "name": "Warehousing Development and Regulatory Authority (WDRA)",
       "base_url": "https://wdra.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -2410,48 +2364,53 @@
           "minister"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Orders Circulars Notifications",
           "url": "https://wdra.gov.in/orders/circulars/notifications",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "div.updates-row-each-inner",
             "title_selector": "span.home-whats-new-truncate-txt a",
             "link_selector": "span.home-whats-new-truncate-txt a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "What's New",
           "url": "https://wdra.gov.in/whats-new-all",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "div.updates-row-each-inner",
             "title_selector": "span.home-whats-new-truncate-txt a",
             "link_selector": "span.home-whats-new-truncate-txt a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Activity Updates",
           "url": "https://wdra.gov.in/activity-update-all",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "div.updates-row-each-inner",
             "title_selector": "span.home-whats-new-truncate-txt a",
             "link_selector": "span.home-whats-new-truncate-txt a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -2604,7 +2563,9 @@
           "eoi"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Latest Circulars",
@@ -2746,7 +2707,8 @@
             "item_selector": "ul li.views-row",
             "title_selector": "span.field-content a",
             "link_selector": "span.field-content a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2760,7 +2722,8 @@
             "item_selector": "ul li.views-row",
             "title_selector": "span.field-content a",
             "link_selector": "span.field-content a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2774,7 +2737,8 @@
             "item_selector": "ul li.views-row",
             "title_selector": "span.field-content a",
             "link_selector": "span.field-content a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2788,7 +2752,8 @@
             "item_selector": "ul li.views-row",
             "title_selector": "span.field-content a",
             "link_selector": "span.field-content a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -2799,7 +2764,7 @@
       "name": "Ministry of Health and Family Welfare",
       "base_url": "https://www.mohfw.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -2858,34 +2823,38 @@
           "eoi"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "News and Highlights - Page 1",
           "url": "https://www.mohfw.gov.in/?q=en/media/news-and-highlights&page=0",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-changed"
+            "date_selector": "td.views-field-changed",
+            "wait_for_selector": "table.views-table tbody tr"
           }
         },
         {
           "section_label": "News and Highlights - Page 2",
           "url": "https://www.mohfw.gov.in/?q=en/media/news-and-highlights&page=1",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.views-table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-php a",
-            "date_selector": "td.views-field-changed"
+            "date_selector": "td.views-field-changed",
+            "wait_for_selector": "table.views-table tbody tr"
           }
         }
       ]
@@ -2958,7 +2927,9 @@
           "portal"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "Circulars - Page 1",
@@ -2972,7 +2943,8 @@
             "item_selector": "div.divide-y article.py-6",
             "title_selector": "h2 a",
             "link_selector": "h2 a",
-            "date_selector": "time"
+            "date_selector": "time",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -2987,7 +2959,8 @@
             "item_selector": "div.divide-y article.py-6",
             "title_selector": "h2 a",
             "link_selector": "h2 a",
-            "date_selector": "time"
+            "date_selector": "time",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3002,7 +2975,8 @@
             "item_selector": "div.divide-y article.py-6",
             "title_selector": "h2 a",
             "link_selector": "h2 a",
-            "date_selector": "time"
+            "date_selector": "time",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3017,7 +2991,8 @@
             "item_selector": "div.divide-y article.py-6",
             "title_selector": "h2 a",
             "link_selector": "h2 a",
-            "date_selector": "time"
+            "date_selector": "time",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3032,10 +3007,12 @@
             "item_selector": "div.divide-y article.py-6",
             "title_selector": "h2 a",
             "link_selector": "h2 a",
-            "date_selector": "time"
+            "date_selector": "time",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
-      ]
+      ],
+      "custom_crawler": "pharmacy-council"
     },
     {
       "site_key": "advertising-standards-council-of-india",
@@ -3043,9 +3020,10 @@
       "name": "Advertising Standards Council of India (ASCI)",
       "base_url": "https://www.ascionline.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
+      "extract_pdf_dates": true,
       "default_category": "news",
       "category_mapping": {
         "circular": [
@@ -3095,13 +3073,15 @@
           "rfp"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Advisories",
           "url": "https://www.ascionline.in/advisories/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2026-01-01",
@@ -3109,7 +3089,7 @@
             "item_selector": "ul.reqData li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": "a",
+            "date_selector": null,
             "wait_for_selector": "ul.reqData li"
           }
         },
@@ -3117,7 +3097,7 @@
           "section_label": "Press Announcements 2026",
           "url": "https://www.ascionline.in/press-announcements/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2026-01-01",
@@ -3133,7 +3113,7 @@
           "section_label": "Media Coverage",
           "url": "https://www.ascionline.in/media-coverage/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2026-01-01",
@@ -3214,7 +3194,7 @@
       "name": "Department of Economic Affairs (DEA)",
       "base_url": "https://dea.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -3272,13 +3252,15 @@
           "eoi"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Press Releases - Page 1",
           "url": "https://dea.gov.in/documents-press-release",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -3286,14 +3268,15 @@
             "item_selector": "div.customTablebdr",
             "title_selector": "div.documentRecordTitle",
             "link_selector": "div.viewButton a.viewBtn",
-            "date_selector": "div.docDate"
+            "date_selector": "div.docDate",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 2",
           "url": "https://dea.gov.in/documents-press-release?page=1",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -3301,14 +3284,15 @@
             "item_selector": "div.customTablebdr",
             "title_selector": "div.documentRecordTitle",
             "link_selector": "div.viewButton a.viewBtn",
-            "date_selector": "div.docDate"
+            "date_selector": "div.docDate",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 3",
           "url": "https://dea.gov.in/documents-press-release?page=2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -3316,14 +3300,15 @@
             "item_selector": "div.customTablebdr",
             "title_selector": "div.documentRecordTitle",
             "link_selector": "div.viewButton a.viewBtn",
-            "date_selector": "div.docDate"
+            "date_selector": "div.docDate",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Orders & Notices",
           "url": "https://dea.gov.in/documents-orders-notices-dea",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -3331,7 +3316,8 @@
             "item_selector": "div.customTablebdr",
             "title_selector": "div.documentRecordTitle",
             "link_selector": "div.viewButton a.viewBtn",
-            "date_selector": "div.docDate"
+            "date_selector": "div.docDate",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -3343,7 +3329,7 @@
       "url": "https://fcraonline.nic.in/home/order.aspx",
       "base_url": "https://fcraonline.nic.in/home/",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -3393,7 +3379,8 @@
         "item_selector": "ul li.ul_li_style_type",
         "title_selector": "a",
         "link_selector": "a",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -3401,9 +3388,11 @@
       "ministry": "Ministry of Finance",
       "name": "Department of Revenue(Foreign Exchange, Import & Customs Duty)",
       "base_url": "https://dor.gov.in",
+      "source_url": "https://dor.gov.in/whats-new",
       "parser_type": "list",
-      "parser_backend": "scrapy",
-      "render_js": true,
+      "parser_backend": "bs4",
+      "custom_crawler": "department-of-revenue",
+      "render_js": false,
       "active": true,
       "default_category": "notification",
       "category_mapping": {
@@ -3458,36 +3447,7 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "Press Releases",
-          "url": "https://dor.gov.in/press-releases",
-          "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "item_selector": "div.col-md-4.col-lg-3",
-            "title_selector": "a.schemeTitle",
-            "link_selector": "a.schemeTitle",
-            "date_selector": "time"
-          }
-        },
-        {
-          "section_label": "What's New",
-          "url": "https://dor.gov.in/whats-new",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": true,
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": "table.responsiveTable tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-field-whats-new-document a",
-            "date_selector": "td.views-field-field-whats-new-date time"
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "fssai",
@@ -3598,7 +3558,9 @@
           "bulletin"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".pdf-downloads, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
@@ -3614,7 +3576,8 @@
             "item_selector": "ol.whatnewall li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3632,7 +3595,9 @@
             "title_selector": "p strong",
             "link_selector": "ul ul li a[title='Download']",
             "date_selector": "p strong",
-            "allow_missing_link": true
+            "allow_missing_link": true,
+            "extra_links_selector": "ul ul li a[title='Download']",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3650,7 +3615,9 @@
             "title_selector": "p strong",
             "link_selector": "ul ul li a[title='Download']",
             "date_selector": "p strong",
-            "allow_missing_link": true
+            "allow_missing_link": true,
+            "extra_links_selector": "ul ul li a[title='Download']",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3667,10 +3634,12 @@
             "item_selector": ".row.borderwithbox",
             "title_selector": ".newscard-content h4 b",
             "link_selector": ".newscard-content p a",
-            "date_selector": ".newscard-content h4 small"
+            "date_selector": ".newscard-content h4 small",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
-      ]
+      ],
+      "custom_crawler": "fssai"
     },
     {
       "site_key": "dept-of-empowerment-of-persons-with-disabilities",
@@ -3678,7 +3647,7 @@
       "name": "Dept of Empowerment of Persons with Disabilities (DEPwD)",
       "base_url": "https://depwd.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -3756,62 +3725,70 @@
           "shields and medals"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".pdf-downloads, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Notifications",
           "url": "https://depwd.gov.in/en/notifications/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[role='rowheader'] .bt-content",
             "link_selector": ".pdf-downloads a",
-            "date_selector": "td:nth-child(2) .bt-content"
+            "date_selector": "td:nth-child(2) .bt-content",
+            "extra_links_selector": ".pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars",
           "url": "https://depwd.gov.in/en/circulars/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[role='rowheader'] .bt-content",
             "link_selector": ".pdf-downloads a",
-            "date_selector": "td:nth-child(2) .bt-content"
+            "date_selector": "td:nth-child(2) .bt-content",
+            "extra_links_selector": ".pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "What's New",
           "url": "https://depwd.gov.in/en/whats-new/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "ul.whats-news-list li a",
             "title_selector": null,
             "link_selector": null,
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Notes",
           "url": "https://depwd.gov.in/en/press-notes/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td .bt-content a",
             "link_selector": "td .bt-content a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -3897,7 +3874,8 @@
             "item_selector": ".views-field-title .field-content",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -3911,10 +3889,26 @@
             "item_selector": ".field-content ul li",
             "title_selector": null,
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
+    },
+    {
+      "site_key": "mohfw-dohfw",
+      "ministry": "Ministry of Health and Family Welfare",
+      "name": "Department of Health and Family Welfare (DOHFW)",
+      "base_url": "https://www.mohfw-dohfw.gov.in",
+      "source_url": "https://www.mohfw-dohfw.gov.in/whats-new",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "custom_crawler": "mohfw-dohfw",
+      "render_js": true,
+      "active": true,
+      "default_category": "notification",
+      "selectors": {},
+      "sections": []
     },
     {
       "site_key": "indian-council-of-medical-research",
@@ -4012,7 +4006,8 @@
             "item_selector": "div.colorBox a.colorBox__list",
             "title_selector": "span.details",
             "link_selector": null,
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -4029,7 +4024,8 @@
             "row_selector": "table tbody tr",
             "title_selector": "td:nth-child(2)",
             "link_selector": "td:nth-child(4) a[download]",
-            "date_selector": "td:nth-child(3)"
+            "date_selector": "td:nth-child(3)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -4040,7 +4036,7 @@
       "name": "Indian Nursing Council (INC)",
       "base_url": "https://www.indiannursingcouncil.org",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -4116,76 +4112,83 @@
           "event management"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Special Attention - Page 1",
           "url": "https://www.indiannursingcouncil.org/special-attention",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "div.files p.file-heading",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Special Attention - Page 2",
           "url": "https://www.indiannursingcouncil.org/special-attention?page=2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "div.files p.file-heading",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Special Attention - Page 3",
           "url": "https://www.indiannursingcouncil.org/special-attention?page=3",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "div.files p.file-heading",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Latest Updates",
           "url": "https://www.indiannursingcouncil.org/updates",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "div.updates-box div.update",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars and Resolutions",
           "url": "https://www.indiannursingcouncil.org/circulars-and-resolutions",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "div.files p.file-heading",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -4235,7 +4238,7 @@
       "name": "Department of Atomic Energy",
       "base_url": "https://dae.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -4317,91 +4320,100 @@
           "section_label": "Press Releases - Page 1",
           "url": "https://dae.gov.in/category/press-release/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "div.awardListing",
             "title_selector": "h2",
             "link_selector": "a.btn",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 2",
           "url": "https://dae.gov.in/category/press-release/page/2/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "div.awardListing",
             "title_selector": "h2",
             "link_selector": "a.btn",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 3",
           "url": "https://dae.gov.in/category/press-release/page/3/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "div.awardListing",
             "title_selector": "h2",
             "link_selector": "a.btn",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "DPC Orders - Page 1",
           "url": "https://dae.gov.in/dpc-orders-and-personnel-administration-matters/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "recruitment",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[role='rowheader']",
             "link_selector": ".pdf-downloads a",
-            "date_selector": "td:nth-child(2)"
+            "date_selector": "td:nth-child(2)",
+            "extra_links_selector": ".pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "DPC Orders - Page 2",
           "url": "https://dae.gov.in/dpc-orders-and-personnel-administration-matters/page/2/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "recruitment",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[role='rowheader']",
             "link_selector": ".pdf-downloads a",
-            "date_selector": "td:nth-child(2)"
+            "date_selector": "td:nth-child(2)",
+            "extra_links_selector": ".pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "DPC Orders - Page 3",
           "url": "https://dae.gov.in/dpc-orders-and-personnel-administration-matters/page/3/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "recruitment",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[role='rowheader']",
             "link_selector": ".pdf-downloads a",
-            "date_selector": "td:nth-child(2)"
+            "date_selector": "td:nth-child(2)",
+            "extra_links_selector": ".pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Latest News Ticker",
           "url": "https://dae.gov.in/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
@@ -4412,7 +4424,10 @@
             "wait_for_selector": "ul.slides li a.with-urlchange"
           }
         }
-      ]
+      ],
+      "selectors": {
+        "wait_for_selector": ".entry-title, h2.entry-title"
+      }
     },
     {
       "site_key": "sebi",
@@ -4458,7 +4473,10 @@
           "rfp"
         ]
       },
-      "selectors": {}
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
+      "custom_crawler": "sebi"
     },
     {
       "site_key": "rbi",
@@ -4573,8 +4591,11 @@
           "rfp"
         ]
       },
-      "selectors": {},
-      "sections": []
+      "selectors": {
+        "wait_for_selector": "table.tablebg"
+      },
+      "sections": [],
+      "custom_crawler": "rbi"
     },
     {
       "site_key": "central-ground-water-board",
@@ -4582,7 +4603,7 @@
       "name": "Central Ground Water Board (CGWB)",
       "base_url": "https://cgwb.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -4641,20 +4662,23 @@
           "quotation"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Public Notices and Circulars",
           "url": "https://cgwb.gov.in/en/public-notices-circulars",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "row_selector": "table.table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-field-download-notice-circular p a",
-            "date_selector": "td.views-field-field-notice-circular-number"
+            "date_selector": "td.views-field-field-notice-circular-number",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -4662,14 +4686,15 @@
           "section_label": "What's New",
           "url": "https://cgwb.gov.in/en/whats_new",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "row_selector": "table.table tbody tr",
             "title_selector": "td.views-field-nothing a",
             "link_selector": "td.views-field-nothing a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         }
@@ -4682,7 +4707,7 @@
       "name": "Central Pollution Control Board (CPCB)",
       "base_url": "https://cpcb.nic.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -4748,7 +4773,9 @@
           "gem bid"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Public Notices",
@@ -4811,7 +4838,7 @@
       "name": "Ministry of Environment, Forest and Climate Change (MoEFCC)",
       "base_url": "https://moef.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -4880,41 +4907,45 @@
           "ifs officers"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".views-row, table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
           "url": "https://moef.gov.in/whats-new/update",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table#pressTable tbody tr",
             "title_selector": "td:nth-child(2) a",
             "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(3)"
+            "date_selector": "td:nth-child(3)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Orders",
           "url": "https://moef.gov.in/orders/update",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "row_selector": "table#pressTable tbody tr",
             "title_selector": "td:nth-child(2) a",
             "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(3)"
+            "date_selector": "td:nth-child(3)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News and Highlights",
           "url": "https://moef.gov.in/news-highlights",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "min_date": "2025-07-01",
@@ -4922,14 +4953,15 @@
             "item_selector": "div.table-responsivebox ul li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars and Orders",
           "url": "https://moef.gov.in/circular-orders-2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -4937,7 +4969,8 @@
             "item_selector": "div.table-responsivebox ul li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -5009,7 +5042,9 @@
           "engagement"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": ".entry-title, h2"
+      },
       "sections": [
         {
           "section_label": "What's New Page 1",
@@ -5022,7 +5057,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5037,7 +5073,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5052,7 +5089,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5067,7 +5105,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5082,7 +5121,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5097,7 +5137,8 @@
             "item_selector": "div.col-md-12.mb-30",
             "title_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
             "link_selector": "div.Annual-report p:nth-child(2) a:last-of-type",
-            "date_selector": "span.tender-date"
+            "date_selector": "span.tender-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         }
@@ -5260,7 +5301,8 @@
         "row_selector": "table#tblNewSec tbody tr",
         "title_selector": "td[data-label='Title'] a",
         "link_selector": "td[data-label='Title'] a",
-        "date_selector": "td[data-label='Date']"
+        "date_selector": "td[data-label='Date']",
+        "wait_for_selector": "table tbody tr"
       },
       "sections": []
     },
@@ -5329,7 +5371,9 @@
           "engagement"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Announcements",
@@ -5342,7 +5386,8 @@
             "item_selector": "div.announcement-card ul.list-unstyled li",
             "title_selector": "p.text-primary a",
             "link_selector": "p.text-primary a",
-            "date_selector": "p.small.color-grey"
+            "date_selector": "p.small.color-grey",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -5356,7 +5401,8 @@
             "item_selector": "#notices div.left-box ul.pdf-list li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -5370,7 +5416,8 @@
             "item_selector": "#updates div.left-box ul.pdf-list li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -5455,7 +5502,7 @@
       "url": "https://dccd.gov.in/",
       "base_url": "https://dccd.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -5501,7 +5548,8 @@
         "item_selector": "ul.ticker li, ul#ticker2 li",
         "title_selector": "article a, a",
         "link_selector": "article a, a",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": "table tbody tr"
       },
       "verify_ssl": false
     },
@@ -5512,7 +5560,7 @@
       "source_url": "https://dgfscdhg.gov.in/",
       "base_url": "https://dgfscdhg.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "verify_ssl": false,
       "active": true,
@@ -5544,7 +5592,8 @@
         "item_selector": "div.region-latest-updatation li.news-item",
         "title_selector": "a",
         "link_selector": "a",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -5554,7 +5603,7 @@
       "url": "https://consumeraffairs.gov.in/pages/latest-news",
       "base_url": "https://consumeraffairs.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -5582,7 +5631,8 @@
         "row_selector": "tbody#list tr",
         "title_selector": "th[scope='row']",
         "link_selector": "td a.link-primary, td a.tender_link",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": "table tbody tr"
       },
       "verify_ssl": false
     },
@@ -5592,7 +5642,7 @@
       "name": "Pension Fund Regulatory and Development Authority (PFRDA)",
       "base_url": "https://pfrda.org.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -5664,13 +5714,15 @@
           "engagement"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "Press Releases - Page 1",
           "url": "https://pfrda.org.in/web/pfrda/media/press-releases?delta=10&start=1",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -5678,14 +5730,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 2",
           "url": "https://pfrda.org.in/web/pfrda/media/press-releases?delta=10&start=2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -5693,14 +5746,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 3",
           "url": "https://pfrda.org.in/web/pfrda/media/press-releases?delta=10&start=3",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "min_date": "2025-07-01",
@@ -5708,14 +5762,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Recent Updates - Page 1",
           "url": "https://pfrda.org.in/web/pfrda/recent-updates?delta=15&start=1",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -5723,14 +5778,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Recent Updates - Page 2",
           "url": "https://pfrda.org.in/web/pfrda/recent-updates?delta=15&start=2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -5738,14 +5794,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Active Circulars - Page 1",
           "url": "https://pfrda.org.in/web/pfrda/regulatory-framework/circulars/active-circulars?delta=10&start=1",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -5753,14 +5810,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Active Circulars - Page 2",
           "url": "https://pfrda.org.in/web/pfrda/regulatory-framework/circulars/active-circulars?delta=10&start=2",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -5768,14 +5826,15 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Active Circulars - Page 3",
           "url": "https://pfrda.org.in/web/pfrda/regulatory-framework/circulars/active-circulars?delta=10&start=3",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "min_date": "2025-07-01",
@@ -5783,7 +5842,8 @@
             "item_selector": "div.basic-card",
             "title_selector": "h2.basic-title",
             "link_selector": "a.basic-link",
-            "date_selector": "div.meta-item:last-child"
+            "date_selector": "div.meta-item:last-child",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -5916,7 +5976,9 @@
           "msp"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "All News",
@@ -5929,7 +5991,8 @@
             "row_selector": "table#maintable tbody tr.ftdhover",
             "title_selector": "td:nth-child(3)",
             "link_selector": "td:nth-child(4) a",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         },
@@ -5944,12 +6007,14 @@
             "item_selector": "div.news-item",
             "title_selector": "p a",
             "link_selector": "p a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "verify_ssl": false
         }
       ],
-      "verify_ssl": false
+      "verify_ssl": false,
+      "custom_crawler": "national-medical-commission"
     },
     {
       "site_key": "esic",
@@ -5958,7 +6023,7 @@
       "url": "https://esic.gov.in/circulars",
       "base_url": "https://esic.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -6045,13 +6110,15 @@
           "preventive"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "News Events - Page 1",
           "url": "https://esic.gov.in/newsevents",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6059,14 +6126,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 2",
           "url": "https://esic.gov.in/NewsEvents/index/page:2",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6074,14 +6142,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 3",
           "url": "https://esic.gov.in/NewsEvents/index/page:3",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6089,14 +6158,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 4",
           "url": "https://esic.gov.in/NewsEvents/index/page:4",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6104,14 +6174,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 5",
           "url": "https://esic.gov.in/NewsEvents/index/page:5",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6119,14 +6190,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 6",
           "url": "https://esic.gov.in/NewsEvents/index/page:6",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6134,14 +6206,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 7",
           "url": "https://esic.gov.in/NewsEvents/index/page:7",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6149,14 +6222,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 8",
           "url": "https://esic.gov.in/NewsEvents/index/page:8",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6164,14 +6238,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 9",
           "url": "https://esic.gov.in/NewsEvents/index/page:9",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6179,14 +6254,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 10",
           "url": "https://esic.gov.in/NewsEvents/index/page:10",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6194,14 +6270,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 11",
           "url": "https://esic.gov.in/NewsEvents/index/page:11",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6209,14 +6286,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 12",
           "url": "https://esic.gov.in/NewsEvents/index/page:12",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6224,14 +6302,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 13",
           "url": "https://esic.gov.in/NewsEvents/index/page:13",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6239,14 +6318,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 14",
           "url": "https://esic.gov.in/NewsEvents/index/page:14",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6254,14 +6334,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "News Events - Page 15",
           "url": "https://esic.gov.in/NewsEvents/index/page:15",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
@@ -6269,14 +6350,15 @@
             "title_selector": "td:nth-child(3) a.red-txt",
             "link_selector": "td:nth-child(3) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(4)"
+            "date_selector": "td:nth-child(4)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 1",
           "url": "https://esic.gov.in/circulars",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6284,14 +6366,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 2",
           "url": "https://esic.gov.in/circulars/index/page:2",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6299,14 +6382,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 3",
           "url": "https://esic.gov.in/circulars/index/page:3",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6314,14 +6398,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 4",
           "url": "https://esic.gov.in/circulars/index/page:4",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6329,14 +6414,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 5",
           "url": "https://esic.gov.in/circulars/index/page:5",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6344,14 +6430,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 6",
           "url": "https://esic.gov.in/circulars/index/page:6",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6359,14 +6446,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 7",
           "url": "https://esic.gov.in/circulars/index/page:7",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6374,14 +6462,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 8",
           "url": "https://esic.gov.in/circulars/index/page:8",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6389,14 +6478,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 9",
           "url": "https://esic.gov.in/circulars/index/page:9",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6404,14 +6494,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 10",
           "url": "https://esic.gov.in/circulars/index/page:10",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6419,14 +6510,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 11",
           "url": "https://esic.gov.in/circulars/index/page:11",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6434,14 +6526,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 12",
           "url": "https://esic.gov.in/circulars/index/page:12",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6449,14 +6542,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 13",
           "url": "https://esic.gov.in/circulars/index/page:13",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6464,14 +6558,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 14",
           "url": "https://esic.gov.in/circulars/index/page:14",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6479,14 +6574,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 15",
           "url": "https://esic.gov.in/circulars/index/page:15",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6494,14 +6590,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 16",
           "url": "https://esic.gov.in/circulars/index/page:16",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6509,14 +6606,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 17",
           "url": "https://esic.gov.in/circulars/index/page:17",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6524,14 +6622,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 18",
           "url": "https://esic.gov.in/circulars/index/page:18",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6539,14 +6638,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 19",
           "url": "https://esic.gov.in/circulars/index/page:19",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6554,14 +6654,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 20",
           "url": "https://esic.gov.in/circulars/index/page:20",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6569,14 +6670,15 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars - Page 21",
           "url": "https://esic.gov.in/circulars/index/page:21",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
@@ -6584,7 +6686,8 @@
             "title_selector": "td:nth-child(4) a.red-txt",
             "link_selector": "td:nth-child(4) a.red-txt",
             "summary_selector": "td:nth-child(2)",
-            "date_selector": "td:nth-child(5)"
+            "date_selector": "td:nth-child(5)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -6717,7 +6820,8 @@
           "selectors": {
             "row_selector": "table tbody tr, .views-row, .announcementbox",
             "title_selector": "td.views-field-title, .views-field-title, h3, h2, p.mb-0",
-            "link_selector": "a"
+            "link_selector": "a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -6730,7 +6834,8 @@
           "selectors": {
             "row_selector": "table tbody tr, .views-row, .schemesBox",
             "title_selector": "td.views-field-title, .views-field-title, a.schemeTitle, h3",
-            "link_selector": "a"
+            "link_selector": "a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -6743,7 +6848,8 @@
           "selectors": {
             "row_selector": "table tbody tr, .views-row",
             "title_selector": "td.views-field-title, .views-field-title, h3",
-            "link_selector": "a"
+            "link_selector": "a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -6755,7 +6861,7 @@
       "url": "https://www.epfindia.gov.in/site_en/Updates.php",
       "base_url": "https://www.epfindia.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": false,
       "default_category": "notification",
@@ -6823,7 +6929,7 @@
       "url": "https://www.trai.gov.in/what-s-new",
       "base_url": "https://www.trai.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -6862,13 +6968,15 @@
           "appointment"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "What's New",
           "url": "https://www.trai.gov.in/what-s-new",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "pagination_param": "page",
@@ -6879,14 +6987,15 @@
             "row_selector": "table.views-table tbody tr",
             "title_selector": ".views-field-title a",
             "link_selector": ".views-field-title a",
-            "date_selector": ".views-field-field-date"
+            "date_selector": ".views-field-field-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases",
           "url": "https://www.trai.gov.in/notifications/press-release",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "pagination_param": "page",
@@ -6897,7 +7006,8 @@
             "item_selector": ".view-press-release .view-content li",
             "title_selector": ".views-field-title .field-content",
             "link_selector": ".views-field-field-file a",
-            "date_selector": ".views-field-field-date .field-content"
+            "date_selector": ".views-field-field-date .field-content",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -6950,7 +7060,10 @@
           "rfp"
         ]
       },
-      "selectors": {}
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
+      "custom_crawler": "irdai"
     },
     {
       "site_key": "department-of-bio-technology",
@@ -7151,7 +7264,7 @@
       "name": "Ministry of New and Renewable Energy (MNRE)",
       "base_url": "https://mnre.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -7210,34 +7323,39 @@
           "solar"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr, .views-row, .entry-title"
+      },
       "sections": [
         {
           "section_label": "What's New",
           "url": "https://mnre.gov.in/en/whats-new/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "item_selector": "div.gen-list ul li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Current Notices",
           "url": "https://mnre.gov.in/en/notice-category/current-notices/",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "notification",
           "selectors": {
             "row_selector": "table.data-table-1 tbody tr",
             "title_selector": "td[data-th='Title'] span.bt-content",
             "link_selector": "td[data-th='File'] span.pdf-downloads a",
-            "date_selector": "td[data-th='Start Date'] span.bt-content"
+            "date_selector": "td[data-th='Start Date'] span.bt-content",
+            "extra_links_selector": "td[data-th='File'] span.pdf-downloads a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -7351,11 +7469,13 @@
       "site_key": "ministry-of-coal-for-coal-mines",
       "ministry": "Ministry of Coal",
       "name": "Ministry of Coal",
-      "base_url": "https://www.coal.gov.in",
-      "parser_type": "table",
+      "url": "https://www.coal.nic.in",
+      "base_url": "https://www.coal.nic.in",
+      "parser_type": "list",
       "parser_backend": "bs4",
-      "render_js": true,
+      "render_js": false,
       "active": true,
+      "custom_crawler": "ministry-of-coal-for-coal-mines",
       "default_category": "notification",
       "category_mapping": {
         "circular": [
@@ -7436,44 +7556,7 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "What's New",
-          "url": "https://www.coal.gov.in/whats-new",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "notification",
-          "pagination_param": "page",
-          "start_page": 0,
-          "max_pages": 2,
-          "min_date": "2025-10-01",
-          "selectors": {
-            "row_selector": "div.scroll-table1 table.views-table tbody tr",
-            "title_selector": "td.views-field-counter:nth-child(2)",
-            "link_selector": "td.views-field-nid a",
-            "date_selector": "td.views-field-field-date-range"
-          }
-        },
-        {
-          "section_label": "Press Releases",
-          "url": "https://www.coal.gov.in/media/press-release",
-          "parser_type": "table",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "news",
-          "pagination_param": "page",
-          "start_page": 0,
-          "max_pages": 2,
-          "min_date": "2025-10-01",
-          "selectors": {
-            "row_selector": "div.scroll-table1 table.views-table tbody tr",
-            "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-nid a",
-            "date_selector": "td.views-field-field-date"
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "coffee-board",
@@ -7539,7 +7622,8 @@
             "item_selector": "#DataList1 tr",
             "title_selector": "a.arch",
             "link_selector": "a.arch",
-            "date_selector": "div.update > span"
+            "date_selector": "div.update > span",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -7553,7 +7637,8 @@
             "item_selector": "#DataList2 tr",
             "title_selector": "a.arch",
             "link_selector": "a.arch",
-            "date_selector": "div.update > span"
+            "date_selector": "div.update > span",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -7564,7 +7649,7 @@
       "name": "Rubber Board of India",
       "base_url": "https://rubberboard.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -7610,34 +7695,38 @@
           "eoi"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "News Feed",
           "url": "https://rubberboard.gov.in/public",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": ".news-feeds li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": null
+            "date_selector": null,
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Updates and Highlights",
           "url": "https://rubberboard.gov.in/public",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": ".events-div li",
             "title_selector": "a",
             "link_selector": "a",
-            "date_selector": "a"
+            "date_selector": "a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -7752,7 +7841,8 @@
         "title_selector": "a.statisticslink",
         "link_selector": "a.statisticslink",
         "date_selector": null
-      }
+      },
+      "custom_crawler": "chemexcil"
     },
     {
       "site_key": "sez-india",
@@ -7792,7 +7882,8 @@
           "selectors": {
             "row_selector": "table.table tbody tr",
             "title_selector": "td.views-field-title",
-            "link_selector": "td.views-field-nothing-1 a"
+            "link_selector": "td.views-field-nothing-1 a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -7809,7 +7900,8 @@
             "row_selector": "table.table tbody tr",
             "title_selector": "td.views-field-title",
             "link_selector": "td.views-field-nothing a",
-            "date_selector": "td.views-field-field-date"
+            "date_selector": "td.views-field-field-date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -7856,7 +7948,8 @@
             "row_selector": "tr.rowHover",
             "title_selector": "td:nth-child(2) a",
             "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(3) a"
+            "date_selector": "td:nth-child(3) a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
@@ -7869,7 +7962,8 @@
           "selectors": {
             "row_selector": "tr.rowHover",
             "title_selector": "td:nth-child(2) a",
-            "link_selector": "td:nth-child(2) a"
+            "link_selector": "td:nth-child(2) a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -7881,7 +7975,7 @@
       "url": "https://icsi.edu/home/",
       "base_url": "https://www.icsi.edu",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -7935,7 +8029,8 @@
         "item_selector": "ul#marquee-content li",
         "title_selector": "p a",
         "link_selector": "p a",
-        "date_selector": null
+        "date_selector": null,
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -7945,7 +8040,7 @@
       "url": "https://ibbi.gov.in/whats-new",
       "base_url": "https://ibbi.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -7956,7 +8051,8 @@
         "row_selector": "table.cols-4 tbody tr",
         "title_selector": "td:nth-child(3) a.snd",
         "link_selector": "td:nth-child(3) a.snd",
-        "date_selector": "td:nth-child(2)"
+        "date_selector": "td:nth-child(2)",
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -8048,10 +8144,11 @@
       "url": "https://cercind.gov.in/",
       "base_url": "https://cercind.gov.in",
       "parser_type": "list",
-      "parser_backend": "scrapy",
+      "parser_backend": "bs4",
       "render_js": false,
       "active": true,
       "verify_ssl": false,
+      "custom_crawler": "central-electricity-regulatory-commission",
       "default_category": "notification",
       "category_mapping": {
         "recruitment": [
@@ -8087,38 +8184,7 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "What's New",
-          "source_url": "https://cercind.gov.in/",
-          "parser_type": "list",
-          "parser_backend": "scrapy",
-          "render_js": false,
-          "verify_ssl": false,
-          "default_category": "notification",
-          "selectors": {
-            "item_selector": ".container.coc-mid .list-group-item",
-            "title_selector": "a",
-            "link_selector": "a",
-            "date_selector": null
-          }
-        },
-        {
-          "section_label": "Orders",
-          "source_url": "https://cercind.gov.in/",
-          "parser_type": "table",
-          "parser_backend": "scrapy",
-          "render_js": false,
-          "verify_ssl": false,
-          "default_category": "notification",
-          "selectors": {
-            "row_selector": ".container.coc-mid table.tbsa tbody tr",
-            "title_selector": "td:nth-child(2)",
-            "link_selector": "td:nth-child(2) a",
-            "date_selector": "td:nth-child(3)"
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "office-of-economic-adviser",
@@ -8170,7 +8236,8 @@
           "selectors": {
             "item_selector": "ul#whatsnew-ul marquee li",
             "title_selector": "a",
-            "link_selector": "a"
+            "link_selector": "a",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -8179,8 +8246,13 @@
       "site_key": "national-bee-board",
       "ministry": "Ministry of Agriculture and Farmers Welfare",
       "name": "National Bee Board (NBB)",
+      "url": "https://nbb.gov.in",
       "base_url": "https://nbb.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": false,
       "active": true,
+      "custom_crawler": "national-bee-board",
       "default_category": "news",
       "category_mapping": {
         "news": [
@@ -8206,22 +8278,7 @@
           "post of"
         ]
       },
-      "sections": [
-        {
-          "section_label": "News & Events",
-          "url": "https://nbb.gov.in/",
-          "parser_type": "list",
-          "parser_backend": "bs4",
-          "render_js": true,
-          "default_category": "news",
-          "selectors": {
-            "item_selector": "ul.cmn_ul li",
-            "title_selector": "a",
-            "link_selector": "a",
-            "wait_for_selector": "ul.cmn_ul li"
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "falta-sez",
@@ -8268,7 +8325,8 @@
             "row_selector": "table tbody tr",
             "title_selector": "td:nth-child(2)",
             "link_selector": "td:nth-child(4) a",
-            "date_selector": "td:nth-child(3)"
+            "date_selector": "td:nth-child(3)",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -8285,7 +8343,8 @@
       "selectors": {
         "item_selector": ".et_pb_tab_0.et_pb_tab_content ul li, div.et_pb_tab_0 ul li",
         "title_selector": "a",
-        "link_selector": "a"
+        "link_selector": "a",
+        "wait_for_selector": "table tbody tr"
       },
       "category_mapping": {
         "notification": [
@@ -8313,7 +8372,7 @@
       "url": "https://gujaratindia.gov.in/NewsDetailsList",
       "base_url": "https://gujaratindia.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -8378,7 +8437,8 @@
         "item_selector": "div#newsdetailslist div.edwrap",
         "title_selector": "div.event-top-right h3",
         "link_selector": "div.item-list a",
-        "date_selector": "div.calendar"
+        "date_selector": "div.calendar",
+        "wait_for_selector": "table tbody tr"
       }
     },
     {
@@ -8388,7 +8448,7 @@
       "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html",
       "base_url": "https://uidai.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "circular",
@@ -8446,174 +8506,188 @@
           "eoi"
         ]
       },
-      "selectors": {},
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
       "sections": [
         {
           "section_label": "Circulars & Office Memorandums - Page 1",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 2",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=10",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 3",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=20",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 4",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=30",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 5",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=40",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 6",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=50",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Circulars & Office Memorandums - Page 7",
           "url": "https://uidai.gov.in/en/media-resources/uidai-documents/circulars-memorandums-notification-01.html?start=60",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "circular",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "div.title.circuler a",
             "link_selector": "div.title.circuler a",
-            "date_selector": "div.col-md-5.date"
+            "date_selector": "div.col-md-5.date",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 1",
           "url": "https://uidai.gov.in/en/media-resources/media/press-releases.html",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "a[title]",
             "link_selector": "a[title]",
-            "date_selector": "div.col-md-5.ml-30"
+            "date_selector": "div.col-md-5.ml-30",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 2",
           "url": "https://uidai.gov.in/en/media-resources/media/press-releases.html?start=10",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "a[title]",
             "link_selector": "a[title]",
-            "date_selector": "div.col-md-5.ml-30"
+            "date_selector": "div.col-md-5.ml-30",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 3",
           "url": "https://uidai.gov.in/en/media-resources/media/press-releases.html?start=20",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "a[title]",
             "link_selector": "a[title]",
-            "date_selector": "div.col-md-5.ml-30"
+            "date_selector": "div.col-md-5.ml-30",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 4",
           "url": "https://uidai.gov.in/en/media-resources/media/press-releases.html?start=30",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "a[title]",
             "link_selector": "a[title]",
-            "date_selector": "div.col-md-5.ml-30"
+            "date_selector": "div.col-md-5.ml-30",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         },
         {
           "section_label": "Press Releases - Page 5",
           "url": "https://uidai.gov.in/en/media-resources/media/press-releases.html?start=40",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "default_category": "news",
           "selectors": {
             "item_selector": "ul.list-group li.list-group-item",
             "title_selector": "a[title]",
             "link_selector": "a[title]",
-            "date_selector": "div.col-md-5.ml-30"
+            "date_selector": "div.col-md-5.ml-30",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           }
         }
       ]
@@ -8625,7 +8699,7 @@
       "url": "https://seepz.gov.in/",
       "base_url": "https://seepz.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -8674,11 +8748,13 @@
       "site_key": "pharmexcil",
       "ministry": "Ministry of Chemicals and Fertilizers",
       "name": "Pharmexcil – News & Government Notifications",
+      "url": "https://pharmexcil.com",
       "base_url": "https://pharmexcil.com",
-      "parser_type": "table",
+      "parser_type": "list",
       "parser_backend": "bs4",
       "render_js": false,
       "active": true,
+      "custom_crawler": "pharmexcil",
       "default_category": "news",
       "category_mapping": {
         "circular": [
@@ -8720,36 +8796,7 @@
         ]
       },
       "selectors": {},
-      "sections": [
-        {
-          "section_label": "News Articles",
-          "url": "https://pharmexcil.com/news_article",
-          "parser": "table",
-          "parser_backend": "bs4",
-          "render_js": false,
-          "default_category": "news",
-          "selectors": {
-            "row_selector": "tr.griderow1, tr.griderow2",
-            "title_selector": "td:nth-child(3) a",
-            "link_selector": "td:nth-child(3) a",
-            "date_selector": "td:nth-child(2)"
-          }
-        },
-        {
-          "section_label": "Government Notifications",
-          "url": "https://pharmexcil.com/government-notifications-circulars",
-          "parser": "table",
-          "parser_backend": "bs4",
-          "render_js": false,
-          "default_category": "circular",
-          "selectors": {
-            "row_selector": "tr.griderow1, tr.griderow2",
-            "title_selector": "td:nth-child(6) a",
-            "link_selector": "td:nth-child(6) a",
-            "date_selector": "td:nth-child(2)"
-          }
-        }
-      ]
+      "sections": []
     },
     {
       "site_key": "jerc-jk-ladakh",
@@ -8758,7 +8805,7 @@
       "url": "https://jercjkl.jk.gov.in/",
       "base_url": "https://jercjkl.jk.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": false,
       "active": true,
       "default_category": "notification",
@@ -8882,7 +8929,7 @@
       "url": "https://cipam.gov.in/en",
       "base_url": "https://cipam.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": false,
       "active": true,
       "default_category": "news",
@@ -8903,7 +8950,8 @@
       "parser_backend": "bs4",
       "render_js": false,
       "active": true,
-      "default_category": "news"
+      "default_category": "news",
+      "custom_crawler": "chandigarh"
     },
     {
       "site_key": "department-of-animal-husbandry-and-dairying",
@@ -8936,13 +8984,12 @@
       "site_key": "ministry-of-power",
       "ministry": "Ministry of Power",
       "name": "Ministry of Power",
-      "url": "https://powermin.gov.in/en/content/circulars",
-      "base_url": "https://powermin.gov.in",
+      "url": "https://www.powermin.gov.in/whats-new",
+      "base_url": "https://www.powermin.gov.in",
       "active": true,
       "custom_crawler": "power-ministry",
       "min_date": "2026-01-01",
-      "default_category": "circular",
-      "note": "Blocked by IP-based CAPTCHA protection"
+      "default_category": "circular"
     },
     {
       "site_key": "meity",
@@ -8954,6 +9001,7 @@
       "parser_backend": "bs4",
       "render_js": false,
       "active": true,
+      "custom_crawler": "meity",
       "default_category": "notification",
       "category_mapping": {
         "news": [
@@ -9050,7 +9098,7 @@
       "url": "https://mopng.gov.in/en/home/whatsnew",
       "base_url": "https://mopng.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": false,
       "verify_ssl": false,
       "active": true,
@@ -9105,7 +9153,7 @@
           "section_label": "What's New",
           "source_url": "https://mopng.gov.in/en/home/whatsnew",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": false,
           "verify_ssl": false,
           "pagination_param": "page",
@@ -9122,7 +9170,7 @@
           "section_label": "PSU What's New",
           "source_url": "https://mopng.gov.in/en/psu-whats-new",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": false,
           "verify_ssl": false,
           "selectors": {
@@ -9141,7 +9189,7 @@
       "url": "https://msme.gov.in/latest-events",
       "base_url": "https://msme.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": false,
       "active": true,
       "default_category": "news",
@@ -9191,7 +9239,7 @@
           "section_label": "Latest Events (Table)",
           "source_url": "https://msme.gov.in/latest-events",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": false,
           "pagination_param": "page",
           "start_page": 0,
@@ -9207,7 +9255,7 @@
           "section_label": "What's New (List)",
           "source_url": "https://msme.gov.in/",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": false,
           "selectors": {
             "item_selector": "ul.newsslider li a",
@@ -9275,11 +9323,13 @@
             "item_selector": "a[href]",
             "title_selector": "",
             "link_selector": "",
-            "date_selector": ""
+            "date_selector": "",
+            "wait_for_selector": "table tbody tr, .views-row, .entry-title"
           },
           "pre_capture_js": "await new Promise(r => setTimeout(r, 8000));"
         }
-      ]
+      ],
+      "custom_crawler": "national-centre-for-cold-chain-development"
     },
     {
       "site_key": "arunachal-pradesh",
@@ -9338,7 +9388,7 @@
       "url": "https://meghalaya.gov.in/whats-new",
       "base_url": "https://meghalaya.gov.in",
       "parser_type": "list",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "news",
@@ -9379,7 +9429,7 @@
           "section_label": "What's New",
           "url": "https://meghalaya.gov.in/index.php/whats-new",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "max_pages": 5,
           "default_category": "notification",
@@ -9395,7 +9445,7 @@
           "section_label": "Gov Orders",
           "url": "https://meghalaya.gov.in/whats-new/gov-orders",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "max_pages": 5,
           "default_category": "notification",
@@ -9411,7 +9461,7 @@
           "section_label": "Announcements",
           "url": "https://meghalaya.gov.in/whats-new/announcements",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "max_pages": 5,
           "default_category": "news",
@@ -9427,7 +9477,7 @@
           "section_label": "Press Releases",
           "url": "https://meghalaya.gov.in/whats-new/press-releases",
           "parser_type": "list",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "max_pages": 5,
           "default_category": "news",
@@ -9439,7 +9489,10 @@
             "wait_for_selector": "ul li"
           }
         }
-      ]
+      ],
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      }
     },
     {
       "site_key": "nagaland",
@@ -9448,7 +9501,7 @@
       "url": "https://nagaland.gov.in/news",
       "base_url": "https://nagaland.gov.in",
       "parser_type": "table",
-      "parser_backend": "bs4",
+      "parser_backend": "scrapy",
       "render_js": true,
       "active": true,
       "default_category": "notification",
@@ -9482,29 +9535,29 @@
         ]
       },
       "selectors": {
-        "item_selector": "table.datatable-table tbody tr",
         "title_selector": "td:nth-child(2)",
         "link_selector": "td:nth-child(2) a",
         "date_selector": "td:nth-child(4)",
         "department_selector": "td:nth-child(3)",
-        "wait_for_selector": "table.datatable-table tbody tr"
+        "wait_for_selector": "table.datatable-table tbody tr",
+        "row_selector": "table.datatable-table tbody tr"
       },
       "sections": [
         {
           "section_label": "Notifications",
           "url": "https://nagaland.gov.in/news",
           "parser_type": "table",
-          "parser_backend": "bs4",
+          "parser_backend": "scrapy",
           "render_js": true,
           "max_pages": 5,
           "default_category": "notification",
           "selectors": {
-            "item_selector": "table.datatable-table tbody tr",
             "title_selector": "td:nth-child(2)",
             "link_selector": "td:nth-child(2) a",
             "date_selector": "td:nth-child(4)",
             "department_selector": "td:nth-child(3)",
-            "wait_for_selector": "table.datatable-table tbody tr"
+            "wait_for_selector": "table.datatable-table tbody tr",
+            "row_selector": "table.datatable-table tbody tr"
           }
         }
       ]
@@ -9561,7 +9614,7 @@
       "name": "Ministry of Road Transport and Highways",
       "url": "https://morth.gov.in/#/whats-new",
       "base_url": "https://morth.gov.in",
-      "parser_type": "custom",
+      "parser_type": "list",
       "parser_backend": "bs4",
       "render_js": true,
       "active": true,
@@ -9590,8 +9643,11 @@
           "launch"
         ]
       },
-      "selectors": {},
-      "min_date": "2026-01-01"
+      "selectors": {
+        "wait_for_selector": "table tbody tr"
+      },
+      "min_date": "2026-01-01",
+      "custom_crawler": "ministry-of-road-transport-and-highways"
     },
     {
       "site_key": "epfo",
@@ -9886,4 +9942,174 @@
           "render_js": false,
           "selectors": {
             "row_selector": ".innerpage-tab-content table tbody tr",
-            "title_selec
+            "title_selector": "td",
+            "link_selector": "td a"
+          },
+          "section_label": "Tickers"
+        }
+      ]
+    },
+    {
+      "site_key": "ministry-of-cooperation",
+      "ministry": "Ministry of Cooperation",
+      "name": "Ministry of Cooperation",
+      "url": "https://www.cooperation.gov.in/en/notices-circulars",
+      "base_url": "https://www.cooperation.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "ministry-of-cooperation",
+      "default_category": "circular",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "notice",
+          "notification"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "procurement"
+        ],
+        "news": [
+          "announcement",
+          "press release",
+          "news"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "job"
+        ]
+      },
+      "selectors": {}
+    },
+    {
+      "site_key": "directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "name": "Directorate of Plant Protection Quarantine & Storage",
+      "url": "https://ppqs.gov.in/news-archive",
+      "base_url": "https://ppqs.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules",
+      "default_category": "circular",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "office order",
+          "order",
+          "notice",
+          "om",
+          "memorandum",
+          "insecticide",
+          "quarantine rules"
+        ],
+        "notification": [
+          "notification",
+          "gazette",
+          "amendment",
+          "regulation"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "procurement",
+          "rfp"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "deputation",
+          "appointment"
+        ],
+        "news": [
+          "press release",
+          "news",
+          "launch",
+          "event"
+        ]
+      },
+      "selectors": {}
+    },
+    {
+      "site_key": "department-of-financial-services",
+      "ministry": "Ministry of Finance",
+      "name": "Department of Financial Services",
+      "url": "https://financialservices.gov.in/what-s-new",
+      "base_url": "https://financialservices.gov.in",
+      "parser_type": "table",
+      "parser_backend": "bs4",
+      "render_js": false,
+      "active": true,
+      "custom_crawler": "department-of-financial-services",
+      "default_category": "circular",
+      "category_mapping": {
+        "circular": [
+          "circular",
+          "office memorandum",
+          "om",
+          "instruction",
+          "guideline",
+          "advisory",
+          "notice"
+        ],
+        "notification": [
+          "notification",
+          "gazette",
+          "amendment",
+          "regulation",
+          "act"
+        ],
+        "tender": [
+          "tender",
+          "bid",
+          "rfp",
+          "procurement",
+          "eoi"
+        ],
+        "recruitment": [
+          "recruitment",
+          "vacancy",
+          "deputation",
+          "appointment"
+        ],
+        "news": [
+          "press release",
+          "news",
+          "launch",
+          "event",
+          "budget",
+          "scheme"
+        ]
+      },
+      "selectors": {}
+    },
+    {
+      "site_key": "mission-for-integrated-development-of-horticulture",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "name": "Mission for Integrated Development of Horticulture (Schemes & Guidelines)",
+      "url": "https://www.midh.gov.in/Letters&Circulars",
+      "base_url": "https://www.midh.gov.in",
+      "parser_type": "list",
+      "parser_backend": "bs4",
+      "render_js": true,
+      "active": true,
+      "custom_crawler": "mission-for-integrated-development-of-horticulture",
+      "default_category": "notification",
+      "category_mapping": {
+        "notification": [
+          "letters",
+          "circulars",
+          "guidelines",
+          "schemes"
+        ]
+      },
+      "selectors": {},
+      "min_date": "2026-01-01"
+    }
+  ]
+}

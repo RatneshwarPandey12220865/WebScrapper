@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
-CUTOFF = datetime(2025, 10, 1, tzinfo=timezone.utc)
+CUTOFF = datetime(2026, 1, 1, tzinfo=timezone.utc)
 ITEMS_PER_PAGE = 25
 
 DEFAULT_HEADERS = {

@@ -29,6 +29,7 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
@@ -41,57 +42,11 @@ _MIN_DATE         = datetime(2026, 1, 1, tzinfo=timezone.utc)
 _CONCURRENCY      = 6
 _MAX_PAGES        = 5   # max listing pages for both What's New and Notifications
 
-# DD-MM-YYYY  (sub-page date cells)
-_DMY_RE  = re.compile(r"(\d{1,2})-(\d{1,2})-(\d{4})")
-# ISO or YYYY-MM-DD  (Drupal <time datetime="…"> attribute)
-_ISO_RE  = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-# MM/DD/YYYY  (What's New start/end date cells: "Mon, 04/27/2026 - 12:00")
-_MDY_RE  = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
-
 
 # ── Date helpers ──────────────────────────────────────────────────────────────
 
 def _clean(v: str | None) -> str:
     return " ".join((v or "").split())
-
-
-def _parse_iso(raw: str | None) -> datetime | None:
-    """Parse ISO/Drupal datetime attribute: '2026-05-12T12:00:00Z'."""
-    if not raw:
-        return None
-    m = _ISO_RE.search(raw)
-    if m:
-        try:
-            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
-
-
-def _parse_dmy(raw: str | None) -> datetime | None:
-    """Parse DD-MM-YYYY date text from DataTables cells: '15-10-2024'."""
-    if not raw:
-        return None
-    m = _DMY_RE.search(raw.strip())
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
-
-
-def _parse_mdy(raw: str | None) -> datetime | None:
-    """Parse MM/DD/YYYY date text from What's New cells: 'Mon, 04/27/2026 - 12:00'."""
-    if not raw:
-        return None
-    m = _MDY_RE.search(raw.strip())
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
 
 
 # ── What's New parser ─────────────────────────────────────────────────────────
@@ -135,16 +90,16 @@ def _parse_whatsnew_page(html: str) -> list[ScrapedItem]:
 
         time_tag = row.select_one("td.views-field-field-date time")
         raw_dt   = (time_tag.get("datetime") or _clean(time_tag.get_text())) if time_tag else ""
-        published_at = _parse_iso(raw_dt)
+        published_at = _parse_date(raw_dt)
 
         # Fallback: parse start date from views-field-field-start-date
         if not published_at:
             start_td = row.select_one("td.views-field-field-start-date")
             if start_td:
-                published_at = _parse_mdy(_clean(start_td.get_text()))
+                published_at = _parse_date(_clean(start_td.get_text()))
 
         end_td = row.select_one("td.views-field-field-end-date")
-        end_date = _parse_mdy(_clean(end_td.get_text())) if end_td else None
+        end_date = _parse_date(_clean(end_td.get_text())) if end_td else None
 
         if published_at and published_at < _MIN_DATE:
             continue
@@ -242,8 +197,8 @@ def _parse_notification_subpage(html: str, page_url: str) -> list[ScrapedItem]:
             continue
 
         # ── Dates (col 1 = start/published, col 2 = end) ──────────────────
-        published_at = _parse_dmy(_clean(cells[1].get_text()))
-        end_date     = _parse_dmy(_clean(cells[2].get_text()))
+        published_at = _parse_date(_clean(cells[1].get_text()))
+        end_date     = _parse_date(_clean(cells[2].get_text()))
 
         # Filter: end_date must be on or after Jan 2026
         # If end_date is unparseable, fall back to start date for the check
@@ -282,8 +237,7 @@ async def _fetch_subpage(
 ) -> list[ScrapedItem]:
     async with semaphore:
         try:
-            resp = await client.get(url, timeout=30)
-            resp.raise_for_status()
+            resp = await _fetch_with_retry(client, url)
             items = _parse_notification_subpage(resp.text, url)
             logger.info("[fertilizers] Sub-page %s → %d items", url.split("/")[-1], len(items))
             return items
@@ -294,6 +248,34 @@ async def _fetch_subpage(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
+async def _fetch_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    retries: int = 2,
+) -> httpx.Response:
+    """GET with retry on transient errors; re-raises on persistent failure."""
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            resp = await client.get(url, timeout=45)
+            resp.raise_for_status()
+            return resp
+        except (httpx.ConnectError, httpx.RemoteProtocolError, httpx.TimeoutException) as exc:
+            last_exc = exc
+            if attempt < retries:
+                await asyncio.sleep(2 ** attempt)
+                continue
+            raise
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (429, 503, 502) and attempt < retries:
+                last_exc = exc
+                await asyncio.sleep(3 * (attempt + 1))
+                continue
+            raise
+    raise last_exc  # type: ignore[misc]
+
+
 async def crawl_fertilizers(_config: SiteConfig) -> list[ScrapedItem]:
     all_items: list[ScrapedItem] = []
     seen_links: set[str] = set()
@@ -302,16 +284,18 @@ async def crawl_fertilizers(_config: SiteConfig) -> list[ScrapedItem]:
         follow_redirects=True,
         headers=DEFAULT_HEADERS,
         timeout=60,
+        verify=getattr(_config, "verify_ssl", True),
     ) as client:
 
         # ── 1. What's New  (paginated) ────────────────────────────────────
         for page_num in range(_MAX_PAGES):
             url = f"{_WHATS_NEW_URL}?page={page_num}" if page_num else _WHATS_NEW_URL
             try:
-                resp = await client.get(url)
-                resp.raise_for_status()
+                resp = await _fetch_with_retry(client, url)
             except Exception as exc:
                 logger.warning("[fertilizers] What's New page %d failed: %s", page_num, exc)
+                if page_num == 0:
+                    raise  # let services.py handle SSL retry / error reporting
                 break
 
             page_items = _parse_whatsnew_page(resp.text)
@@ -330,10 +314,11 @@ async def crawl_fertilizers(_config: SiteConfig) -> list[ScrapedItem]:
         for page_num in range(_MAX_PAGES):
             url = f"{_NOTIF_LIST_URL}?page={page_num}" if page_num else _NOTIF_LIST_URL
             try:
-                resp = await client.get(url)
-                resp.raise_for_status()
+                resp = await _fetch_with_retry(client, url)
             except Exception as exc:
                 logger.warning("[fertilizers] Notifications listing page %d failed: %s", page_num, exc)
+                if page_num == 0:
+                    raise  # let services.py handle SSL retry / error reporting
                 break
 
             urls = _extract_subpage_urls(resp.text)

@@ -41,7 +41,6 @@ class CrawlRequest(BaseModel):
     use_cache: bool = False
     date_from: str | None = None
     date_to: str | None = None
-    pdf_date_sites: list[str] = Field(default_factory=list)
 
 
 class CrawlAllRequest(BaseModel):
@@ -84,7 +83,6 @@ async def crawl(request: CrawlRequest) -> dict:
         use_cache=request.use_cache,
         date_from=request.date_from,
         date_to=request.date_to,
-        pdf_date_sites=set(request.pdf_date_sites),
     )
 
 

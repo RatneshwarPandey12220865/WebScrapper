@@ -130,16 +130,6 @@
       "report_id": "ministry_of_textiles"
     },
     {
-      "site_key": "project-export-promotion-council",
-      "name": "Project Export Promotion Council (PEPC)",
-      "registry_url": "http://www.projectexports.com/",
-      "alternate_url": null,
-      "preferred_url": "http://www.projectexports.com/",
-      "status": "working",
-      "status_raw": "working",
-      "report_id": "project_export_promotion_council"
-    },
-    {
       "site_key": "quality-council-of-india",
       "name": "Quality Council of India (QCI)",
       "registry_url": "https://qcin.org/",
@@ -334,9 +324,9 @@
       "name": "Directorate of Plant Protection Quarantine & Storage (For Plant Quarantine Rules, Insectides Rules)",
       "registry_url": "http://ppqs.gov.in/",
       "alternate_url": null,
-      "preferred_url": "http://ppqs.gov.in/",
+      "preferred_url": "https://ppqs.gov.in",
       "status": "working",
-      "status_raw": "working",
+      "status_raw": "Custom crawler — news-archive",
       "report_id": "directorate_of_plant_protection_quarantine_storage_for_plant_quarantine_rules_insectides_rules"
     },
     {
@@ -388,16 +378,6 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "national_horticulture_board"
-    },
-    {
-      "site_key": "plant-protection-quarantie-and-storage-import-and-export-related",
-      "name": "Plant Protection, Quarantie and Storage (Import and Export related)",
-      "registry_url": "https://plantquarantineindia.nic.in/",
-      "alternate_url": "https://ppqs.gov.in/en",
-      "preferred_url": "https://ppqs.gov.in/en",
-      "status": "not_working",
-      "status_raw": "not working",
-      "report_id": "plant_protection_quarantie_and_storage_import_and_export_related"
     },
     {
       "site_key": "sfac-farmer-producer-organisation",
@@ -1679,6 +1659,197 @@
       "status": "working",
       "status_raw": "working",
       "report_id": "cbic_gst_portal"
+    },
+    {
+      "site_key": "project-exports-promotion-council",
+      "name": "Project Exports Promotion Council of India (PEPC)",
+      "ministry": "Ministry of Commerce and Industry",
+      "supported": true,
+      "url": "https://projectexports.com"
+    },
+    {
+      "site_key": "department-of-agriculture-and-farmers-welfare-whatsnew",
+      "name": "Department of Agriculture and Farmers Welfare – What's New",
+      "ministry": "Department of Agriculture and Farmers Welfare",
+      "supported": true,
+      "url": "https://agriwelfare.gov.in"
+    },
+    {
+      "site_key": "mohfw-dohfw",
+      "name": "Department of Health and Family Welfare (DOHFW)",
+      "ministry": "Ministry of Health and Family Welfare",
+      "supported": true,
+      "url": "https://www.mohfw-dohfw.gov.in/whats-new"
+    },
+    {
+      "site_key": "cbic-customs",
+      "name": "CBIC - Central Board of Indirect Taxes & Customs",
+      "ministry": "Ministry of Finance",
+      "supported": true,
+      "url": "https://www.cbic.gov.in/"
+    },
+    {
+      "site_key": "directorate-of-cashewnut-cocoa-development",
+      "name": "Directorate of Cashewnut & Cocoa Development (DCCD)",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "supported": true,
+      "url": "https://dccd.gov.in/"
+    },
+    {
+      "site_key": "directorate-general-fire-services-civil-defence-home-guards",
+      "name": "Directorate General of Fire Services, Civil Defence and Home Guards (DGFSCD&HG)",
+      "ministry": "Ministry of Home Affairs",
+      "supported": true,
+      "url": "https://dgfscdhg.gov.in/"
+    },
+    {
+      "site_key": "dot",
+      "name": "Department of Telecommunications (DoT)",
+      "ministry": "Ministry of Communications",
+      "supported": true,
+      "url": ""
+    },
+    {
+      "site_key": "sez-india",
+      "name": "Special Economic Zones India (SEZ India)",
+      "ministry": "Ministry of Commerce and Industry",
+      "supported": true,
+      "url": ""
+    },
+    {
+      "site_key": "indian-trade-portal",
+      "name": "Indian Trade Portal",
+      "ministry": "Ministry of Commerce and Industry",
+      "supported": true,
+      "url": ""
+    },
+    {
+      "site_key": "jerc-jk-ladakh",
+      "name": "Joint Electricity Regulatory Commission – J&K and Ladakh",
+      "ministry": "Ministry of Power",
+      "supported": true,
+      "url": "https://jercjkl.jk.gov.in/"
+    },
+    {
+      "site_key": "department-of-animal-husbandry-and-dairying",
+      "name": "Department of Animal Husbandry and Dairying",
+      "ministry": "Ministry of Fisheries, Animal Husbandry and Dairying",
+      "supported": true,
+      "url": "https://dahd.gov.in/whats-new"
+    },
+    {
+      "site_key": "rajasthan-dipr",
+      "name": "DIPR Rajasthan - Press Releases",
+      "ministry": "Government of Rajasthan",
+      "supported": true,
+      "url": "https://dipr.rajasthan.gov.in/pages/press-release-list/85/36?lan=en"
+    },
+    {
+      "site_key": "epfo",
+      "name": "Employees Provident Fund Organisation (EPFO)",
+      "ministry": "Ministry of Labour and Employment",
+      "supported": true,
+      "url": "https://www.epfo.gov.in/press-release"
+    },
+    {
+      "site_key": "andhra-pradesh-official-portal",
+      "name": "Andhra Pradesh - Official State Portal",
+      "ministry": "Government of Andhra Pradesh",
+      "supported": true,
+      "url": "https://www.ap.gov.in/#/"
+    },
+    {
+      "site_key": "dasd-kerala",
+      "name": "Directorate of Arecanut and Spices Development (DASD)",
+      "ministry": "Government of Kerala",
+      "supported": true,
+      "url": "https://dasd.kerala.gov.in/"
+    },
+    {
+      "site_key": "jercuts",
+      "name": "Joint Electricity Regulatory Commission for UT of Andaman & Nicobar Islands and Lakshadweep (JERC)",
+      "ministry": "Ministry of Power",
+      "supported": true,
+      "url": "https://jercuts.gov.in/whats-new/"
+    },
+    {
+      "site_key": "dot-eservices",
+      "name": "DOT eServices - Circular Notifications (Others)",
+      "ministry": "Ministry of Communications",
+      "supported": true,
+      "url": "https://eservices.dot.gov.in/circular-notifications-others"
+    },
+    {
+      "site_key": "sfac",
+      "name": "Small Farmers Agribusiness Consortium (SFAC)",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "supported": true,
+      "url": "https://sfacindia.com/View_What's_New.aspx"
+    },
+    {
+      "site_key": "jalshakti-dowr",
+      "name": "Jal Shakti - Department of Water Resources, River Development & Ganga Rejuvenation (DoWR)",
+      "ministry": "Ministry of Jal Shakti",
+      "supported": true,
+      "url": "https://www.jalshakti-dowr.gov.in"
+    },
+    {
+      "site_key": "enam",
+      "name": "Electronic National Agriculture Market (eNAM)",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "supported": true,
+      "url": "https://enam.gov.in/web/all_news_desc"
+    },
+    {
+      "site_key": "npci",
+      "name": "National Payments Corporation of India (NPCI)",
+      "ministry": "Reserve Bank of India / Payments",
+      "supported": true,
+      "url": "https://www.npci.org.in/what-we-do/npci-media/press-release"
+    },
+    {
+      "site_key": "mea",
+      "name": "Ministry of External Affairs",
+      "ministry": "Ministry of External Affairs",
+      "supported": true,
+      "url": "https://www.mea.gov.in/news.htm"
+    },
+    {
+      "site_key": "chhattisgarh",
+      "name": "Chhattisgarh Government Portal",
+      "ministry": "Chhattisgarh State Government",
+      "supported": true,
+      "url": "https://cgstate.gov.in/en/all-notification"
+    },
+    {
+      "site_key": "ministry-of-cooperation",
+      "name": "Ministry of Cooperation",
+      "registry_url": "https://www.cooperation.gov.in/en/notices-circulars",
+      "alternate_url": "https://www.cooperation.gov.in/en/announcement",
+      "preferred_url": "https://www.cooperation.gov.in",
+      "status": "working",
+      "status_raw": "Custom crawler — Notices & Circulars + Announcements",
+      "report_id": "ministry_of_cooperation"
+    },
+    {
+      "site_key": "department-of-financial-services",
+      "name": "Department of Financial Services",
+      "registry_url": "https://financialservices.gov.in/what-s-new",
+      "alternate_url": "https://financialservices.gov.in/orders-and-notices",
+      "preferred_url": "https://financialservices.gov.in",
+      "status": "working",
+      "status_raw": "Custom crawler — What's New + Orders & Notices + Gazette Notifications",
+      "report_id": "department_of_financial_services"
+    },
+    {
+      "site_key": "mission-for-integrated-development-of-horticulture",
+      "name": "Mission for Integrated Development of Horticulture (Schemes & Guidelines)",
+      "registry_url": "https://midh.gov.in",
+      "alternate_url": "https://www.midh.gov.in/Letters&Circulars",
+      "preferred_url": "https://www.midh.gov.in/Letters&Circulars",
+      "status": "working",
+      "status_raw": "working",
+      "report_id": "mission-for-integrated-development-of-horticulture"
     }
   ]
 }

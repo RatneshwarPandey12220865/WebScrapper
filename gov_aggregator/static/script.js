@@ -49,7 +49,6 @@ let crawlResults = [];
 let siteStatuses = [];
 let globalMinDate = null;
 const selectedSites = new Set();
-const pdfDateSites = new Set();  // sites for which PDF date extraction is requested
 
 // Bulk crawl state
 let activeBulkJobId = null;
@@ -81,14 +80,22 @@ function formatDate(value) {
 }
 
 function formatDateRange(item) {
-  const pdfBadge = item.date_source === "pdf_extracted"
-    ? `<span class="badge badge--pdf-date" title="Date extracted from PDF content">PDF</span>`
-    : "";
-  if (!item.publish_date) return `<span class="date-unavailable">Not available</span>${pdfBadge}`;
+  let dateBadge = "";
+  if (item.date_source === "pdf_extracted") {
+    dateBadge = `<span class="badge badge--pdf-date" title="Date extracted from PDF document content">📄 PDF</span>`;
+  } else if (item.date_source === "page") {
+    dateBadge = `<span class="badge badge--page-date" title="Date parsed from the website page">🌐 Page</span>`;
+  } else if (item.date_source === "title") {
+    dateBadge = `<span class="badge badge--title-date" title="Date extracted from the item title text">🔤 Title</span>`;
+  } else {
+    dateBadge = `<span class="badge badge--no-date" title="No date available for this item">— No date</span>`;
+  }
+
+  if (!item.publish_date) return `<span class="date-unavailable">Not available</span> ${dateBadge}`;
   const start = new Date(item.publish_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  if (!item.end_date) return `${start}${pdfBadge}`;
+  if (!item.end_date) return `${start} ${dateBadge}`;
   const end = new Date(item.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  return `<span class="date-range">${start}<span class="date-range__arrow">→</span>${end}</span>${pdfBadge}`;
+  return `<span class="date-range">${start}<span class="date-range__arrow">→</span>${end}</span> ${dateBadge}`;
 }
 
 function normalize(text) {
@@ -150,7 +157,6 @@ function renderSiteList() {
       ? (() => { try { return new URL(rawUrl).origin; } catch { return rawUrl; } })()
       : "No URL available";
 
-    const isPdfActive = pdfDateSites.has(site.site_key);
     card.innerHTML = `
       <input type="checkbox" class="site-card__check" data-site-key="${site.site_key}" ${checked} ${disabled}>
       <div class="site-card__body">
@@ -159,15 +165,6 @@ function renderSiteList() {
           <span class="badge${site.supported ? " badge--supported" : ""}">${statusLabel}</span>
         </div>
         <p>${baseUrl}</p>
-        ${isSelected && site.supported ? `
-        <div class="site-card__pdf-row">
-          <button class="site-card__pdf-btn${isPdfActive ? " site-card__pdf-btn--active" : ""}"
-                  data-site-key="${site.site_key}" type="button"
-                  title="${isPdfActive ? "PDF date extraction ON — click to disable" : "Enable PDF date extraction for this site"}">
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM9.5 3A1.5 1.5 0 0 1 11 4.5h2L9.5 1V3z"/></svg>
-            PDF Dates
-          </button>
-        </div>` : ""}
       </div>
     `;
 
@@ -178,31 +175,11 @@ function renderSiteList() {
         card.classList.add("site-card--selected");
       } else {
         selectedSites.delete(key);
-        pdfDateSites.delete(key);
         card.classList.remove("site-card--selected");
       }
       renderSelectionSummary();
       renderSiteList();
     });
-
-    const pdfBtn = card.querySelector(".site-card__pdf-btn");
-    if (pdfBtn) {
-      pdfBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const key = pdfBtn.dataset.siteKey;
-        if (pdfDateSites.has(key)) {
-          pdfDateSites.delete(key);
-          pdfBtn.classList.remove("site-card__pdf-btn--active");
-          pdfBtn.title = "Enable PDF date extraction for this site";
-          showToast(`PDF date extraction disabled for ${site.name}`, "info");
-        } else {
-          pdfDateSites.add(key);
-          pdfBtn.classList.add("site-card__pdf-btn--active");
-          pdfBtn.title = "PDF date extraction ON — click to disable";
-          showToast(`PDF date extraction enabled for ${site.name}`, "success");
-        }
-      });
-    }
 
     siteListNode.appendChild(card);
   });
@@ -1083,7 +1060,6 @@ async function crawlSelectedSites() {
       body: JSON.stringify({
         site_keys: siteKeys,
         use_cache: useCacheToggle.checked,
-        pdf_date_sites: [...pdfDateSites].filter(k => siteKeys.includes(k)),
       }),
     });
 
@@ -1390,7 +1366,6 @@ selectSupportedButton.addEventListener("click", () => {
 
 clearSelectionButton.addEventListener("click", () => {
   selectedSites.clear();
-  pdfDateSites.clear();
   renderSiteList();
   renderSelectionSummary();
 });

@@ -7,30 +7,18 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 _BASE = "https://asi.nic.in"
 _MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
-# Matches DD-MM-YYYY or DD/MM/YYYY anywhere in text
-_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
+# Matches DD-MM-YYYY or DD/MM/YYYY anywhere in text (used for title-stripping)
+_STRIP_STRIP_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
 
 
 def _clean(value: str | None) -> str:
     return " ".join((value or "").split())
-
-
-def _parse_date(raw: str | None) -> datetime | None:
-    """Parse DD-MM-YYYY or DD/MM/YYYY → datetime."""
-    if not raw:
-        return None
-    m = _DATE_RE.search(raw.strip())
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
 
 
 def _parse_table(html: str, section_label: str) -> tuple[list[ScrapedItem], bool]:
@@ -84,19 +72,19 @@ def _parse_table(html: str, section_label: str) -> tuple[list[ScrapedItem], bool
 
         # Strategy 2: date leaked into the last part of the title string
         if not _parse_date(date_text):
-            m = _DATE_RE.search(title)
+            m = _STRIP_DATE_RE.search(title)
             if m:
                 date_text = m.group(0)
 
         # Strategy 3: scan the full row text
         if not _parse_date(date_text):
             row_text = _clean(row.get_text())
-            m = _DATE_RE.search(row_text)
+            m = _STRIP_DATE_RE.search(row_text)
             if m:
                 date_text = m.group(0)
 
         # Strip any leaked date from the end of the title
-        title = _DATE_RE.sub("", title).strip(" -–—")
+        title = _STRIP_DATE_RE.sub("", title).strip(" -–—")
         title = _clean(title)
 
         published_at = _parse_date(date_text)

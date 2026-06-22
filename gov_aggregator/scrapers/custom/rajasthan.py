@@ -173,6 +173,14 @@ def _sync_crawl(config: SiteConfig) -> list[ScrapedItem]:
             if expanded:
                 _collect_page_items(page, base_url=config.base_url, seen_links=seen_links, items=items)
             else:
+                # Selecting "All" in DataTables may wipe rows via server-side AJAX.
+                # Reload the original page so the default 10-row view is restored
+                # before paginating through it.
+                page.goto(config.source_url, wait_until="networkidle", timeout=_TIMEOUT_MS)
+                try:
+                    page.wait_for_selector(_ROWS_SELECTOR, timeout=20_000)
+                except PlaywrightTimeoutError:
+                    page.wait_for_timeout(5_000)
                 _paginate_if_needed(page, base_url=config.base_url, seen_links=seen_links, items=items)
 
             return items

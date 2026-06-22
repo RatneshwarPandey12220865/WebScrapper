@@ -163,8 +163,18 @@ async def _capture_target(context, index: int, has_download: bool) -> tuple[str 
         await page.close()
 
 
-def _parse_latest_news_html(html: str) -> list[ScrapedItem]:
-    """Parse the latest-news page HTML."""
+_MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_YEAR = "2026"
+_MAX_PAGES = 20
+
+
+def _parse_latest_news_html(html: str) -> tuple[list[ScrapedItem], str | None]:
+    """Parse one page of latest-news HTML.
+
+    Returns (items, next_page_url_or_None).
+    The site uses Drupal pagination with URLs like ?year=2026&page=%2C1
+    so we follow the actual href from the Next button rather than building it.
+    """
     items = []
     soup = BeautifulSoup(html, "html.parser")
 
@@ -175,16 +185,23 @@ def _parse_latest_news_html(html: str) -> list[ScrapedItem]:
 
         date_div = content_span.select_one("div.up-date")
         date_text = _clean_text(date_div.get_text()) if date_div else ""
+        published_at = _parse_date(date_text)
 
         gry_ft = content_span.select_one("div.gry-ft")
         if not gry_ft:
             continue
 
-        link_a = gry_ft.find("a", href=True)
+        # Extract link first, then build title without the "Click here" anchor text
+        para = gry_ft.find("p")
+        link_a = (para or gry_ft).find("a", href=True)
         link = _abs_url(link_a.get("href")) if link_a else ""
 
-        all_text = gry_ft.get_text()
-        title = all_text.split("Click here")[0].strip()
+        if para:
+            if link_a:
+                link_a.extract()  # remove anchor so title text is clean
+            title = _clean_text(para.get_text())
+        else:
+            title = _clean_text(gry_ft.get_text().split("Click here")[0])
 
         if not title:
             continue
@@ -193,61 +210,78 @@ def _parse_latest_news_html(html: str) -> list[ScrapedItem]:
             ScrapedItem(
                 title=title,
                 link=link,
-                published_at=_parse_date(date_text),
+                published_at=published_at,
                 is_pdf=link.lower().endswith(".pdf") if link else False,
                 section_label="Latest News",
             )
         )
 
-    return items
+    next_a = soup.select_one(".pager__item--next a")
+    next_href = next_a["href"] if next_a else None
+    if next_href and not next_href.startswith("http"):
+        # href is relative like "?year=2026&page=%2C1" — attach to the news page base
+        if next_href.startswith("?"):
+            next_href = LATEST_NEWS_URL + next_href
+        elif next_href.startswith("/"):
+            next_href = "https://www.incometax.gov.in" + next_href
+        else:
+            next_href = LATEST_NEWS_URL + "/" + next_href
+    return items, next_href
 
 
-async def _fetch_latest_news_page(client: httpx.AsyncClient, page_num: int) -> list[ScrapedItem]:
-    """Fetch a single page of latest news."""
-    if page_num == 0:
-        url = LATEST_NEWS_URL
-    elif page_num == 1:
-        url = f"{LATEST_NEWS_URL}?page=%2C1&link=5"
-    else:
-        url = f"{LATEST_NEWS_URL}?page=%2C2&link=6"
+async def _fetch_latest_news_url(
+    client: httpx.AsyncClient, url: str
+) -> tuple[list[ScrapedItem], str | None]:
+    """Fetch one page of latest news by full URL.
 
+    Returns (items, next_page_url_or_None).
+    """
     try:
-        logger.info(f"[income-tax] Fetching: {url}")
+        logger.info("[income-tax] Fetching %s", url)
         response = await client.get(url, timeout=30.0)
         response.raise_for_status()
-        html = response.text
-        
-        items = _parse_latest_news_html(html)
-        logger.info(f"[income-tax] Page {page_num}: {len(items)} items")
-        return items
-    except Exception as e:
-        logger.warning(f"[income-tax] Failed to fetch latest-news page {page_num}: {e}")
-        return []
+        items, next_url = _parse_latest_news_html(response.text)
+        logger.info("[income-tax] %d items, next=%s", len(items), next_url)
+        return items, next_url
+    except Exception as exc:
+        logger.warning("[income-tax] Failed to fetch %s: %s", url, exc)
+        return [], None
 
 
 async def scrape_income_tax(config: SiteConfig) -> list[ScrapedItem]:
-    import httpx
-
     all_items: list[ScrapedItem] = []
+
+    # Drop Accept-Encoding so the server returns gzip/plain instead of brotli,
+    # which httpx can't decompress without the optional 'brotli' package.
+    headers = {k: v for k, v in DEFAULT_HEADERS.items() if k.lower() != "accept-encoding"}
 
     async with httpx.AsyncClient(
         follow_redirects=True,
-        headers=DEFAULT_HEADERS,
+        headers=headers,
         timeout=30.0,
     ) as client:
-        for page_num in range(3):
-            page_items = await _fetch_latest_news_page(client, page_num)
-            all_items.extend(page_items)
-            logger.info(f"[income-tax] Latest News page {page_num + 1}: {len(page_items)} items")
+        next_url: str | None = f"{LATEST_NEWS_URL}?year={_YEAR}"
+        visited: set[str] = set()
+        while next_url and len(visited) < _MAX_PAGES:
+            if next_url in visited:
+                break
+            visited.add(next_url)
 
-            if not page_items:
+            page_items, next_url = await _fetch_latest_news_url(client, next_url)
+
+            # Stop early if we hit items older than the cutoff
+            stop = any(
+                item.published_at and item.published_at < _MIN_DATE
+                for item in page_items
+            )
+            all_items.extend(page_items)
+            if stop or not page_items:
                 break
 
-        all_items.sort(
-            key=lambda i: i.published_at or datetime.min.replace(tzinfo=timezone.utc),
-            reverse=True,
-        )
-
+    all_items.sort(
+        key=lambda i: i.published_at or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
     return all_items
 
 

@@ -25,17 +25,7 @@ _MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
 _WHATSNEW_PAGES = 4
 _EXECUTOR = ThreadPoolExecutor(max_workers=1)
 
-_DATE_RE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
-
-
-def _parse_date(raw: str) -> datetime | None:
-    m = _DATE_RE.search(raw.strip())
-    if not m:
-        return None
-    try:
-        return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-    except ValueError:
-        return None
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 
 
 def _parse_whatsnew_page(html: str) -> list[ScrapedItem]:

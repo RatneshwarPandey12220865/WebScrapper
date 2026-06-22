@@ -21,6 +21,7 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from gov_aggregator.scrapers.date_utils import parse_date as _parse_date
 from gov_aggregator.scrapers.engine import DEFAULT_HEADERS
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
@@ -32,33 +33,9 @@ _MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
 _CONCURRENCY = 8
 _MAX_PAGES = 5
 
-_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
-# ISO datetime attr on <time> elements: "2026-05-12T12:00:00Z"
-_ISO_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-
 
 def _clean(v: str | None) -> str:
     return " ".join((v or "").split())
-
-
-def _parse_date(raw: str | None) -> datetime | None:
-    if not raw:
-        return None
-    # Try ISO format first (from datetime attribute)
-    m = _ISO_DATE_RE.search(raw)
-    if m:
-        try:
-            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    # Fallback to DD/MM/YYYY
-    m = _DATE_RE.search(raw)
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
-        except ValueError:
-            pass
-    return None
 
 
 def _parse_listing_page(html: str) -> list[dict]:
@@ -139,8 +116,7 @@ async def _resolve_node(
     """
     async with semaphore:
         try:
-            resp = await client.get(item["node_url"], timeout=20)
-            resp.raise_for_status()
+            resp = await _get(client, item["node_url"])
             pdf_url, published_at = _extract_pdf_from_detail(resp.text)
         except Exception as exc:
             logger.debug("[dahd] Failed to fetch %s: %s", item["node_url"], exc)
@@ -158,11 +134,35 @@ async def _resolve_node(
     )
 
 
+async def _get(client: httpx.AsyncClient, url: str, *, retries: int = 2) -> httpx.Response:
+    """GET with retry on transient errors; raises on persistent failure."""
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return resp
+        except (httpx.ConnectError, httpx.RemoteProtocolError, httpx.TimeoutException) as exc:
+            last_exc = exc
+            if attempt < retries:
+                await asyncio.sleep(2 ** attempt)
+                continue
+            raise
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (429, 502, 503) and attempt < retries:
+                last_exc = exc
+                await asyncio.sleep(3 * (attempt + 1))
+                continue
+            raise
+    raise last_exc  # type: ignore[misc]
+
+
 async def crawl_dahd(config: SiteConfig) -> list[ScrapedItem]:
     async with httpx.AsyncClient(
         follow_redirects=True,
         headers=DEFAULT_HEADERS,
         timeout=60,
+        verify=getattr(config, "verify_ssl", True),
     ) as client:
 
         # ── 1. Collect raw items from all listing pages ───────────────────
@@ -170,10 +170,11 @@ async def crawl_dahd(config: SiteConfig) -> list[ScrapedItem]:
         for page_num in range(_MAX_PAGES):
             url = f"{_LISTING_URL}?page={page_num}"
             try:
-                resp = await client.get(url)
-                resp.raise_for_status()
+                resp = await _get(client, url)
             except Exception as exc:
                 logger.warning("[dahd] Listing page %d failed: %s", page_num, exc)
+                if page_num == 0:
+                    raise  # propagate so services.py can SSL-retry / report error
                 break
 
             page_items = _parse_listing_page(resp.text)

@@ -1580,53 +1580,45 @@ button, input, select, textarea { font: inherit; }
 }
 .ep-site-row__btn:hover { background: var(--neutral-200); }
 
-/* ── PDF date extraction toggle (site card) ─────────────────────────────── */
-.site-card__pdf-row {
-  margin-top: 0.4rem;
-}
-.site-card__pdf-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.18rem 0.55rem;
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--radius-full);
-  background: var(--neutral-100);
-  color: var(--neutral-600);
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  letter-spacing: 0.02em;
-}
-.site-card__pdf-btn:hover {
-  background: var(--primary-50);
-  border-color: var(--primary-500);
-  color: var(--primary-700);
-}
-.site-card__pdf-btn--active {
-  background: var(--accent-100);
-  border-color: var(--accent-600);
-  color: var(--accent-700);
-  font-weight: 600;
-}
-.site-card__pdf-btn--active:hover {
-  background: #b2f5ea;
-  border-color: var(--accent-700);
-}
-
 /* ── PDF date badge (results table date column) ──────────────────────────── */
-.badge--pdf-date {
+.badge--pdf-date,
+.badge--page-date,
+.badge--title-date,
+.badge--no-date {
   display: inline-block;
   margin-left: 0.3rem;
-  padding: 0.1rem 0.38rem;
-  background: var(--accent-100);
-  color: var(--accent-700);
+  padding: 0.1rem 0.42rem;
   border-radius: var(--radius-full);
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   vertical-align: middle;
+  white-space: nowrap;
+}
+/* 📄 PDF — date extracted from PDF document */
+.badge--pdf-date {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+/* 🌐 Page — date parsed from HTML page */
+.badge--page-date {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+/* 🔤 Title — date parsed from item title text */
+.badge--title-date {
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+}
+/* — No date — date not available */
+.badge--no-date {
+  background: var(--neutral-100);
+  color: var(--neutral-400);
+  border: 1px solid var(--neutral-200);
+  font-weight: 500;
 }
 .date-unavailable {
   color: var(--neutral-400);

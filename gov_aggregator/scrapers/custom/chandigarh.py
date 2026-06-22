@@ -31,7 +31,7 @@ def _parse_date(raw: str | None) -> datetime | None:
 async def crawl_chandigarh(config: SiteConfig) -> list[ScrapedItem]:
     items: list[ScrapedItem] = []
 
-    async with httpx.AsyncClient(follow_redirects=True, headers=DEFAULT_HEADERS, timeout=60) as client:
+    async with httpx.AsyncClient(follow_redirects=True, headers=DEFAULT_HEADERS, timeout=60, verify=False) as client:
         # Section 1: News/Press Releases Archive
         press_release_url = "https://chandigarh.gov.in/news-press-releases-archieve"
         for page in range(2):

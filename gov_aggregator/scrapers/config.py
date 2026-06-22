@@ -25,6 +25,8 @@ SELECTOR_KEYS = (
     "pre_capture_js",
     "pre_capture_click",
     "allow_missing_link",
+    "extra_links_selector",
+    "exclude_title_pattern",
 )
 
 VALID_BACKENDS = {"bs4", "scrapy"}
@@ -101,6 +103,7 @@ def _site_section(section: dict) -> SiteSection:
         max_items=section.get("max_items"),
         verify_ssl=section.get("verify_ssl"),
         min_date=section.get("min_date"),
+        date_format=section.get("date_format"),
     )
 
 
@@ -139,6 +142,7 @@ def _site_config(site: dict, metadata_defaults: dict | None = None) -> SiteConfi
         verify_ssl=site.get("verify_ssl", True),
         sections=sections,
         min_date=site.get("min_date"),
+        date_format=site.get("date_format"),
         custom_crawler=site.get("custom_crawler"),
         extract_pdf_dates=bool(site.get("extract_pdf_dates", metadata_defaults.get("extract_pdf_dates_global", False))),
     )

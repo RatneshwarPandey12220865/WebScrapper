@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -11,7 +12,7 @@ from typing import Any
 
 logger = logging.getLogger("gov_aggregator.services")
 
-from gov_aggregator.scrapers.config import is_ssl_error, load_site_configs
+from gov_aggregator.scrapers.config import auto_disable_ssl_verification, is_ssl_error, load_site_configs
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 
@@ -53,8 +54,6 @@ SESSION_LOCK = Lock()
 # ── Bulk job tracking ──────────────────────────────────────────────────────
 ACTIVE_JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = Lock()
-
-BATCH_SIZE = 10  # sites per batch in bulk crawl
 
 
 def _now() -> datetime:
@@ -199,20 +198,52 @@ def _classify_item(config: SiteConfig, item: ScrapedItem) -> str:
     return config.default_category or "news"
 
 
+def _extract_date_from_title(title: str) -> datetime | None:
+    """Try to pull a publication date from the item title text.
+
+    Used as a last-resort fallback when neither the page HTML nor the PDF
+    content contain a structured date field. Many government sites embed the
+    date directly in the title, e.g.:
+      "Customs Notification dated 31 May 2026"
+      "Public Notice No. 13/2026-27 dated 29 May 2026"
+      "FTA Seminar | 04 June 2026"
+    """
+    if not title:
+        return None
+    try:
+        from gov_aggregator.scrapers.pdf_date_extractor import extract_date_from_text
+        d = extract_date_from_text(title)
+        if d:
+            return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    except Exception:
+        pass
+    return None
+
+
 def _shape_item(config: SiteConfig, item: ScrapedItem, *, crawl_time: str, previous_links: set[str]) -> dict[str, Any]:
     published_at = item.published_at
     if published_at and published_at.tzinfo is None:
         published_at = published_at.replace(tzinfo=timezone.utc)
 
+    date_source: str | None = None
+    if published_at:
+        date_source = "page"
+    else:
+        # Attempt to extract date from the title text before giving up
+        published_at = _extract_date_from_title(_clean_title(item.title))
+        if published_at:
+            date_source = "title"
+
     return {
         "site_key": config.site_key,
         "source_website": config.name,
-        "section_label": item.section_label or "",   # e.g. "Notifications", "Press Releases"
+        "section_label": item.section_label or "",
         "crawl_url": config.source_url or config.base_url,
         "title": _clean_title(item.title),
         "category": _classify_item(config, item),
         "description": item.summary,
         "publish_date": published_at.isoformat() if published_at else None,
+        "date_source": date_source,
         "end_date": item.end_date.isoformat() if item.end_date else None,
         "pdf_url": item.link if item.is_pdf else None,
         "external_link": None if item.is_pdf else item.link,
@@ -272,6 +303,8 @@ _GLOBAL_MIN_DATE_EXEMPT = {
     "department-of-agriculture-and-farmers-welfare-whatsnew",
     "department-of-fisheries",
     "jerc-mizoram",
+    # NCCD publishes infrequently; most items predate 2026 and are still current
+    "national-centre-for-cold-chain-development",
 }
 
 
@@ -396,33 +429,28 @@ def _clean_title(title: str | None) -> str:
 async def _maybe_extract_pdf_dates(
     config: SiteConfig,
     shaped_items: list[dict[str, Any]],
-    *,
-    force: bool = False,
 ) -> list[dict[str, Any]]:
-    """Post-shaping step: fill in publish_date for PDF items missing a date.
+    """Post-shaping step: fill in publish_date for any item missing a date.
 
-    Runs when config.extract_pdf_dates is True or force=True (per-request override).
+    Applies to all items with a link (PDF or non-PDF) — the extractor
+    auto-detects the document format (PDF, DOCX, HTML, etc.).
     """
-    if not config.extract_pdf_dates and not force:
-        return shaped_items
-
     from gov_aggregator.scrapers.pdf_date_extractor import (
         extract_pdf_dates_batch,
         flush_cache,
     )
 
-    # Collect URLs that need extraction
     urls_needed = [
         item["link"]
         for item in shaped_items
-        if item.get("is_pdf") and not item.get("publish_date") and item.get("link")
+        if not item.get("publish_date") and item.get("link")
     ]
 
     if not urls_needed:
         return shaped_items
 
     logger.info(
-        "PDF date extraction: %d/%d items missing dates for %s",
+        "Doc date extraction: %d/%d items missing dates for %s",
         len(urls_needed), len(shaped_items), config.site_key,
     )
 
@@ -430,7 +458,7 @@ async def _maybe_extract_pdf_dates(
     flush_cache()
 
     for item in shaped_items:
-        if item.get("is_pdf") and not item.get("publish_date") and item.get("link"):
+        if not item.get("publish_date") and item.get("link"):
             extracted = date_map.get(item["link"])
             if extracted:
                 item["publish_date"] = extracted.isoformat() + "T00:00:00+00:00"
@@ -445,7 +473,6 @@ async def crawl_site_keys(
     use_cache: bool = True,
     date_from: str | None = None,
     date_to: str | None = None,
-    pdf_date_sites: set[str] = frozenset(),
     _job_id: str | None = None,
 ) -> dict[str, Any]:
     from gov_aggregator.scrapers.custom import CUSTOM_CRAWLERS
@@ -458,8 +485,13 @@ async def crawl_site_keys(
 
     items: list[dict[str, Any]] = []
     statuses: list[dict[str, Any]] = []
-    to_crawl: list[tuple[str, dict[str, Any], SiteConfig]] = []
 
+    # Sites routed to the generic ScraperEngine
+    to_crawl: list[tuple[str, dict[str, Any], SiteConfig]] = []
+    # Sites routed to a custom crawler: (orig_key, site_dict, config, crawler_key)
+    custom_queue: list[tuple[str, dict[str, Any], SiteConfig, str]] = []
+
+    # ── Phase 1: categorise every requested site ───────────────────────────
     for site_key in unique_keys:
         site = catalog.get(site_key)
         resolved_site_key = _resolve_site_key(site_key)
@@ -499,73 +531,196 @@ async def crawl_site_keys(
             continue
 
         config = configs[resolved_site_key]
-        if config.custom_crawler and config.custom_crawler in CUSTOM_CRAWLERS:
-            try:
-                previous_links = _previous_links(resolved_site_key)
-                custom_items = await CUSTOM_CRAWLERS[config.custom_crawler](config)
-                shaped_items = [
-                    _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
-                    for item in custom_items
-                ]
-                shaped_items = await _maybe_extract_pdf_dates(
-                    config, shaped_items,
-                    force=config.site_key in pdf_date_sites,
-                )
-                _store_cache(config.site_key, shaped_items)
-                items.extend(shaped_items)
-                statuses.append(
-                    _status_payload(
-                        site_key=site_key,
-                        site_name=site["name"],
-                        ministry=config.ministry,
-                        state="completed",
-                        message="Crawl completed successfully.",
-                        item_count=len(shaped_items),
-                        new_count=sum(1 for item in shaped_items if item["is_new"]),
-                        data_since=_effective_data_since(config),
-                        crawl_time=crawl_time,
-                    )
-                )
-            except Exception as exc:  # noqa: BLE001
-                error_msg = str(exc)
-                if is_ssl_error(exc):
-                    error_msg = f"[SSL ERROR] {error_msg}"
-                statuses.append(_error_status(site_key, site["name"], error_msg, ministry=config.ministry, crawl_time=crawl_time))
+
+        # Resolve crawler key: explicit config value → resolved site_key → raw site_key
+        _crawler_key: str | None = config.custom_crawler
+        if not _crawler_key or _crawler_key not in CUSTOM_CRAWLERS:
+            for _candidate in (resolved_site_key, site_key):
+                if _candidate in CUSTOM_CRAWLERS:
+                    _crawler_key = _candidate
+                    break
+            else:
+                _crawler_key = None
+
+        if _crawler_key:
+            custom_queue.append((site_key, site, config, _crawler_key))
             continue
 
-        to_crawl.append((site_key, site, configs[resolved_site_key]))
+        # Guard: skip sites with no URL and no sections — can't scrape without a target
+        if not config.source_url and not any(s.source_url for s in (config.sections or [])):
+            statuses.append(_error_status(
+                site_key, site["name"],
+                "No source URL configured for this site.",
+                ministry=config.ministry,
+                crawl_time=crawl_time,
+            ))
+            continue
 
-    if to_crawl:
-        engine = ScraperEngine(
-            site_configs=[config for _, _, config in to_crawl],
-            concurrency=5,
-            timeout_seconds=90.0,
-        )
-        results = await engine.scrape_all()
-        result_map = {result.site_key: result for result in results}
+        to_crawl.append((site_key, site, config))
 
-        for requested_site_key, site, config in to_crawl:
-            result = result_map.get(config.site_key)
-            if result is None:
-                statuses.append(_error_status(requested_site_key, site["name"], "No crawl result was returned.", ministry=config.ministry, crawl_time=crawl_time))
-                continue
+    # ── Phase 2: run custom crawlers + engine concurrently ─────────────────
+    # 20 concurrent custom crawlers — each is I/O-bound so this is safe.
+    _custom_sem = asyncio.Semaphore(20)
 
-            if result.error:
-                statuses.append(_error_status(requested_site_key, site["name"], result.error, ministry=config.ministry, crawl_time=crawl_time))
-                continue
+    async def _run_one_custom(
+        site_key: str,
+        site: dict[str, Any],
+        config: SiteConfig,
+        crawler_key: str,
+    ) -> tuple[str, dict[str, Any], SiteConfig, list[dict[str, Any]], Exception | None]:
+        async with _custom_sem:
+            try:
+                previous_links = _previous_links(config.site_key)
+                raw = await CUSTOM_CRAWLERS[crawler_key](config)
+                shaped = [
+                    _shape_item(config, it, crawl_time=crawl_time, previous_links=previous_links)
+                    for it in raw
+                ]
+                return (site_key, site, config, shaped, None)
+            except Exception as exc:  # noqa: BLE001
+                if is_ssl_error(exc):
+                    return await _retry_custom_without_ssl(site_key, site, config, crawler_key, crawl_time)
+                return (site_key, site, config, [], exc)
 
+    async def _retry_custom_without_ssl(
+        site_key: str,
+        site: dict[str, Any],
+        config: SiteConfig,
+        crawler_key: str,
+        _crawl_time: str,
+    ) -> tuple[str, dict[str, Any], SiteConfig, list[dict[str, Any]], Exception | None]:
+        """Retry a custom crawler with SSL verification disabled after an SSL error."""
+        from copy import copy
+        logger.warning("[%s] SSL error — retrying custom crawler with SSL disabled", site_key)
+        ssl_free = copy(config)
+        ssl_free.verify_ssl = False
+        try:
             previous_links = _previous_links(config.site_key)
-            shaped_items = [
-                _shape_item(config, item, crawl_time=crawl_time, previous_links=previous_links)
-                for item in result.items
+            raw = await CUSTOM_CRAWLERS[crawler_key](ssl_free)
+            shaped = [
+                _shape_item(ssl_free, it, crawl_time=_crawl_time, previous_links=previous_links)
+                for it in raw
             ]
-            shaped_items = await _maybe_extract_pdf_dates(
-                config, shaped_items,
-                force=config.site_key in pdf_date_sites,
+            # Persist the bypass so future crawls skip SSL verification from the start
+            try:
+                auto_disable_ssl_verification(config.site_key)
+                logger.info("[%s] SSL bypass persisted to sites_config.json", config.site_key)
+            except Exception as persist_exc:
+                logger.warning("[%s] Could not persist SSL bypass: %s", config.site_key, persist_exc)
+            return (site_key, site, ssl_free, shaped, None)
+        except Exception as retry_exc:  # noqa: BLE001
+            logger.error("[%s] SSL-bypass retry also failed: %s", site_key, retry_exc)
+            return (site_key, site, config, [], retry_exc)
+
+    async def _run_engine() -> list[Any]:
+        if not to_crawl:
+            return []
+        engine = ScraperEngine(
+            site_configs=[c for _, _, c in to_crawl],
+            concurrency=20,          # was 5 — httpx fetches are cheap to parallelise
+            timeout_seconds=90.0,
+            playwright_browsers=4,   # 4 independent Chromium instances
+        )
+        return await engine.scrape_all()
+
+    # Fire both groups at the same time
+    custom_results, engine_results = await asyncio.gather(
+        asyncio.gather(*[_run_one_custom(*args) for args in custom_queue]),
+        _run_engine(),
+    )
+
+    # ── Phase 3: post-process custom crawler results ───────────────────────
+    # Collect all items that still need PDF date extraction across all sites,
+    # then do one consolidated batch instead of one per site.
+    all_custom_shaped: list[tuple[str, dict[str, Any], SiteConfig, list[dict[str, Any]]]] = []
+
+    for site_key, site, config, shaped, exc in custom_results:
+        if exc is not None:
+            error_msg = str(exc)
+            if is_ssl_error(exc):
+                error_msg = f"[SSL ERROR] {error_msg}"
+            statuses.append(_error_status(site_key, site["name"], error_msg, ministry=config.ministry, crawl_time=crawl_time))
+        else:
+            all_custom_shaped.append((site_key, site, config, shaped))
+
+    # Single PDF-date extraction pass over all custom-crawler items
+    if all_custom_shaped:
+        from gov_aggregator.scrapers.pdf_date_extractor import extract_pdf_dates_batch, flush_cache
+
+        all_urls = [
+            item["link"]
+            for _, _, _, shaped in all_custom_shaped
+            for item in shaped
+            if not item.get("publish_date") and item.get("link")
+        ]
+        date_map = await extract_pdf_dates_batch(all_urls) if all_urls else {}
+        flush_cache()
+
+        for site_key, site, config, shaped in all_custom_shaped:
+            for item in shaped:
+                if not item.get("publish_date") and item.get("link"):
+                    _d = date_map.get(item["link"])
+                    if _d is not None:
+                        item["publish_date"] = _d.isoformat() + "T00:00:00+00:00"
+                        item["date_source"] = "pdf_extracted"
+            _store_cache(config.site_key, shaped)
+            items.extend(shaped)
+            statuses.append(
+                _status_payload(
+                    site_key=site_key,
+                    site_name=site["name"],
+                    ministry=config.ministry,
+                    state="completed",
+                    message="Crawl completed successfully.",
+                    item_count=len(shaped),
+                    new_count=sum(1 for it in shaped if it["is_new"]),
+                    data_since=_effective_data_since(config),
+                    crawl_time=crawl_time,
+                )
             )
-            _store_cache(config.site_key, shaped_items)
-            items.extend(shaped_items)
-            ssl_bypassed = getattr(result, "ssl_bypassed", False)
+
+    # ── Phase 4: post-process engine results ──────────────────────────────
+    result_map = {r.site_key: r for r in engine_results}
+
+    engine_shaped_all: list[tuple[str, dict[str, Any], SiteConfig, list[dict[str, Any]], bool]] = []
+
+    for requested_site_key, site, config in to_crawl:
+        result = result_map.get(config.site_key)
+        if result is None:
+            statuses.append(_error_status(requested_site_key, site["name"], "No crawl result was returned.", ministry=config.ministry, crawl_time=crawl_time))
+            continue
+        if result.error:
+            statuses.append(_error_status(requested_site_key, site["name"], result.error, ministry=config.ministry, crawl_time=crawl_time))
+            continue
+        previous_links = _previous_links(config.site_key)
+        shaped = [
+            _shape_item(config, it, crawl_time=crawl_time, previous_links=previous_links)
+            for it in result.items
+        ]
+        ssl_bypassed = getattr(result, "ssl_bypassed", False)
+        engine_shaped_all.append((requested_site_key, site, config, shaped, ssl_bypassed))
+
+    if engine_shaped_all:
+        from gov_aggregator.scrapers.pdf_date_extractor import extract_pdf_dates_batch, flush_cache
+
+        eng_urls = [
+            item["link"]
+            for _, _, _, shaped, _ in engine_shaped_all
+            for item in shaped
+            if not item.get("publish_date") and item.get("link")
+        ]
+        eng_date_map = await extract_pdf_dates_batch(eng_urls) if eng_urls else {}
+        flush_cache()
+
+        for requested_site_key, site, config, shaped, ssl_bypassed in engine_shaped_all:
+            for item in shaped:
+                if not item.get("publish_date") and item.get("link"):
+                    _d = eng_date_map.get(item["link"])
+                    if _d is not None:
+                        item["publish_date"] = _d.isoformat() + "T00:00:00+00:00"
+                        item["date_source"] = "pdf_extracted"
+            _store_cache(config.site_key, shaped)
+            items.extend(shaped)
             statuses.append(
                 _status_payload(
                     site_key=requested_site_key,
@@ -573,8 +728,8 @@ async def crawl_site_keys(
                     ministry=config.ministry,
                     state="completed",
                     message="Crawl completed successfully." if not ssl_bypassed else "Crawl completed (SSL verification bypassed).",
-                    item_count=len(shaped_items),
-                    new_count=sum(1 for item in shaped_items if item["is_new"]),
+                    item_count=len(shaped),
+                    new_count=sum(1 for it in shaped if it["is_new"]),
                     data_since=_effective_data_since(config),
                     crawl_time=crawl_time,
                     ssl_bypassed=ssl_bypassed,
@@ -601,8 +756,19 @@ async def crawl_site_keys(
     }
 
 
+def _bulk_site_keys() -> list[str]:
+    """Return the deduplicated list of supported site keys for a bulk crawl.
+
+    Uses the catalog (get_site_catalog) rather than _supported_config_map so
+    that alias duplicates (e.g. both 'dgft' and 'directorate-general-of-foreign-trade')
+    are collapsed to a single canonical key, preventing the same crawler from
+    running twice and avoiding spurious 'missing' statuses in bulk results.
+    """
+    return [s["site_key"] for s in get_site_catalog() if s["supported"]]
+
+
 async def crawl_all_supported_sites(*, use_cache: bool = True) -> dict[str, Any]:
-    return await crawl_site_keys(list(_supported_config_map()), use_cache=use_cache)
+    return await crawl_site_keys(_bulk_site_keys(), use_cache=use_cache)
 
 
 async def run_bulk_crawl(
@@ -612,40 +778,32 @@ async def run_bulk_crawl(
     date_from: str | None,
     date_to: str | None,
 ) -> None:
-    """Background task: crawl all active sites in batches, tracking progress in ACTIVE_JOBS."""
-    all_site_keys = list(_supported_config_map())
+    """Background task: crawl all active sites concurrently, tracking progress in ACTIVE_JOBS."""
+    all_site_keys = _bulk_site_keys()
     total = len(all_site_keys)
 
     with JOBS_LOCK:
         ACTIVE_JOBS[job_id]["sites_total"] = total
         ACTIVE_JOBS[job_id]["status"] = "running"
 
-    all_items: list[dict[str, Any]] = []
-    all_statuses: list[dict[str, Any]] = []
-
-    for i in range(0, total, BATCH_SIZE):
+    try:
         with JOBS_LOCK:
             if ACTIVE_JOBS[job_id].get("status") == "cancelled":
                 return
 
-        batch = all_site_keys[i : i + BATCH_SIZE]
-        try:
-            result = await crawl_site_keys(
-                batch,
-                use_cache=use_cache,
-                date_from=date_from,
-                date_to=date_to,
-                _job_id=job_id,
-            )
-            all_items.extend(result["items"])
-            all_statuses.extend(result["site_statuses"])
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Bulk crawl batch %d error: %s", i // BATCH_SIZE, exc)
-
-        with JOBS_LOCK:
-            ACTIVE_JOBS[job_id]["sites_done"] = min(i + BATCH_SIZE, total)
-
-    all_items.sort(key=_result_sort_key, reverse=True)
+        result = await crawl_site_keys(
+            all_site_keys,
+            use_cache=use_cache,
+            date_from=date_from,
+            date_to=date_to,
+            _job_id=job_id,
+        )
+        all_items = result["items"]
+        all_statuses = result["site_statuses"]
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Bulk crawl error: %s", exc)
+        all_items = []
+        all_statuses = []
 
     with JOBS_LOCK:
         ACTIVE_JOBS[job_id].update(
