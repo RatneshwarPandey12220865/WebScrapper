@@ -11,6 +11,7 @@ from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from gov_aggregator.scrapers.config import is_ssl_error
 from gov_aggregator.scrapers.parsers import extract_items
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig, SiteSection
+from gov_aggregator.scrapers.throttle import HOST_THROTTLE
 
 logger = logging.getLogger("gov_aggregator.engine")
 
@@ -87,6 +88,7 @@ class PlaywrightPool:
     ) -> str:
         assert self._sem is not None, "PlaywrightPool.start() not called"
         async with self._sem:
+            await HOST_THROTTLE.wait(url)
             browser = self._next_browser()
             return await _fetch_page(
                 browser, url,
@@ -449,6 +451,10 @@ class ScraperEngine:
         insecure_client: httpx.AsyncClient | None = None,
         verify_ssl: bool = True,
     ) -> str:
+        # Politeness: space out requests to the same host (avoids IP bans).
+        # Covers both the verified and insecure-retry paths in one place.
+        await HOST_THROTTLE.wait(url)
+
         async def _insecure_get() -> str:
             if insecure_client is not None:
                 r = await insecure_client.get(url)

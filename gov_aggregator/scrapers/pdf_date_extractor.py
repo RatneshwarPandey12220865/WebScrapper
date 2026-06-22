@@ -55,6 +55,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from gov_aggregator.scrapers.throttle import HOST_THROTTLE
+
 logger = logging.getLogger("gov_aggregator.pdf_date_extractor")
 
 # ── Optional heavy dependencies ────────────────────────────────────────────
@@ -178,8 +180,22 @@ def _save_cache() -> None:
         logger.warning("Could not save pdf_date_cache.json: %s", exc)
 
 
+# Strategies that represent a *transient* failure (the server was down, the
+# download stalled, rendering crashed). These are NOT cached, so the next run
+# retries them — unlike a genuine "document has no date" result, which is cached
+# permanently to avoid pointlessly re-downloading the same file.
+_TRANSIENT_FAILURE_STRATEGIES = {
+    "download_failed",
+    "ocr_download_failed",
+    "ocr_render_failed",
+}
+
+
 def _cache_put(url: str, result_date: str | None, strategy: str) -> None:
     global _cache_dirty
+    if result_date is None and strategy in _TRANSIENT_FAILURE_STRATEGIES:
+        # Don't persist transient failures — let the next crawl retry the URL.
+        return
     _cache[url] = {
         "date": result_date,
         "strategy_used": strategy,
@@ -813,6 +829,10 @@ async def _download_bytes(url: str, max_bytes: int = 10_485_760) -> bytes | None
     case we return None rather than a corrupt partial document.
     """
     try:
+        # Politeness: space out downloads to the same host. A single ministry
+        # can have dozens of dateless PDFs — without this they'd all be fetched
+        # in a rapid burst, the most likely trigger for an IP ban.
+        await HOST_THROTTLE.wait(url)
         async with httpx.AsyncClient(verify=False, timeout=30.0, follow_redirects=True) as client:
             async with client.stream("GET", url) as r:
                 if r.status_code != 200:

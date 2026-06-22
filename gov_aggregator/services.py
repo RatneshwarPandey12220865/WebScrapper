@@ -559,8 +559,9 @@ async def crawl_site_keys(
         to_crawl.append((site_key, site, config))
 
     # ── Phase 2: run custom crawlers + engine concurrently ─────────────────
-    # 20 concurrent custom crawlers — each is I/O-bound so this is safe.
-    _custom_sem = asyncio.Semaphore(20)
+    # 8 concurrent custom crawlers — gentler fan-out reduces the burst of
+    # simultaneous requests across government sites (lowers IP-ban risk).
+    _custom_sem = asyncio.Semaphore(8)
 
     async def _run_one_custom(
         site_key: str,
@@ -617,9 +618,9 @@ async def crawl_site_keys(
             return []
         engine = ScraperEngine(
             site_configs=[c for _, _, c in to_crawl],
-            concurrency=20,          # was 5 — httpx fetches are cheap to parallelise
+            concurrency=8,           # gentler fan-out + per-host throttle avoids IP bans
             timeout_seconds=90.0,
-            playwright_browsers=4,   # 4 independent Chromium instances
+            playwright_browsers=3,   # 3 independent Chromium instances
         )
         return await engine.scrape_all()
 
