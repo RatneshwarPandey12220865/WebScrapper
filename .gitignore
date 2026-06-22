@@ -15,6 +15,10 @@ exports/*.zip
 .pytest_cache/
 pytest-cache-files-*/
 *.bak
+.vscode/
+
+# YOLO model weights — auto-downloaded by ultralytics on first use (6.5 MB)
+*.pt
 
 # Phase 2 — PDF date cache (regenerated at runtime; stores transient failures)
 gov_aggregator/data/pdf_date_cache.json
