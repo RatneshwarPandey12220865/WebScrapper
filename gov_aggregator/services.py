@@ -305,6 +305,9 @@ _GLOBAL_MIN_DATE_EXEMPT = {
     "jerc-mizoram",
     # NCCD publishes infrequently; most items predate 2026 and are still current
     "national-centre-for-cold-chain-development",
+    # Ministry of Steel publishes press releases rarely; the current list is
+    # Dec 2024–Dec 2025 and still the latest available, so exempt from the floor
+    "ministry-of-steel",
 }
 
 
