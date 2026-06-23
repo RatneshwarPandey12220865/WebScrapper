@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 import httpx
@@ -8,7 +9,9 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 API_URL = "https://www.nmc.org.in/MCIRest/open/getDataFromService?service=getLatestNewsNmc"
 DOC_BASE = "https://www.nmc.org.in/MCIRest/open/getDocument?path="
-CUTOFF = datetime(2025, 10, 1, tzinfo=timezone.utc)
+
+# NMC embeds the date at the start of pageName: "22/06/2026 - Actual title here"
+_DATE_PREFIX_RE = re.compile(r"^\d{1,2}/\d{2}/\d{4}\s*[-–]\s*")
 
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -47,15 +50,17 @@ def _build_link(record: dict) -> tuple[str, bool]:
 
 
 def _shape_record(record: dict) -> ScrapedItem | None:
-    title = (record.get("pageName") or "").strip()
+    raw_title = (record.get("pageName") or "").strip()
+    if not raw_title:
+        return None
+
+    # Strip the embedded date prefix ("22/06/2026 - ") from pageName so the
+    # dashboard shows clean titles. The date itself is already in updatedDate.
+    title = _DATE_PREFIX_RE.sub("", raw_title).strip()
     if not title:
         return None
 
     published_at = _parse_date(record.get("updatedDate"))
-
-    # Apply cutoff — skip items before July 2025
-    if published_at and published_at < CUTOFF:
-        return None
 
     link, is_pdf = _build_link(record)
     if not link:
