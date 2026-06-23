@@ -32,11 +32,23 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
 logger = logging.getLogger("gov_aggregator.custom.digifootprint")
 
-# Feeds to pull, in priority order. (section_label, endpoint)
-_FEEDS: list[tuple[str, str]] = [
+# Default feeds for any DigiFootprint site not listed below.
+_DEFAULT_FEEDS: list[tuple[str, str]] = [
     ("What's New", "/wp-json/post-page/whats_new"),
     ("Latest",     "/wp-json/custom/api/new-posts?s="),
 ]
+
+# Per-site overrides keyed by site_key.
+# MSME: new-posts returns only generic portal pages (noise); use the
+# structured document-category endpoints that carry real notifications/MOUs.
+_SITE_FEEDS: dict[str, list[tuple[str, str]]] = {
+    "ministry-of-micro-small-medium-enterprises": [
+        ("What's New",      "/wp-json/post-page/whats_new"),
+        ("Orders & Notices","/wp-json/document/documents?document_category=orders-and-notices"),
+        ("MOUs",            "/wp-json/document/documents?document_category=guidelines"),
+        ("Press Releases",  "/wp-json/document/documents?document_category=press-release"),
+    ],
+}
 
 _DOC_EXTS = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
 
@@ -137,13 +149,15 @@ async def crawl_digifootprint(config: SiteConfig) -> list[ScrapedItem]:
     items: list[ScrapedItem] = []
     seen: set[str] = set()
 
+    feeds = _SITE_FEEDS.get(config.site_key, _DEFAULT_FEEDS)
+
     async with httpx.AsyncClient(
         headers=_headers(site_base),
         verify=config.verify_ssl,
         follow_redirects=True,
         timeout=45.0,
     ) as client:
-        for label, endpoint in _FEEDS:
+        for label, endpoint in feeds:
             try:
                 resp = await client.get(cms_base + endpoint)
                 if resp.status_code != 200:
