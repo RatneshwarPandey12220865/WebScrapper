@@ -14,7 +14,7 @@ from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 _BASE = "https://asi.nic.in"
 _MIN_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
 # Matches DD-MM-YYYY or DD/MM/YYYY anywhere in text (used for title-stripping)
-_STRIP_STRIP_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
+_STRIP_DATE_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b")
 
 
 def _clean(value: str | None) -> str:
