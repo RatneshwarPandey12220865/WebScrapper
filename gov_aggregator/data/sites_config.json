@@ -527,7 +527,7 @@
       "base_url": "https://steel.gov.in",
       "parser_type": "table",
       "parser_backend": "scrapy",
-      "render_js": true,
+      "render_js": false,
       "default_category": "news",
       "category_mapping": {
         "news": [
@@ -560,11 +560,11 @@
         ]
       },
       "selectors": {
-        "row_selector": ".whats-new table tbody tr",
+        "row_selector": ".our-testimonial table tbody tr",
         "title_selector": "td.views-field-title",
         "link_selector": "td.views-field-field-download a, td.views-field-field-link a",
         "date_selector": null,
-        "wait_for_selector": ".views-row, table tbody tr"
+        "wait_for_selector": ".our-testimonial table tbody tr"
       }
     },
     {
