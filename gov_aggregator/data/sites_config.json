@@ -872,11 +872,11 @@
       "site_key": "ministry-of-women-child-development",
       "ministry": "Ministry of Women and Child Development",
       "name": "Ministry of Women and Child Development",
-      "url": "https://wcd.gov.in/documents/press-release",
+      "source_url": "https://wcd.gov.in/documents/press-release",
       "base_url": "https://wcd.gov.in",
       "parser_type": "list",
       "parser_backend": "scrapy",
-      "render_js": true,
+      "render_js": false,
       "active": true,
       "default_category": "news",
       "category_mapping": {
@@ -922,9 +922,40 @@
         "item_selector": "div.list_det_bx.tender_list",
         "title_selector": ".col-md-7 .det_cont p",
         "link_selector": "a[href*=\"uploaded\"]",
-        "date_selector": ".col-md-2 small",
-        "wait_for_selector": "div.list_det_bx.tender_list"
-      }
+        "date_selector": ".col-md-2 small"
+      },
+      "sections": [
+        {
+          "section_label": "Press Releases",
+          "source_url": "https://wcd.gov.in/documents/press-release",
+          "parser": "list",
+          "parser_backend": "scrapy",
+          "render_js": false,
+          "default_category": "news",
+          "date_format": "%d-%m-%Y",
+          "selectors": {
+            "item_selector": "div.list_det_bx.tender_list",
+            "title_selector": ".col-md-7 .det_cont p",
+            "link_selector": "a[href*=\"uploaded\"]",
+            "date_selector": ".col-md-2 small"
+          }
+        },
+        {
+          "section_label": "Orders & Notices",
+          "source_url": "https://wcd.gov.in/documents/orders-and-notices",
+          "parser": "list",
+          "parser_backend": "scrapy",
+          "render_js": false,
+          "default_category": "notification",
+          "date_format": "%d-%m-%Y",
+          "selectors": {
+            "item_selector": "div.list_det_bx.tender_list",
+            "title_selector": ".col-md-7 .det_cont p",
+            "link_selector": "a[href*=\"uploaded\"]",
+            "date_selector": ".col-md-2 small"
+          }
+        }
+      ]
     },
     {
       "site_key": "commission-for-agri-costs-and-prices",
