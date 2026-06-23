@@ -76,6 +76,7 @@ from .dfs import crawl_dfs
 from .midh import crawl_midh
 from .nfsm import crawl_nfsm
 from .ppqs import crawl_ppqs
+from .textiles import crawl_textiles
 
 CustomCrawler = Callable[[SiteConfig], Awaitable[list[ScrapedItem]]]
 
@@ -153,6 +154,7 @@ CUSTOM_CRAWLERS: dict[str, CustomCrawler] = {
     "department-of-financial-services": crawl_dfs,
     "directorate-of-plant-protection-quarantine-storage-for-plant-quarantine-rules-insectides-rules": crawl_ppqs,
     "mission-for-integrated-development-of-horticulture": crawl_midh,
+    "ministry-of-textiles": crawl_textiles,
 }
 
 __all__ = [
@@ -208,5 +210,6 @@ __all__ = [
     "crawl_dfs",
     "crawl_midh",
     "crawl_ppqs",
+    "crawl_textiles",
     "scrape_income_tax",
 ]

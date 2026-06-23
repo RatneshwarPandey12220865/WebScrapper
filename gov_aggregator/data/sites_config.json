@@ -575,7 +575,8 @@
       "base_url": "https://www.texmin.gov.in",
       "parser_type": "list",
       "parser_backend": "scrapy",
-      "render_js": true,
+      "render_js": false,
+      "custom_crawler": "ministry-of-textiles",
       "default_category": "notification",
       "category_mapping": {
         "circular": [
