@@ -50,6 +50,9 @@ let siteStatuses = [];
 let globalMinDate = null;
 const selectedSites = new Set();
 
+// Site drill-down: when set, the results table shows only this site's items.
+let focusedSiteKey = null;
+
 // Bulk crawl state
 let activeBulkJobId = null;
 let activeBulkJobStatus = null;   // tracks actual job status string
@@ -305,8 +308,23 @@ function renderStatuses() {
         ? `<span class="ssl-bypass-badge" title="SSL verification was bypassed automatically">SSL bypassed</span>`
         : "";
 
+      // A row is clickable only when the site actually returned items.
+      const hasItems = isActive && totalItems > 0;
+      const isFocused = focusedSiteKey === s.site_key;
+      const rowClasses = [
+        "status-item",
+        hasItems ? "status-item--clickable" : "",
+        isFocused ? "status-item--focused" : "",
+      ].filter(Boolean).join(" ");
+      const a11y = hasItems
+        ? `data-site-key="${s.site_key}" role="button" tabindex="0" title="Click to view ${s.site_name}'s items"`
+        : "";
+      const viewHint = hasItems
+        ? `<span class="status-item__view">${isFocused ? "Viewing ✓" : "View ›"}</span>`
+        : "";
+
       return `
-        <div class="status-item" data-state="${s.state}">
+        <div class="${rowClasses}" data-state="${s.state}" ${a11y}>
           <span class="status-dot"></span>
           <div class="status-item__left">
             <strong>${s.site_name}</strong>
@@ -318,6 +336,7 @@ function renderStatuses() {
             <span class="status-state-label">${s.state}</span>
             ${itemLabel}
             ${newLabel}
+            ${viewHint}
           </div>
         </div>`;
     })
@@ -364,6 +383,7 @@ function filteredResults() {
     const haystack = normalize(`${item.title} ${item.description || ""}`);
     const publishDate = item.publish_date ? item.publish_date.slice(0, 10) : "";
 
+    if (focusedSiteKey && item.site_key !== focusedSiteKey) return false;
     if (keyword && !haystack.includes(keyword)) return false;
     if (website && item.source_website !== website) return false;
     if (category && item.category !== category) return false;
@@ -385,10 +405,41 @@ function actionLinks(item) {
   return links.join("");
 }
 
+// ── Site drill-down ──────────────────────────────────────────────────────────
+function focusSite(siteKey) {
+  // Toggle: clicking the already-focused site clears the focus.
+  focusedSiteKey = focusedSiteKey === siteKey ? null : siteKey;
+  renderResults();
+  if (focusedSiteKey) {
+    document.querySelector(".results-table")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function clearSiteFocus() {
+  focusedSiteKey = null;
+  renderResults();
+}
+
+function renderSiteFocusBanner() {
+  const banner = document.getElementById("siteFocusBanner");
+  if (!banner) return;
+  if (!focusedSiteKey) {
+    banner.style.display = "none";
+    return;
+  }
+  const st = siteStatuses.find((s) => s.site_key === focusedSiteKey);
+  const name = st?.site_name || focusedSiteKey;
+  const count = filteredResults().length;
+  document.getElementById("siteFocusName").textContent = name;
+  document.getElementById("siteFocusCount").textContent = `· ${count} item${count !== 1 ? "s" : ""}`;
+  banner.style.display = "flex";
+}
+
 // ── Results table ──────────────────────────────────────────────────────────
 function renderResults() {
   const results = filteredResults();
   renderActiveFilterChips();
+  renderSiteFocusBanner();
   renderMetrics();
   renderStatuses();
   resultSummaryNode.textContent = `${results.length} item${results.length !== 1 ? "s" : ""} shown${results.length !== crawlResults.length ? ` (${crawlResults.length} total)` : ""}`;
@@ -1065,6 +1116,7 @@ async function crawlSelectedSites() {
 
     crawlResults = payload.items;
     siteStatuses = payload.site_statuses;
+    focusedSiteKey = null;   // fresh data — drop any previous site drill-down
     const returned = payload.meta?.returned_items ?? crawlResults.length;
     const shown = filteredResults().length;
     const filterNote = shown !== returned ? ` · ${shown} shown with active filter` : "";
@@ -1223,6 +1275,7 @@ async function loadBulkResults() {
     const payload = await fetchJson(`/api/crawl/result/${activeBulkJobId}`);
     crawlResults = payload.items || [];
     siteStatuses = payload.site_statuses || [];
+    focusedSiteKey = null;   // fresh data — drop any previous site drill-down
     const returned = payload.meta?.returned_items ?? crawlResults.length;
     statusNode.textContent = `Bulk crawl finished at ${formatDate(payload.crawl_time)}. ${returned} items returned.`;
     const errors = siteStatuses.filter((s) => s.state === "error").length;
@@ -1374,6 +1427,7 @@ clearFiltersBtn.addEventListener("click", () => {
   keywordSearch.value = "";
   websiteFilter.value = "";
   categoryFilter.value = "";
+  focusedSiteKey = null;          // also clear the site drill-down
   applyRange(null, null, null);   // resets DRW + sidebar inputs + re-renders
 });
 
@@ -1397,6 +1451,21 @@ exportAllBtn.addEventListener("click", exportAllZip);
 exportJsonButton.addEventListener("click", exportJson);
 exportCsvButton.addEventListener("click", exportCsv);
 exportExcelButton.addEventListener("click", exportExcel);
+
+// Site drill-down: click (or Enter/Space) a status row to view that site's items
+statusListNode.addEventListener("click", (e) => {
+  const row = e.target.closest(".status-item--clickable");
+  if (row?.dataset.siteKey) focusSite(row.dataset.siteKey);
+});
+statusListNode.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const row = e.target.closest(".status-item--clickable");
+  if (row?.dataset.siteKey) {
+    e.preventDefault();
+    focusSite(row.dataset.siteKey);
+  }
+});
+document.getElementById("siteFocusClear")?.addEventListener("click", clearSiteFocus);
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 document.getElementById("dateFilterBannerClear").addEventListener("click", () => {
