@@ -2763,10 +2763,11 @@
       "site_key": "ministry-of-health-welfare",
       "ministry": "Ministry of Health and Family Welfare",
       "name": "Ministry of Health and Family Welfare",
-      "base_url": "https://www.mohfw.gov.in",
+      "base_url": "https://www.mohfw-dohfw.gov.in",
       "parser_type": "table",
       "parser_backend": "scrapy",
-      "render_js": true,
+      "render_js": false,
+      "custom_crawler": "mohfw-dohfw",
       "active": true,
       "default_category": "notification",
       "category_mapping": {
