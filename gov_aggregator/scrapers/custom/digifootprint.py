@@ -1,20 +1,24 @@
-"""Ministry of Textiles — https://www.texmin.gov.in
+"""DigiFootprint platform crawler — shared by ministries built on the NIC
+"DigiFootprint" stack (Next.js SPA + WordPress backend).
 
-The public site is a Next.js SPA sitting behind an Akamai WAF that returns
-HTTP 403 to headless browsers, so the old render_js + CSS-selector approach
-returned 0 items. The page itself ships no data — the lists are fetched
-client-side from a WordPress REST API mounted under the ``/cms/`` path on the
-same domain (plain httpx is NOT blocked by the WAF).
+Several ministry sites (e.g. Textiles texmin.gov.in, MSME msme.gov.in) run on
+this identical platform. The public site is a Next.js SPA behind an Akamai WAF
+that returns HTTP 403 to headless browsers, and the page ships no data — the
+lists are fetched client-side from a WordPress REST API mounted under the
+``/cms/`` path on the same host. Plain httpx is NOT blocked by the WAF, so we
+call that API directly.
 
-This crawler talks to that API directly:
-
-  • /cms/wp-json/post-page/whats_new      — the "What's New" feed (freshest items)
-  • /cms/wp-json/custom/api/new-posts?s=  — 20 most recent posts across types
+Feeds pulled (relative to ``<site>/cms``):
+  • /wp-json/post-page/whats_new      — the "What's New" feed (freshest items)
+  • /wp-json/custom/api/new-posts?s=  — 20 most recent posts across types
 
 Each WordPress post carries ``post_title`` and ``post_date`` (a real published
 date, so no PDF date-extraction is needed). The document link is the direct
 file URL embedded in ``acf_data`` when present; otherwise we build the
 canonical front-end detail-page URL from the post type and slug.
+
+The site host is taken from ``config.base_url`` so a single implementation
+serves every ministry on the platform.
 """
 from __future__ import annotations
 
@@ -26,11 +30,7 @@ import httpx
 
 from gov_aggregator.scrapers.schemas import ScrapedItem, SiteConfig
 
-logger = logging.getLogger("gov_aggregator.custom.textiles")
-
-SITE_BASE = "https://www.texmin.gov.in"
-# WordPress backend is served under the /cms/ path prefix on the same host.
-CMS_BASE = f"{SITE_BASE}/cms"
+logger = logging.getLogger("gov_aggregator.custom.digifootprint")
 
 # Feeds to pull, in priority order. (section_label, endpoint)
 _FEEDS: list[tuple[str, str]] = [
@@ -38,14 +38,24 @@ _FEEDS: list[tuple[str, str]] = [
     ("Latest",     "/wp-json/custom/api/new-posts?s="),
 ]
 
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    ),
-    "Accept": "application/json",
-    "Referer": f"{SITE_BASE}/whats-new",
-}
+_DOC_EXTS = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
+
+
+def _bases(config: SiteConfig) -> tuple[str, str]:
+    """Return (site_base, cms_base) derived from the site's configured base_url."""
+    site = (config.base_url or "").rstrip("/")
+    return site, f"{site}/cms"
+
+
+def _headers(site_base: str) -> dict[str, str]:
+    return {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json",
+        "Referer": f"{site_base}/whats-new",
+    }
 
 
 def _parse_wp_date(raw: str | None) -> datetime | None:
@@ -74,9 +84,9 @@ def _as_list(payload: Any) -> list:
 def _find_file_url(acf: Any) -> str | None:
     """Return the first direct document URL found anywhere inside acf_data.
 
-    Posts of type 'document'/'scheme' embed a ready-made file URL under
-    /static/uploads/...; 'whats_new' posts instead store a bare attachment ID
-    (which the public API won't resolve) — those fall back to the page URL.
+    Only real documents — NOT scheme thumbnail images (.jpg/.png). Posts that
+    store a bare attachment ID (which the public API won't resolve) fall back
+    to the front-end page URL.
     """
     found: list[str] = []
 
@@ -88,16 +98,14 @@ def _find_file_url(acf: Any) -> str | None:
             for value in node:
                 walk(value)
         elif isinstance(node, str) and node.startswith("http"):
-            # Only real documents — NOT scheme thumbnail images (.jpg/.png).
-            lo = node.lower().split("?")[0]
-            if lo.endswith((".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")):
+            if node.lower().split("?")[0].endswith(_DOC_EXTS):
                 found.append(node)
 
     walk(acf)
     return found[0] if found else None
 
 
-def _shape(post: dict) -> ScrapedItem | None:
+def _shape(post: dict, site_base: str) -> ScrapedItem | None:
     title = (post.get("post_title") or "").strip()
     if not title:
         return None
@@ -112,7 +120,7 @@ def _shape(post: dict) -> ScrapedItem | None:
     elif slug:
         # Front-end detail page, e.g. /whats-new/<slug> or /schemes-and-services/<slug>.
         route = (post.get("post_type") or "post").replace("_", "-")
-        link = f"{SITE_BASE}/{route}/{slug}"
+        link = f"{site_base}/{route}/{slug}"
         is_pdf = False
     else:
         return None
@@ -120,36 +128,41 @@ def _shape(post: dict) -> ScrapedItem | None:
     return ScrapedItem(title=title, link=link, published_at=published_at, is_pdf=is_pdf)
 
 
-async def crawl_textiles(config: SiteConfig) -> list[ScrapedItem]:
+async def crawl_digifootprint(config: SiteConfig) -> list[ScrapedItem]:
+    site_base, cms_base = _bases(config)
+    if not site_base:
+        logger.warning("[digifootprint] %s has no base_url configured", config.site_key)
+        return []
+
     items: list[ScrapedItem] = []
     seen: set[str] = set()
 
     async with httpx.AsyncClient(
-        headers=DEFAULT_HEADERS,
+        headers=_headers(site_base),
         verify=config.verify_ssl,
         follow_redirects=True,
         timeout=45.0,
     ) as client:
         for label, endpoint in _FEEDS:
             try:
-                resp = await client.get(CMS_BASE + endpoint)
+                resp = await client.get(cms_base + endpoint)
                 if resp.status_code != 200:
-                    logger.warning("[textiles] %s -> HTTP %s", endpoint, resp.status_code)
+                    logger.warning("[%s] %s -> HTTP %s", config.site_key, endpoint, resp.status_code)
                     continue
                 posts = _as_list(resp.json())
             except Exception as exc:  # noqa: BLE001
-                logger.warning("[textiles] %s failed: %s", endpoint, exc)
+                logger.warning("[%s] %s failed: %s", config.site_key, endpoint, exc)
                 continue
 
             for post in posts:
                 if not isinstance(post, dict):
                     continue
-                item = _shape(post)
+                item = _shape(post, site_base)
                 if not item or item.link in seen:
                     continue
                 seen.add(item.link)
                 item.section_label = label
                 items.append(item)
 
-    logger.info("[textiles] extracted %d items across %d feeds", len(items), len(_FEEDS))
+    logger.info("[%s] digifootprint extracted %d items", config.site_key, len(items))
     return items
